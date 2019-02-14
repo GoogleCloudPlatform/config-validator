@@ -2,8 +2,6 @@
 package gcv
 
 import (
-	"log"
-
 	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
 )
 
@@ -50,19 +48,24 @@ func NewValidator(options ...Option) (*Validator, error) {
 }
 
 // AddData adds GCP resource metadata to be audited later.
-func (v *Validator) AddData(assets []validator.Asset) error {
-	log.Fatal("Not implemented")
+func (v *Validator) AddData(*validator.AddDataRequest) error {
 	return nil
 }
 
 // Reset clears previously added data from the underlying query evaluation engine.
 func (v *Validator) Reset() error {
-	log.Fatal("Not implemented")
 	return nil
 }
 
 // Audit checks the GCP resource metadata that has been added via AddData to determine if any of the constraint is violated.
-func (v *Validator) Audit() ([]validator.Violation, error) {
-	log.Fatal("Not implemented")
-	return nil, nil
+func (v *Validator) Audit() (*validator.AuditResponse, error) {
+	return &validator.AuditResponse{
+		Violations: []*validator.Violation{
+			{
+				Constraint: "StubContraint",
+				Resource:   "//compute.googleapis.com/projects/my-project/zones/my-zone/disks/my-disk",
+				Message:    "Stub Message",
+			},
+		},
+	}, nil
 }
