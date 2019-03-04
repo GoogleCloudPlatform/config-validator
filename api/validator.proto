@@ -3,7 +3,6 @@ syntax = "proto3";
 
 package validator;
 
-import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
 
 // Asset contains GCP resource metadata and additional metadata set on a resource, such as Cloud IAM policy.
@@ -39,16 +38,20 @@ message Violation {
 message AddDataRequest {
   repeated Asset assets = 1;
 }
+message AddDataResponse {}
 
+message AuditRequest {}
 message AuditResponse {
   repeated Violation violations = 1;
 }
+message ResetRequest {}
+message ResetResponse {}
 
 service Validator {
   // AddData adds GCP resource metadata to be audited later.
-  rpc AddData(AddDataRequest) returns (google.protobuf.Empty) {}
+  rpc AddData(AddDataRequest) returns (AddDataResponse) {}
   // Audit checks the GCP resource metadata that has been added via AddData to determine if any of the constraint is violated.
-  rpc Audit(google.protobuf.Empty) returns (AuditResponse) {}
+  rpc Audit(AuditRequest) returns (AuditResponse) {}
   // Reset clears previously added data from the underlying query evaluation engine.
-  rpc Reset(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+  rpc Reset(ResetRequest) returns (ResetResponse) {}
 }
