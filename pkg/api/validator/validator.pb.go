@@ -6,15 +6,20 @@ package validator
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import _ "github.com/golang/protobuf/ptypes/empty"
 import _struct "github.com/golang/protobuf/ptypes/struct"
+
+import (
+	context "golang.org/x/net/context"
+	grpc "google.golang.org/grpc"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
-// This is a compile-time assertion to ensure that this generated file is compatible with the proto package it is being compiled against.
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
@@ -43,7 +48,7 @@ func (m *Asset) Reset()         { *m = Asset{} }
 func (m *Asset) String() string { return proto.CompactTextString(m) }
 func (*Asset) ProtoMessage()    {}
 func (*Asset) Descriptor() ([]byte, []int) {
-	return fileDescriptor_validator_82128c9b1f9bbc34, []int{0}
+	return fileDescriptor_validator_ee93e3a54713ff68, []int{0}
 }
 func (m *Asset) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Asset.Unmarshal(m, b)
@@ -111,7 +116,7 @@ func (m *Violation) Reset()         { *m = Violation{} }
 func (m *Violation) String() string { return proto.CompactTextString(m) }
 func (*Violation) ProtoMessage()    {}
 func (*Violation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_validator_82128c9b1f9bbc34, []int{1}
+	return fileDescriptor_validator_ee93e3a54713ff68, []int{1}
 }
 func (m *Violation) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Violation.Unmarshal(m, b)
@@ -170,7 +175,7 @@ func (m *AddDataRequest) Reset()         { *m = AddDataRequest{} }
 func (m *AddDataRequest) String() string { return proto.CompactTextString(m) }
 func (*AddDataRequest) ProtoMessage()    {}
 func (*AddDataRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_validator_82128c9b1f9bbc34, []int{2}
+	return fileDescriptor_validator_ee93e3a54713ff68, []int{2}
 }
 func (m *AddDataRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AddDataRequest.Unmarshal(m, b)
@@ -197,6 +202,66 @@ func (m *AddDataRequest) GetAssets() []*Asset {
 	return nil
 }
 
+type AddDataResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *AddDataResponse) Reset()         { *m = AddDataResponse{} }
+func (m *AddDataResponse) String() string { return proto.CompactTextString(m) }
+func (*AddDataResponse) ProtoMessage()    {}
+func (*AddDataResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_validator_ee93e3a54713ff68, []int{3}
+}
+func (m *AddDataResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_AddDataResponse.Unmarshal(m, b)
+}
+func (m *AddDataResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_AddDataResponse.Marshal(b, m, deterministic)
+}
+func (dst *AddDataResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AddDataResponse.Merge(dst, src)
+}
+func (m *AddDataResponse) XXX_Size() int {
+	return xxx_messageInfo_AddDataResponse.Size(m)
+}
+func (m *AddDataResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_AddDataResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AddDataResponse proto.InternalMessageInfo
+
+type AuditRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *AuditRequest) Reset()         { *m = AuditRequest{} }
+func (m *AuditRequest) String() string { return proto.CompactTextString(m) }
+func (*AuditRequest) ProtoMessage()    {}
+func (*AuditRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_validator_ee93e3a54713ff68, []int{4}
+}
+func (m *AuditRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_AuditRequest.Unmarshal(m, b)
+}
+func (m *AuditRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_AuditRequest.Marshal(b, m, deterministic)
+}
+func (dst *AuditRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AuditRequest.Merge(dst, src)
+}
+func (m *AuditRequest) XXX_Size() int {
+	return xxx_messageInfo_AuditRequest.Size(m)
+}
+func (m *AuditRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_AuditRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AuditRequest proto.InternalMessageInfo
+
 type AuditResponse struct {
 	Violations           []*Violation `protobuf:"bytes,1,rep,name=violations,proto3" json:"violations,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
@@ -208,7 +273,7 @@ func (m *AuditResponse) Reset()         { *m = AuditResponse{} }
 func (m *AuditResponse) String() string { return proto.CompactTextString(m) }
 func (*AuditResponse) ProtoMessage()    {}
 func (*AuditResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_validator_82128c9b1f9bbc34, []int{3}
+	return fileDescriptor_validator_ee93e3a54713ff68, []int{5}
 }
 func (m *AuditResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AuditResponse.Unmarshal(m, b)
@@ -235,39 +300,248 @@ func (m *AuditResponse) GetViolations() []*Violation {
 	return nil
 }
 
+type ResetRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ResetRequest) Reset()         { *m = ResetRequest{} }
+func (m *ResetRequest) String() string { return proto.CompactTextString(m) }
+func (*ResetRequest) ProtoMessage()    {}
+func (*ResetRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_validator_ee93e3a54713ff68, []int{6}
+}
+func (m *ResetRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ResetRequest.Unmarshal(m, b)
+}
+func (m *ResetRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ResetRequest.Marshal(b, m, deterministic)
+}
+func (dst *ResetRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ResetRequest.Merge(dst, src)
+}
+func (m *ResetRequest) XXX_Size() int {
+	return xxx_messageInfo_ResetRequest.Size(m)
+}
+func (m *ResetRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ResetRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ResetRequest proto.InternalMessageInfo
+
+type ResetResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ResetResponse) Reset()         { *m = ResetResponse{} }
+func (m *ResetResponse) String() string { return proto.CompactTextString(m) }
+func (*ResetResponse) ProtoMessage()    {}
+func (*ResetResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_validator_ee93e3a54713ff68, []int{7}
+}
+func (m *ResetResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ResetResponse.Unmarshal(m, b)
+}
+func (m *ResetResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ResetResponse.Marshal(b, m, deterministic)
+}
+func (dst *ResetResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ResetResponse.Merge(dst, src)
+}
+func (m *ResetResponse) XXX_Size() int {
+	return xxx_messageInfo_ResetResponse.Size(m)
+}
+func (m *ResetResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ResetResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ResetResponse proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterType((*Asset)(nil), "validator.Asset")
 	proto.RegisterType((*Violation)(nil), "validator.Violation")
 	proto.RegisterType((*AddDataRequest)(nil), "validator.AddDataRequest")
+	proto.RegisterType((*AddDataResponse)(nil), "validator.AddDataResponse")
+	proto.RegisterType((*AuditRequest)(nil), "validator.AuditRequest")
 	proto.RegisterType((*AuditResponse)(nil), "validator.AuditResponse")
+	proto.RegisterType((*ResetRequest)(nil), "validator.ResetRequest")
+	proto.RegisterType((*ResetResponse)(nil), "validator.ResetResponse")
 }
 
-func init() { proto.RegisterFile("validator.proto", fileDescriptor_validator_82128c9b1f9bbc34) }
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConn
 
-var fileDescriptor_validator_82128c9b1f9bbc34 = []byte{
-	// 373 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x92, 0x4f, 0xcb, 0xd3, 0x40,
-	0x10, 0xc6, 0xdf, 0xf8, 0xbe, 0x6d, 0xcd, 0xd4, 0xaa, 0x0c, 0x22, 0x31, 0xfe, 0xa1, 0xc4, 0x4b,
-	0x4e, 0x29, 0x44, 0x2f, 0x2a, 0x08, 0x05, 0x7b, 0x97, 0x20, 0xbd, 0x96, 0x69, 0x32, 0xb6, 0x81,
-	0x24, 0x1b, 0xb3, 0x93, 0x42, 0x3e, 0x87, 0xf8, 0x89, 0xfc, 0x62, 0x92, 0xcd, 0x1f, 0xa3, 0x52,
-	0xbc, 0x65, 0x9f, 0xe7, 0x99, 0xcc, 0x6f, 0x67, 0x07, 0x1e, 0x5d, 0x28, 0x4b, 0x13, 0x12, 0x55,
-	0x05, 0x65, 0xa5, 0x44, 0xa1, 0x3d, 0x0a, 0xee, 0xf3, 0x93, 0x52, 0xa7, 0x8c, 0x37, 0xc6, 0x38,
-	0xd6, 0x5f, 0x37, 0x9c, 0x97, 0xd2, 0x74, 0x39, 0xf7, 0xc5, 0xdf, 0xa6, 0x96, 0xaa, 0x8e, 0xa5,
-	0x73, 0xbd, 0xef, 0x16, 0xcc, 0xb6, 0x5a, 0xb3, 0x20, 0xc2, 0x5d, 0x41, 0x39, 0x3b, 0xd6, 0xda,
-	0xf2, 0xed, 0xc8, 0x7c, 0xe3, 0x4b, 0x00, 0x6a, 0xcd, 0x83, 0x34, 0x25, 0x3b, 0xf7, 0x8c, 0x63,
-	0x1b, 0xe5, 0x4b, 0x53, 0x32, 0xbe, 0x86, 0x15, 0x15, 0x31, 0x6b, 0xa9, 0x9a, 0x43, 0x49, 0x72,
-	0x76, 0x6e, 0x4d, 0xe2, 0xc1, 0x20, 0x7e, 0x26, 0x39, 0x63, 0x08, 0xf7, 0x2b, 0xd6, 0xaa, 0xae,
-	0x62, 0x76, 0xee, 0xd6, 0x96, 0xbf, 0x0c, 0x9f, 0x06, 0x1d, 0x52, 0x30, 0x20, 0x05, 0x7b, 0xca,
-	0x6a, 0x8e, 0xc6, 0x9c, 0xf7, 0xc3, 0x02, 0x7b, 0x9f, 0xaa, 0x8c, 0x24, 0x55, 0x05, 0xbe, 0x02,
-	0x88, 0x55, 0xa1, 0xa5, 0xa2, 0xb4, 0x90, 0x9e, 0x6f, 0xa2, 0xa0, 0x3b, 0xe9, 0xd0, 0x31, 0x8e,
-	0x67, 0x74, 0x60, 0x91, 0xb3, 0xd6, 0x74, 0xe2, 0x1e, 0x6e, 0x38, 0xb6, 0x5c, 0x39, 0x0b, 0x25,
-	0x24, 0xf4, 0x3f, 0xae, 0x21, 0xe7, 0xbd, 0x87, 0x87, 0xdb, 0x24, 0xf9, 0x44, 0x42, 0x11, 0x7f,
-	0xab, 0x59, 0x0b, 0xfa, 0x30, 0x37, 0xf3, 0xd0, 0x8e, 0xb5, 0xbe, 0xf5, 0x97, 0xe1, 0xe3, 0xe0,
-	0xf7, 0x3b, 0x99, 0xb9, 0x46, 0xbd, 0xef, 0xed, 0x60, 0xb5, 0xad, 0x93, 0x54, 0x22, 0xd6, 0xa5,
-	0x2a, 0x34, 0xe3, 0x5b, 0x80, 0xcb, 0x70, 0xc7, 0xa1, 0xfc, 0xc9, 0xa4, 0x7c, 0x1c, 0x40, 0x34,
-	0xc9, 0x85, 0x3f, 0xdb, 0xd1, 0x0c, 0x19, 0xfc, 0x08, 0x8b, 0x1e, 0x08, 0x9f, 0x4d, 0x3b, 0xff,
-	0x01, 0xe9, 0xfe, 0x7b, 0xb1, 0x5d, 0xbb, 0x20, 0xde, 0x0d, 0x7e, 0x80, 0x99, 0x81, 0xc2, 0x2b,
-	0x11, 0xd7, 0x99, 0xfe, 0x75, 0x8a, 0xef, 0xdd, 0xe0, 0x3b, 0x98, 0x45, 0xdc, 0xae, 0xce, 0xb5,
-	0xe2, 0xab, 0x7d, 0x8f, 0x73, 0xa3, 0xbc, 0xf9, 0x15, 0x00, 0x00, 0xff, 0xff, 0x04, 0x2d, 0xb4,
-	0x09, 0xd6, 0x02, 0x00, 0x00,
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion4
+
+// ValidatorClient is the client API for Validator service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type ValidatorClient interface {
+	// AddData adds GCP resource metadata to be audited later.
+	AddData(ctx context.Context, in *AddDataRequest, opts ...grpc.CallOption) (*AddDataResponse, error)
+	// Audit checks the GCP resource metadata that has been added via AddData to determine if any of the constraint is violated.
+	Audit(ctx context.Context, in *AuditRequest, opts ...grpc.CallOption) (*AuditResponse, error)
+	// Reset clears previously added data from the underlying query evaluation engine.
+	Reset(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*ResetResponse, error)
+}
+
+type validatorClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewValidatorClient(cc *grpc.ClientConn) ValidatorClient {
+	return &validatorClient{cc}
+}
+
+func (c *validatorClient) AddData(ctx context.Context, in *AddDataRequest, opts ...grpc.CallOption) (*AddDataResponse, error) {
+	out := new(AddDataResponse)
+	err := c.cc.Invoke(ctx, "/validator.Validator/AddData", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *validatorClient) Audit(ctx context.Context, in *AuditRequest, opts ...grpc.CallOption) (*AuditResponse, error) {
+	out := new(AuditResponse)
+	err := c.cc.Invoke(ctx, "/validator.Validator/Audit", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *validatorClient) Reset(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*ResetResponse, error) {
+	out := new(ResetResponse)
+	err := c.cc.Invoke(ctx, "/validator.Validator/Reset", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ValidatorServer is the server API for Validator service.
+type ValidatorServer interface {
+	// AddData adds GCP resource metadata to be audited later.
+	AddData(context.Context, *AddDataRequest) (*AddDataResponse, error)
+	// Audit checks the GCP resource metadata that has been added via AddData to determine if any of the constraint is violated.
+	Audit(context.Context, *AuditRequest) (*AuditResponse, error)
+	// Reset clears previously added data from the underlying query evaluation engine.
+	Reset(context.Context, *ResetRequest) (*ResetResponse, error)
+}
+
+func RegisterValidatorServer(s *grpc.Server, srv ValidatorServer) {
+	s.RegisterService(&_Validator_serviceDesc, srv)
+}
+
+func _Validator_AddData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidatorServer).AddData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/validator.Validator/AddData",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidatorServer).AddData(ctx, req.(*AddDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Validator_Audit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuditRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidatorServer).Audit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/validator.Validator/Audit",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidatorServer).Audit(ctx, req.(*AuditRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Validator_Reset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidatorServer).Reset(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/validator.Validator/Reset",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidatorServer).Reset(ctx, req.(*ResetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Validator_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "validator.Validator",
+	HandlerType: (*ValidatorServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "AddData",
+			Handler:    _Validator_AddData_Handler,
+		},
+		{
+			MethodName: "Audit",
+			Handler:    _Validator_Audit_Handler,
+		},
+		{
+			MethodName: "Reset",
+			Handler:    _Validator_Reset_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "validator.proto",
+}
+
+func init() { proto.RegisterFile("validator.proto", fileDescriptor_validator_ee93e3a54713ff68) }
+
+var fileDescriptor_validator_ee93e3a54713ff68 = []byte{
+	// 389 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x91, 0xcf, 0x8e, 0xd3, 0x40,
+	0x0c, 0xc6, 0x37, 0xec, 0x6e, 0x4b, 0xdc, 0x7f, 0x30, 0x42, 0x10, 0x22, 0x40, 0x55, 0xb8, 0xe4,
+	0x94, 0x4a, 0x81, 0x13, 0xe2, 0x52, 0x04, 0x77, 0x14, 0xa1, 0x5e, 0x2b, 0x37, 0x31, 0x6d, 0xa4,
+	0x34, 0x13, 0x32, 0x4e, 0xa5, 0x3e, 0x07, 0xe2, 0xa9, 0x78, 0x29, 0x94, 0xc9, 0x24, 0x4c, 0x04,
+	0xd2, 0xde, 0xc6, 0xfe, 0x3e, 0xdb, 0x3f, 0x7b, 0x60, 0x75, 0xc1, 0x22, 0xcf, 0x90, 0x65, 0x1d,
+	0x55, 0xb5, 0x64, 0x29, 0xdc, 0x21, 0xe1, 0xbf, 0x3a, 0x4a, 0x79, 0x2c, 0x68, 0xa3, 0x85, 0x43,
+	0xf3, 0x7d, 0xa3, 0xb8, 0x6e, 0x52, 0xee, 0x8c, 0xc1, 0x4f, 0x07, 0xee, 0xb7, 0x4a, 0x11, 0x0b,
+	0x01, 0x77, 0x25, 0x9e, 0xc9, 0x73, 0xd6, 0x4e, 0xe8, 0x26, 0xfa, 0x2d, 0x5e, 0x03, 0x60, 0x2b,
+	0xee, 0xf9, 0x5a, 0x91, 0xf7, 0x48, 0x2b, 0xae, 0xce, 0x7c, 0xbb, 0x56, 0x24, 0xde, 0xc2, 0x02,
+	0xcb, 0x94, 0x14, 0xd7, 0xd7, 0x7d, 0x85, 0x7c, 0xf2, 0x6e, 0xb5, 0x63, 0xde, 0x27, 0xbf, 0x22,
+	0x9f, 0x44, 0x0c, 0x8f, 0x6b, 0x52, 0xb2, 0xa9, 0x53, 0xf2, 0xee, 0xd6, 0x4e, 0x38, 0x8b, 0x9f,
+	0x47, 0x1d, 0x52, 0xd4, 0x23, 0x45, 0x3b, 0x2c, 0x1a, 0x4a, 0x06, 0x5f, 0xf0, 0xcb, 0x01, 0x77,
+	0x97, 0xcb, 0x02, 0x39, 0x97, 0xa5, 0x78, 0x03, 0x90, 0xca, 0x52, 0x71, 0x8d, 0x79, 0xc9, 0x86,
+	0xcf, 0xca, 0x08, 0xdf, 0x9a, 0xd0, 0x31, 0x0e, 0xb1, 0xf0, 0x60, 0x7a, 0x26, 0xa5, 0xf0, 0x48,
+	0x06, 0xae, 0x0f, 0x5b, 0xae, 0x33, 0x31, 0x66, 0xc8, 0xf8, 0x10, 0x57, 0xef, 0x0b, 0x3e, 0xc0,
+	0x72, 0x9b, 0x65, 0x9f, 0x91, 0x31, 0xa1, 0x1f, 0x0d, 0x29, 0x16, 0x21, 0x4c, 0xf4, 0x3d, 0x94,
+	0xe7, 0xac, 0x6f, 0xc3, 0x59, 0xfc, 0x24, 0xfa, 0xfb, 0x15, 0xfa, 0xae, 0x89, 0xd1, 0x83, 0xa7,
+	0xb0, 0x1a, 0x6a, 0x55, 0x25, 0x4b, 0x45, 0xc1, 0x12, 0xe6, 0xdb, 0x26, 0xcb, 0xd9, 0x34, 0x0b,
+	0xbe, 0xc0, 0xc2, 0xc4, 0x9d, 0x41, 0xbc, 0x07, 0xb8, 0xf4, 0x67, 0xe8, 0x27, 0x3c, 0xb3, 0x26,
+	0x0c, 0x37, 0x4a, 0x2c, 0x5f, 0xdb, 0x36, 0xa1, 0x76, 0xb4, 0x69, 0xbb, 0x82, 0x85, 0x89, 0xbb,
+	0xb6, 0xf1, 0xef, 0xf6, 0xbc, 0x7d, 0x13, 0xf1, 0x09, 0xa6, 0x06, 0x4c, 0xbc, 0xb4, 0xe9, 0x47,
+	0x8b, 0xfa, 0xfe, 0xff, 0x24, 0xb3, 0xc7, 0x8d, 0xf8, 0x08, 0xf7, 0x9a, 0x5c, 0xbc, 0xb0, 0x6d,
+	0xd6, 0x6e, 0xbe, 0xf7, 0xaf, 0x60, 0x57, 0x6b, 0xc0, 0x51, 0xb5, 0xbd, 0xc2, 0xa8, 0x7a, 0xb4,
+	0x4b, 0x70, 0x73, 0x98, 0xe8, 0xef, 0x7a, 0xf7, 0x27, 0x00, 0x00, 0xff, 0xff, 0x49, 0x98, 0x4b,
+	0x18, 0x05, 0x03, 0x00, 0x00,
 }
