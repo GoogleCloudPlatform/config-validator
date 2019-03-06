@@ -101,7 +101,7 @@ func TestListYAMLFiles(t *testing.T) {
 			if err != nil {
 				t.Fatal("creating temp dir:", err)
 			}
-			defer os.RemoveAll(tmpDir)
+			defer cleanupTmpDir(t, tmpDir)
 			// create files and expected list
 			var expectedFiles []string
 			for _, fileData := range tc.fileState {
@@ -142,7 +142,7 @@ func TestListFilesEmptyDir(t *testing.T) {
 			if err != nil {
 				t.Fatal("creating temp dir:", err)
 			}
-			defer os.RemoveAll(tmpDir)
+			defer cleanupTmpDir(t, tmpDir)
 			scannedFiles, err := tc.listFunction(tmpDir)
 
 			diff := cmp.Diff([]string{}, scannedFiles)
@@ -168,7 +168,7 @@ func TestListFilesInvalidDirPerms(t *testing.T) {
 			if err != nil {
 				t.Fatal("creating temp dir:", err)
 			}
-			defer os.RemoveAll(tmpDir)
+			defer cleanupTmpDir(t, tmpDir)
 			// create dir with restrictive permissions
 			if err := os.MkdirAll(filepath.Join(tmpDir, "invalidDir"), 0000); err != nil {
 				t.Fatal("creating temp dir sub dir:", err)
@@ -432,4 +432,10 @@ func UnclassifiedConstraintBuilder(existingConfig *UnclassifiedConfig, validYaml
 	existingConfig.Yaml = yaml
 	existingConfig.RawFile = validYaml
 	return existingConfig
+}
+
+func cleanupTmpDir(t *testing.T, dir string) {
+	if err := os.RemoveAll(dir); err != nil {
+		t.Log(err)
+	}
 }

@@ -61,9 +61,12 @@ func PolicyPath(p string) Option {
 	}
 }
 
-const (
-	regoDepdencyFilePath = "../../../policies/validator/lib"
-)
+func PolicyLibraryDir(dir string) Option {
+	return func(v *Validator) error {
+		v.policyLibraryDir = dir
+		return nil
+	}
+}
 
 func loadRegoFiles(dir string) (map[string]string, error) {
 	loadedFiles := make(map[string]string)
@@ -120,7 +123,6 @@ func loadYAMLFiles(dir string) ([]*configs.ConstraintTemplate, []*configs.Constr
 // We may want to make this initialization behavior configurable in the future.
 func NewValidator(options ...Option) (*Validator, error) {
 	ret := &Validator{}
-	ret.policyLibraryDir = regoDepdencyFilePath
 	for _, option := range options {
 		if err := option(ret); err != nil {
 			return nil, err
