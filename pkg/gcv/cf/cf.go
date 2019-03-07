@@ -40,11 +40,11 @@ type ConstraintFramework struct {
 }
 
 const (
-	constraintPackagePrefix             = "data.test.fixtures.constraints."
+	constraintTemplatesPackagePrefix    = "data.templates.gcp."
 	constraintDependenciesPackagePrefix = "data.constraint_dep."
-	inputDataPrefix                     = "input.asset"
+	inputDataPrefix                     = "data.inventory"
 	constraintPathPrefix                = "data.config"
-	regoLibraryRule                     = "data.validator.gcp.audit"
+	regoLibraryRule                     = "data.validator.gcp.lib.audit"
 )
 
 func prefixMaxKeys(prefix string, src map[string]string) map[string]string {
@@ -82,7 +82,7 @@ func (cf *ConstraintFramework) AddData(path string, objJSON interface{}) {
 
 // getTemplatePkgPath constructs a package prefix based off the generated type.
 func getTemplatePkgPath(t *configs.ConstraintTemplate) string {
-	return fmt.Sprintf("%s.%s", constraintPackagePrefix, t.GeneratedKind)
+	return fmt.Sprintf("%s.%s", constraintTemplatesPackagePrefix, t.GeneratedKind)
 }
 
 // validateTemplate verifies template compiles
