@@ -47,7 +47,7 @@ const (
 
 func prefixMaxKeys(prefix string, src map[string]string) map[string]string {
 	ret := make(map[string]string)
-	for key,val := range src {
+	for key, val := range src {
 		ret[prefix+key] = val
 	}
 	return ret
@@ -61,12 +61,12 @@ func New(dependencyCode map[string]string) (*ConstraintFramework, error) {
 	cf.userInputData = make(map[string]interface{})
 	cf.templates = make(map[string]*configs.ConstraintTemplate)
 	cf.constraints = make(map[string]map[string]*configs.Constraint)
-	_,compileErrors := ast.CompileModules(dependencyCode)
+	_, compileErrors := ast.CompileModules(dependencyCode)
 	if compileErrors != nil {
 		return nil, status.Error(codes.InvalidArgument, compileErrors.Error())
 	}
 	// Adding this prefix will ensure there are no collisions with templates
-	cf.dependencyCode = prefixMaxKeys(constraintDependenciesPackagePrefix,dependencyCode)
+	cf.dependencyCode = prefixMaxKeys(constraintDependenciesPackagePrefix, dependencyCode)
 	return &cf, nil
 }
 
@@ -107,7 +107,7 @@ func (cf *ConstraintFramework) AddTemplate(template *configs.ConstraintTemplate)
 // validateConstraint validates template kind exists
 // TODO(corb): will also validate constraint data confirms to template validation
 func (cf *ConstraintFramework) validateConstraint(c *configs.Constraint) error {
-	if _,exists := cf.templates[c.Confg.Kind]; !exists {
+	if _, exists := cf.templates[c.Confg.Kind]; !exists {
 		return fmt.Errorf("no template found for kind %s, constraint's template needs to be loaded before constraint. ", c.Confg.Kind)
 	}
 	// TODO(corb): validate constraints data with template validation spec

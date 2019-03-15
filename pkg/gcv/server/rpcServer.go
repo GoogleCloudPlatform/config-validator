@@ -17,10 +17,10 @@ var (
 	// TODO(corb): Template development will eventually inline library code, but the currently template examples have dependency rego code.
 	//  This flag will be deprecated when the template tooling is complete.
 	policyLibraryPath = flag.String("policyLibraryPath", "", "directory containing policy templates and configs")
-	port       = flag.Int("port", 10000, "The server port")
+	port              = flag.Int("port", 10000, "The server port")
 )
 
-type gcvServer struct{
+type gcvServer struct {
 	validator *gcv.Validator
 }
 
@@ -34,7 +34,7 @@ func (s *gcvServer) Audit(ctx context.Context, request *validator.AuditRequest) 
 	return response, err
 }
 
-func (s *gcvServer)  Reset(ctx context.Context, request *validator.ResetRequest) (*validator.ResetResponse, error) {
+func (s *gcvServer) Reset(ctx context.Context, request *validator.ResetRequest) (*validator.ResetResponse, error) {
 	err := s.validator.Reset()
 	return &validator.ResetResponse{}, err
 }

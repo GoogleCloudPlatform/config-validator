@@ -197,9 +197,8 @@ func TestCMF_ConstraintSetup(t *testing.T) {
 	}
 }
 
-
 func TestCF_New_CompilerError(t *testing.T) {
-	_, err := New(map[string]string{"invalid_rego":"this isn't valid rego"})
+	_, err := New(map[string]string{"invalid_rego": "this isn't valid rego"})
 	if err == nil {
 		t.Fatal("Expected error, got none")
 	}
@@ -248,7 +247,6 @@ func makeTemplate(data string) *configs.ConstraintTemplate {
 	}
 	return constraint.(*configs.ConstraintTemplate)
 }
-
 
 func getRegoDepdencies() map[string]string {
 	return map[string]string{}

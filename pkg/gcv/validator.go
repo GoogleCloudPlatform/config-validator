@@ -42,7 +42,7 @@ import (
 // To avoid out of memory errors, callers can invoke Reset to delete existing data.
 type Validator struct {
 	// policyPath points to a directory where the constraints and constraint templates are stored as yaml files.
-	policyPath    string
+	policyPath string
 	// policy dependencies directory points to rego files that provide supporting code for templates.
 	// These rego dependencies should be packaged with the GCV deployment.
 	policyLibraryDir    string
@@ -72,16 +72,16 @@ func loadRegoFiles(dir string) (map[string]string, error) {
 	loadedFiles := make(map[string]string)
 	files, err := configs.ListRegoFiles(dir)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument,err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	for _, filePath := range files {
-		if _,exists := loadedFiles[filePath]; exists {
+		if _, exists := loadedFiles[filePath]; exists {
 			// This shouldn't happen
-			return nil, status.Errorf(codes.Internal,"Unexpected file collision with file %s", filePath)
+			return nil, status.Errorf(codes.Internal, "Unexpected file collision with file %s", filePath)
 		}
 		fileBytes, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			return nil, status.Error(codes.InvalidArgument,errors.Wrapf(err,"unable to read file %s", filePath).Error())
+			return nil, status.Error(codes.InvalidArgument, errors.Wrapf(err, "unable to read file %s", filePath).Error())
 		}
 		loadedFiles[filePath] = string(fileBytes)
 	}
@@ -93,12 +93,12 @@ func loadYAMLFiles(dir string) ([]*configs.ConstraintTemplate, []*configs.Constr
 	var constraints []*configs.Constraint
 	files, err := configs.ListYAMLFiles(dir)
 	if err != nil {
-		return nil,nil,err
+		return nil, nil, err
 	}
-	for _,filePath := range files {
+	for _, filePath := range files {
 		fileContents, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			return nil, nil, status.Error(codes.InvalidArgument,errors.Wrapf(err,"unable to read file %s", filePath).Error())
+			return nil, nil, status.Error(codes.InvalidArgument, errors.Wrapf(err, "unable to read file %s", filePath).Error())
 		}
 		categorizedData, err := configs.CategorizeYAMLFile(fileContents, filePath)
 		if err != nil {
@@ -129,10 +129,10 @@ func NewValidator(options ...Option) (*Validator, error) {
 		}
 	}
 	if ret.policyPath == "" {
-		return nil, status.Errorf(codes.InvalidArgument,"No policy path set, provide an option to set the policy path gcv.PolicyPath")
+		return nil, status.Errorf(codes.InvalidArgument, "No policy path set, provide an option to set the policy path gcv.PolicyPath")
 	}
 	if ret.policyLibraryDir == "" {
-		return nil, status.Errorf(codes.InvalidArgument,"No policy library set")
+		return nil, status.Errorf(codes.InvalidArgument, "No policy library set")
 	}
 
 	regoLib, err := loadRegoFiles(ret.policyLibraryDir)
@@ -148,12 +148,12 @@ func NewValidator(options ...Option) (*Validator, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _,template := range templates {
+	for _, template := range templates {
 		if err := ret.constraintFramework.AddTemplate(template); err != nil {
 			return nil, err
 		}
 	}
-	for _,constraint := range constraints {
+	for _, constraint := range constraints {
 		if err := ret.constraintFramework.AddConstraint(constraint); err != nil {
 			return nil, err
 		}
@@ -162,11 +162,10 @@ func NewValidator(options ...Option) (*Validator, error) {
 	return ret, nil
 }
 
-
 // AddData adds GCP resource metadata to be audited later.
 func (v *Validator) AddData(request *validator.AddDataRequest) error {
 	marshaler := &jsonpb.Marshaler{}
-	for _,asset := range request.Assets {
+	for _, asset := range request.Assets {
 		buf := new(bytes.Buffer)
 		if err := marshaler.Marshal(buf, asset); err != nil {
 			return status.Error(codes.Internal, errors.Wrap(err, "marshalling to json").Error())
@@ -189,7 +188,7 @@ func (v *Validator) Reset() error {
 
 // Audit checks the GCP resource metadata that has been added via AddData to determine if any of the constraint is violated.
 func (v *Validator) Audit() (*validator.AuditResponse, error) {
-	response,err := v.constraintFramework.Audit()
+	response, err := v.constraintFramework.Audit()
 	return response, err
 
 }
