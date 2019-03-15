@@ -17,6 +17,7 @@ package gcv
 
 import (
 	"bytes"
+	"context"
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/pkg/errors"
@@ -164,10 +165,10 @@ func NewValidator(options ...Option) (*Validator, error) {
 
 // AddData adds GCP resource metadata to be audited later.
 func (v *Validator) AddData(request *validator.AddDataRequest) error {
-	marshaler := &jsonpb.Marshaler{}
+	m := &jsonpb.Marshaler{}
 	for _, asset := range request.Assets {
 		buf := new(bytes.Buffer)
-		if err := marshaler.Marshal(buf, asset); err != nil {
+		if err := m.Marshal(buf, asset); err != nil {
 			return status.Error(codes.Internal, errors.Wrap(err, "marshalling to json").Error())
 		}
 		// TODO(morgantep): verify this is how data is expected to be provided
@@ -187,8 +188,8 @@ func (v *Validator) Reset() error {
 }
 
 // Audit checks the GCP resource metadata that has been added via AddData to determine if any of the constraint is violated.
-func (v *Validator) Audit() (*validator.AuditResponse, error) {
-	response, err := v.constraintFramework.Audit()
+func (v *Validator) Audit(ctx context.Context) (*validator.AuditResponse, error) {
+	response, err := v.constraintFramework.Audit(ctx)
 	return response, err
 
 }

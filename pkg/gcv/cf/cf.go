@@ -16,10 +16,12 @@ package cf
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/golang/glog"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
+	"github.com/smallfish/simpleyaml"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
@@ -38,11 +40,11 @@ type ConstraintFramework struct {
 }
 
 const (
-	constraintPackagePrefix             = "data.constraint"
+	constraintPackagePrefix             = "data.test.fixtures.constraints."
 	constraintDependenciesPackagePrefix = "data.constraint_dep."
-	inputDataPrefix                     = "data.inventory"
+	inputDataPrefix                     = "input.asset"
 	constraintPathPrefix                = "data.config"
-	regoLibraryRule                     = "validator.gcp.audit"
+	regoLibraryRule                     = "data.validator.gcp.audit"
 )
 
 func prefixMaxKeys(prefix string, src map[string]string) map[string]string {
@@ -175,12 +177,11 @@ func constraintAsInputData(constraintMap map[string]map[string]*configs.Constrai
 }
 
 // Audit checks the GCP resource metadata that has been added via AddData to determine if any of the constraint is violated.
-func (cf *ConstraintFramework) Audit() (*validator.AuditResponse, error) {
+func (cf *ConstraintFramework) Audit(ctx context.Context) (*validator.AuditResponse, error) {
 	compiler, err := cf.compile()
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	ctx := context.Background()
 	r := rego.New(
 		rego.Query(regoLibraryRule),
 		rego.Compiler(compiler),
@@ -194,16 +195,54 @@ func (cf *ConstraintFramework) Audit() (*validator.AuditResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	glog.Info(rs) // TODO(corb): convert to response and relace mock data
 
-	// Stub out an example error
-	return &validator.AuditResponse{
-		Violations: []*validator.Violation{
-			{
-				Constraint: "StubContraint",
-				Resource:   "//compute.googleapis.com/projects/my-project/zones/my-zone/disks/my-disk",
-				Message:    "Stub Message",
-			},
-		},
+	response := &validator.AuditResponse{
+		Violations: []*validator.Violation{},
+	}
+
+	for _, result := range rs {
+		for _, expression := range result.Expressions {
+			violation, err := convertToViolation(expression)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			response.Violations = append(response.Violations, violation)
+		}
+	}
+
+	return response, nil
+}
+
+func convertToViolation(expression *rego.ExpressionValue) (*validator.Violation, error) {
+	// Convert into a YAML object to allow querying the structure
+	asYaml, err := convertToYAML(expression.Value)
+	if err != nil {
+		return nil, err
+	}
+	constraint, err := asYaml.GetIndex(0).Get("constraint").String()
+	if err != nil {
+		return nil, err
+	}
+	asset , err:= asYaml.GetIndex(0).Get("asset").String()
+	if err != nil {
+		return nil, err
+	}
+	violation , err:= asYaml.GetIndex(0).Get("violation").String()
+	if err != nil {
+		return nil, err
+	}
+	return &validator.Violation{
+		Constraint: constraint,
+		Resource:   asset,
+		Message:    violation,
+		//Metadata: // TODO(corb): check and populate this field
 	}, nil
+}
+
+func convertToYAML(obj interface{}) (*simpleyaml.Yaml, error) {
+	jsonBytes, err := json.Marshal(obj)
+	if err != nil {
+		return nil, err
+	}
+	return simpleyaml.NewYaml(jsonBytes)
 }

@@ -15,11 +15,13 @@
 package cf
 
 import (
+	"context"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"log"
-	"testing"
-
+	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
 	"partner-code.googlesource.com/gcv/gcv/pkg/gcv/configs"
+	"testing"
 )
 
 // TODO(corb): tests
@@ -74,7 +76,7 @@ func TestCMF_TemplateSetup(t *testing.T) {
 	}
 	for _, tc := range testCasts {
 		t.Run(tc.description, func(t *testing.T) {
-			cf, err := New(getRegoDepdencies())
+			cf, err := New(getRegDependencies())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -172,7 +174,7 @@ func TestCMF_ConstraintSetup(t *testing.T) {
 	}
 	for _, tc := range testCasts {
 		t.Run(tc.description, func(t *testing.T) {
-			cf, err := New(getRegoDepdencies())
+			cf, err := New(getRegDependencies())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -201,6 +203,86 @@ func TestCF_New_CompilerError(t *testing.T) {
 	_, err := New(map[string]string{"invalid_rego": "this isn't valid rego"})
 	if err == nil {
 		t.Fatal("Expected error, got none")
+	}
+}
+
+func TestCF_Audit_WithMockAudit(t *testing.T) {
+	testCases := []struct {
+		description    string
+		auditRego      string
+		expectedResult *validator.AuditResponse
+	}{
+		{
+			description: "Parses normal fields",
+			auditRego: `package validator.gcp
+audit[result] {
+	result := {
+		"constraint": "example_constraint_metadata_name_name",
+		"asset": "some_asset_name",
+		"violation": "tmp example issue",
+	}
+}
+`,
+			expectedResult: &validator.AuditResponse{
+				Violations: []*validator.Violation{
+					{
+						Constraint: "example_constraint_metadata_name_name",
+						Resource:   "some_asset_name",
+						Message:    "tmp example issue",
+					},
+				},
+			},
+		},
+		{
+			description: "no audit errors",
+			auditRego: `package validator.gcp
+audit[result] {
+	
+}
+`,
+			expectedResult: &validator.AuditResponse{
+				Violations: []*validator.Violation{},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			cf, err := New(map[string]string{
+				"mock_audit": tc.auditRego,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := cf.Audit(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(tc.expectedResult, result); diff != "" {
+				t.Errorf("unexpected result (-want +got) %v", diff)
+			}
+		})
+	}
+}
+
+func TestCF_Audit_MalformedOutput(t *testing.T) {
+	cf, err := New(map[string]string{
+		"mock_audit": `package validator.gcp
+audit[result] {
+	result := {
+		"NOT_constraint": "example_constraint_metadata_name_name",
+		"asset": "some_asset_name",
+		"violation": "tmp example issue",
+	}
+}
+`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := cf.Audit(context.Background())
+	if err == nil {
+		t.Fatalf("error expected, but non thrown, instead provided result %v", result)
 	}
 }
 
@@ -248,6 +330,6 @@ func makeTemplate(data string) *configs.ConstraintTemplate {
 	return constraint.(*configs.ConstraintTemplate)
 }
 
-func getRegoDepdencies() map[string]string {
+func getRegDependencies() map[string]string {
 	return map[string]string{}
 }

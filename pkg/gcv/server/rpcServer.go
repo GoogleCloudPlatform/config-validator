@@ -44,7 +44,7 @@ func (s *gcvServer) AddData(ctx context.Context, request *validator.AddDataReque
 }
 
 func (s *gcvServer) Audit(ctx context.Context, request *validator.AuditRequest) (*validator.AuditResponse, error) {
-	response, err := s.validator.Audit()
+	response, err := s.validator.Audit(ctx)
 	return response, err
 }
 
