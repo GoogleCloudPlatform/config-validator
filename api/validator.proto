@@ -17,6 +17,7 @@ syntax = "proto3";
 
 package validator;
 
+import "google/iam/v1/policy.proto";
 import "google/protobuf/struct.proto";
 
 // Asset contains GCP resource metadata and additional metadata set on a resource, such as Cloud IAM policy.
@@ -34,6 +35,8 @@ message Asset {
   string ancestry_path = 3;
   // GCP resource metadata. The schema is type dependent.
   google.protobuf.Value resource = 4;
+  // IAM policy associated with the resource.
+  google.iam.v1.Policy iam_policy = 5;
 }
 
 // Violation contains the relevant information to explain how a constraint is violated.
