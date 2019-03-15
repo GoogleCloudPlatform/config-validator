@@ -7,6 +7,6 @@ proto: proto-builder
 	docker run \
 		-v `pwd`:/go/src/partner-code.googlesource.com/gcv/gcv \
 		$(PROTO_DOCKER_IMAGE) \
-		protoc -I./api --go_out=plugins=grpc:./pkg/api/validator ./api/validator.proto
+		protoc -I/proto -I./api --go_out=plugins=grpc:./pkg/api/validator ./api/validator.proto
 
 .PHONY: proto proto-builder

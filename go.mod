@@ -15,6 +15,7 @@ require (
 	github.com/yashtewari/glob-intersection v0.0.0-20180916065949-5c77d914dd0b // indirect
 	golang.org/x/net v0.0.0-20190301231341-16b79f2e4e95
 	golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6 // indirect
+	google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8
 	google.golang.org/grpc v1.19.0
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 )

@@ -4,6 +4,12 @@ RUN apt-get update && apt-get -y install wget unzip
 RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip && \
     unzip -d /usr/local protoc-3.6.1-linux-x86_64.zip
 
+# Add a common directory for .proto includes
+RUN mkdir /proto
+RUN git clone https://github.com/googleapis/googleapis /tmp/googleapis
+# Maintain expected import paths when using protoc -I/proto
+RUN mv /tmp/googleapis/google /proto/google
+
 WORKDIR /go/src/partner-code.googlesource.com/gcv/gcv
 COPY ./go.mod ./go.sum ./
 COPY ./api ./api
