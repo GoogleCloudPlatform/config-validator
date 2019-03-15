@@ -15,22 +15,19 @@
 package gcv
 
 import (
+	"context"
+	"github.com/golang/protobuf/jsonpb"
 	"io/ioutil"
 	"os"
+	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
 	"path/filepath"
 	"testing"
 )
 
-// TODO(corb): add more tests
-//  Errors
-//    No dir
-//    Invalid dir
-//    No config files
-//    No read access
-
 const (
-	localPolicyDir    = "../../../policies/"
-	localPolicyDepDir = "../../../policies/validator/lib"
+	repoRoot          = "../../../"
+	localPolicyDir    = repoRoot + "policies/"
+	localPolicyDepDir = repoRoot + "policies/validator/lib"
 )
 
 func TestCreateValidatorWithNoOptions(t *testing.T) {
@@ -44,6 +41,43 @@ func TestDefaultTestDataCreatesValidator(t *testing.T) {
 	_, err := NewValidator(generateDefaultTestOptions())
 	if err != nil {
 		t.Fatal("unexpected error", err)
+	}
+}
+
+func TestAudit(t *testing.T) {
+	v, err := NewValidator(generateDefaultTestOptions())
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	err = v.AddData(&validator.AddDataRequest{
+		Assets: []*validator.Asset{
+			getStorageAssetNoLogging(),
+			getStorageAssetWithLogging(),
+			getStorageAssetWithSecureLogging(),
+		},
+	})
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+
+	result, err := v.Audit(context.Background())
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+
+	if len(result.Violations) == 0 {
+		t.Fatal("unexpected violations recieved none")
+	}
+	expectedResourceName := getStorageAssetNoLogging().Name
+	foundExpectedViolation := false
+	for _,violation := range result.Violations {
+		if violation.Resource == expectedResourceName {
+			foundExpectedViolation = true
+			break
+		}
+	}
+	if !foundExpectedViolation {
+		t.Fatalf("unexpected result resource %s not found", expectedResourceName)
 	}
 }
 
@@ -130,4 +164,145 @@ func generateDefaultTestOptions() Option {
 		PolicyPath(localPolicyDir),
 		PolicyLibraryDir(localPolicyDepDir),
 	)
+}
+
+func getStorageAssetNoLogging() *validator.Asset {
+	return mustMakeAsset(`{
+  "name": "//storage.googleapis.com/my-storage-bucket",
+  "asset_type": "google.cloud.storage.Bucket",
+  "resource": {
+    "version": "v1",
+    "discovery_document_uri": "https://www.googleapis.com/discovery/v1/apis/storage/v1/rest",
+    "discovery_name": "Bucket",
+    "parent": "//cloudresourcemanager.googleapis.com/projects/68478495408",
+    "data": {
+      "acl": [],
+      "billing": {},
+      "cors": [],
+      "defaultObjectAcl": [],
+      "encryption": {},
+      "etag": "CAI=",
+      "iamConfiguration": {
+        "bucketPolicyOnly": {}
+      },
+      "id": "my-storage-bucket",
+      "kind": "storage#bucket",
+      "labels": {},
+      "lifecycle": {
+        "rule": []
+      },
+      "location": "US-CENTRAL1",
+      "logging": {},
+      "metageneration": 2,
+      "name": "my-storage-bucket",
+      "owner": {},
+      "projectNumber": 68478495408,
+      "retentionPolicy": {},
+      "selfLink": "https://www.googleapis.com/storage/v1/b/my-storage-bucket",
+      "storageClass": "STANDARD",
+      "timeCreated": "2018-07-23T17:30:22.691Z",
+      "updated": "2018-07-23T17:30:23.324Z",
+      "versioning": {},
+      "website": {}
+    }
+  }
+}`)
+}
+func getStorageAssetWithLogging() *validator.Asset {
+	return mustMakeAsset(`{
+  "name": "//storage.googleapis.com/my-storage-bucket-with-logging",
+  "asset_type": "google.cloud.storage.Bucket",
+  "resource": {
+    "version": "v1",
+    "discovery_document_uri": "https://www.googleapis.com/discovery/v1/apis/storage/v1/rest",
+    "discovery_name": "Bucket",
+    "parent": "//cloudresourcemanager.googleapis.com/projects/68478495408",
+    "data": {
+      "acl": [],
+      "billing": {},
+      "cors": [],
+      "defaultObjectAcl": [],
+      "encryption": {},
+      "etag": "CAI=",
+      "iamConfiguration": {
+        "bucketPolicyOnly": {}
+      },
+      "id": "my-storage-bucket",
+      "kind": "storage#bucket",
+      "labels": {},
+      "lifecycle": {
+        "rule": []
+      },
+      "location": "US-CENTRAL1",
+      "logging": {
+        "logBucket": "example-logs-bucket",
+        "logObjectPrefix": "log_object_prefix"
+      },
+      "metageneration": 2,
+      "name": "my-storage-bucket-with-logging",
+      "owner": {},
+      "projectNumber": 68478495408,
+      "retentionPolicy": {},
+      "selfLink": "https://www.googleapis.com/storage/v1/b/my-storage-bucket",
+      "storageClass": "STANDARD",
+      "timeCreated": "2018-07-23T17:30:22.691Z",
+      "updated": "2018-07-23T17:30:23.324Z",
+      "versioning": {},
+      "website": {}
+    }
+  }
+}`)
+}
+func getStorageAssetWithSecureLogging() *validator.Asset {
+	return mustMakeAsset(`{
+  "name": "//storage.googleapis.com/my-storage-bucket-with-secure-logging",
+  "asset_type": "google.cloud.storage.Bucket",
+  "resource": {
+    "version": "v1",
+    "discovery_document_uri": "https://www.googleapis.com/discovery/v1/apis/storage/v1/rest",
+    "discovery_name": "Bucket",
+    "parent": "//cloudresourcemanager.googleapis.com/projects/68478495408",
+    "data": {
+      "acl": [],
+      "billing": {},
+      "cors": [],
+      "defaultObjectAcl": [],
+      "encryption": {},
+      "etag": "CAI=",
+      "iamConfiguration": {
+        "bucketPolicyOnly": {}
+      },
+      "id": "my-storage-bucket",
+      "kind": "storage#bucket",
+      "labels": {},
+      "lifecycle": {
+        "rule": []
+      },
+      "location": "US-CENTRAL1",
+      "logging": {
+        "logBucket": "secure-logs-bucket",
+        "logObjectPrefix": "log_object_prefix"
+      },
+      "metageneration": 2,
+      "name": "my-storage-bucket-with-secure-logging",
+      "owner": {},
+      "projectNumber": 68478495408,
+      "retentionPolicy": {},
+      "selfLink": "https://www.googleapis.com/storage/v1/b/my-storage-bucket",
+      "storageClass": "STANDARD",
+      "timeCreated": "2018-07-23T17:30:22.691Z",
+      "updated": "2018-07-23T17:30:23.324Z",
+      "versioning": {},
+      "website": {}
+    }
+  }
+}`)
+}
+
+func mustMakeAsset(assetJson string) *validator.Asset {
+	asset := &validator.Asset{}
+	if err := jsonpb.UnmarshalString(assetJson, asset); err != nil {
+		panic(err)
+	}
+	return asset
 }

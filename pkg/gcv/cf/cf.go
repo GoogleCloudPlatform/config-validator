@@ -16,12 +16,10 @@ package cf
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/golang/glog"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
-	"github.com/smallfish/simpleyaml"
+	"github.com/open-policy-agent/opa/storage/inmem"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
@@ -30,7 +28,7 @@ import (
 
 // Constraint model framework organizes constraints/templates/data and handles evaluation.
 type ConstraintFramework struct {
-	userInputData map[string]interface{}
+	userInputData []interface{}
 	// map[userDefined]regoCode
 	dependencyCode map[string]string
 	// map[kind]template
@@ -42,8 +40,8 @@ type ConstraintFramework struct {
 const (
 	constraintTemplatesPackagePrefix    = "data.templates.gcp."
 	constraintDependenciesPackagePrefix = "data.constraint_dep."
-	inputDataPrefix                     = "data.inventory"
-	constraintPathPrefix                = "data.config"
+	inputDataPrefix                     = "inventory"
+	constraintPathPrefix                = "constraints"
 	regoLibraryRule                     = "data.validator.gcp.lib.audit"
 )
 
@@ -60,7 +58,6 @@ func prefixMaxKeys(prefix string, src map[string]string) map[string]string {
 //   dependencyCode: map[debugString]regoCode: The debugString key will be referenced in compiler errors. It should help identify the source of the rego code.
 func New(dependencyCode map[string]string) (*ConstraintFramework, error) {
 	cf := ConstraintFramework{}
-	cf.userInputData = make(map[string]interface{})
 	cf.templates = make(map[string]*configs.ConstraintTemplate)
 	cf.constraints = make(map[string]map[string]*configs.Constraint)
 	_, compileErrors := ast.CompileModules(dependencyCode)
@@ -73,16 +70,13 @@ func New(dependencyCode map[string]string) (*ConstraintFramework, error) {
 }
 
 // AddData adds GCP resource metadata to be audited later.
-func (cf *ConstraintFramework) AddData(path string, objJSON interface{}) {
-	if _, exists := cf.userInputData[path]; exists {
-		glog.Infof("Existing asset at %s exists, overwriting", path)
-	}
-	cf.userInputData[path] = objJSON
+func (cf *ConstraintFramework) AddData(objJSON interface{}) {
+	cf.userInputData = append(cf.userInputData,objJSON)
 }
 
 // getTemplatePkgPath constructs a package prefix based off the generated type.
 func getTemplatePkgPath(t *configs.ConstraintTemplate) string {
-	return fmt.Sprintf("%s.%s", constraintTemplatesPackagePrefix, t.GeneratedKind)
+	return fmt.Sprintf("templates.gcp%s", t.GeneratedKind)
 }
 
 // validateTemplate verifies template compiles
@@ -156,42 +150,78 @@ func (cf *ConstraintFramework) compile() (*ast.Compiler, error) {
 func (cf *ConstraintFramework) Reset() {
 	// Clear input data
 	// This is provided as a param in audit
-	cf.userInputData = make(map[string]interface{})
+	cf.userInputData = []interface{}{}
 }
 
-// constraintAsInputData prepares the constraint data for providing to rego. Rego input values support yaml, so the raw constraint data can be passed directly into rego.
-// Passing the raw file data ensures we haven't lost any information when parsing.
+// constraintAsInputData prepares the constraint data for providing to rego.
+// The rego libraries require the data to be formatted as golang objects to be parsed.
+// Our audit script expects these constraints to be in a flat array.
 // Input: map[kind][metadataname]constraint
-// Returns: map[kind][]rawConstraintYAML
-func constraintAsInputData(constraintMap map[string]map[string]*configs.Constraint) map[string][]string {
+// Returns: []golangNestedObject
+func constraintAsInputData(constraintMap map[string]map[string]*configs.Constraint) ([]interface{}, error) {
 	// mimic the same type as the input, but have a string to store the raw constraint data
-	flattened := make(map[string][]string)
+	flattened := []interface{}{}
 
-	for kind, constraints := range constraintMap {
+	for _, constraints := range constraintMap {
 		for _, constraint := range constraints {
-			flattened[kind] = append(flattened[kind], constraint.Confg.RawFile)
+			structured, err := constraint.Confg.AsInterface()
+			if err != nil {
+				return nil, err
+			}
+			flattened = append(flattened, structured)
 		}
 	}
 
-	return flattened
+	return flattened, nil
 }
 
-// Audit checks the GCP resource metadata that has been added via AddData to determine if any of the constraint is violated.
-func (cf *ConstraintFramework) Audit(ctx context.Context) (*validator.AuditResponse, error) {
+func (cf *ConstraintFramework) buildRegoObject() (*rego.Rego, error) {
 	compiler, err := cf.compile()
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
+	constraints, err := constraintAsInputData(cf.constraints)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	r := rego.New(
 		rego.Query(regoLibraryRule),
 		rego.Compiler(compiler),
-		// TODO(morgantep): please PTAL to confirm this will integrate with rego expecations
-		rego.Input(map[string]interface{}{
-			inputDataPrefix:      cf.userInputData,
-			constraintPathPrefix: constraintAsInputData(cf.constraints),
-		}))
+		rego.Store(inmem.NewFromObject(map[string]interface{}{
+				inputDataPrefix:      cf.userInputData,
+				constraintPathPrefix: constraints,
+			})))
+	return r, nil
+}
 
+func getAuditExpressionResult(ctx context.Context, r *rego.Rego) (*rego.ExpressionValue, error) {
 	rs, err := r.Eval(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(rs) != 1 {
+		// Only expecting to receive a single result set
+		return nil, status.Errorf(codes.Internal, "unexpected length of rego eval results, expected 1 got %d. This could indicate an error in the audit rego code", len(rs))
+	}
+	if len(rs[0].Expressions) != 1 {
+		return nil, status.Errorf(codes.Internal, "unexpected length of rego Expression results, expected 1 (from audit call) got %d. This could indicate an error in the audit rego code", len(rs[0].Expressions))
+	}
+	expressionResult := rs[0].Expressions[0]
+	if expressionResult.Text != regoLibraryRule {
+		return nil, status.Errorf(codes.Internal, "Unknown expression result %s, expected %s", expressionResult.Text, regoLibraryRule)
+	}
+
+	return expressionResult, nil
+}
+
+// Audit checks the GCP resource metadata that has been added via AddData to determine if any of the constraint is violated.
+func (cf *ConstraintFramework) Audit(ctx context.Context) (*validator.AuditResponse, error) {
+	r , err := cf.buildRegoObject()
+	if err != nil {
+		return nil, err
+	}
+
+	expressionVal, err := getAuditExpressionResult(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -200,49 +230,11 @@ func (cf *ConstraintFramework) Audit(ctx context.Context) (*validator.AuditRespo
 		Violations: []*validator.Violation{},
 	}
 
-	for _, result := range rs {
-		for _, expression := range result.Expressions {
-			violation, err := convertToViolation(expression)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-			response.Violations = append(response.Violations, violation)
-		}
+	violations, err := convertToViolations(expressionVal)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
+	response.Violations = violations
 
 	return response, nil
-}
-
-func convertToViolation(expression *rego.ExpressionValue) (*validator.Violation, error) {
-	// Convert into a YAML object to allow querying the structure
-	asYaml, err := convertToYAML(expression.Value)
-	if err != nil {
-		return nil, err
-	}
-	constraint, err := asYaml.GetIndex(0).Get("constraint").String()
-	if err != nil {
-		return nil, err
-	}
-	asset , err:= asYaml.GetIndex(0).Get("asset").String()
-	if err != nil {
-		return nil, err
-	}
-	violation , err:= asYaml.GetIndex(0).Get("violation").String()
-	if err != nil {
-		return nil, err
-	}
-	return &validator.Violation{
-		Constraint: constraint,
-		Resource:   asset,
-		Message:    violation,
-		//Metadata: // TODO(corb): check and populate this field
-	}, nil
-}
-
-func convertToYAML(obj interface{}) (*simpleyaml.Yaml, error) {
-	jsonBytes, err := json.Marshal(obj)
-	if err != nil {
-		return nil, err
-	}
-	return simpleyaml.NewYaml(jsonBytes)
 }

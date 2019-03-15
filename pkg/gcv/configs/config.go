@@ -16,7 +16,9 @@
 package configs
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/ghodss/yaml"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,6 +69,21 @@ const (
 	//  This will also require renaming field in the template yaml files when we agree on a name
 	expectedTarget = "admission.kubernetes.gatekeeper.sh"
 )
+
+// AsInterface returns the the config data as a structured golang object. This uses json.Unmarshal to create this object.
+func (c *UnclassifiedConfig) AsInterface() (interface{}, error) {
+	// Since the file is valid yaml, convert to proper json to allow using json.Unmarshal
+	j, err := yaml.YAMLToJSON([]byte(c.RawFile))
+	if err != nil {
+		return nil, errors.Wrap(err, "converting to YAML")
+	}
+	// Use json.Unmarshal to create a proper golang object that maintains the same structure
+	var f interface{}
+	if err := json.Unmarshal(j, &f); err != nil {
+		return nil, errors.Wrap(err, "converting from json")
+	}
+	return f, nil
+}
 
 // getAsConstraint attempts to convert to constraint
 // Returns:

@@ -17,11 +17,13 @@ package cf
 import (
 	"context"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
 	"log"
+	"testing"
+
+	pb "github.com/golang/protobuf/ptypes/struct"
+	"github.com/google/go-cmp/cmp"
 	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
 	"partner-code.googlesource.com/gcv/gcv/pkg/gcv/configs"
-	"testing"
 )
 
 // TODO(corb): tests
@@ -76,7 +78,7 @@ func TestCMF_TemplateSetup(t *testing.T) {
 	}
 	for _, tc := range testCasts {
 		t.Run(tc.description, func(t *testing.T) {
-			cf, err := New(getRegDependencies())
+			cf, err := New(getRegoDependencies())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -174,7 +176,7 @@ func TestCMF_ConstraintSetup(t *testing.T) {
 	}
 	for _, tc := range testCasts {
 		t.Run(tc.description, func(t *testing.T) {
-			cf, err := New(getRegDependencies())
+			cf, err := New(getRegoDependencies())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -206,20 +208,22 @@ func TestCF_New_CompilerError(t *testing.T) {
 	}
 }
 
-func TestCF_Audit_WithMockAudit(t *testing.T) {
+func TestCF_AuditParsing_WithMockAudit(t *testing.T) {
 	testCases := []struct {
 		description    string
 		auditRego      string
 		expectedResult *validator.AuditResponse
 	}{
 		{
-			description: "Parses normal fields",
-			auditRego: `package validator.gcp
+			description: "no  metadata",
+			auditRego: `package validator.gcp.lib
 audit[result] {
 	result := {
 		"constraint": "example_constraint_metadata_name_name",
 		"asset": "some_asset_name",
-		"violation": "tmp example issue",
+		"violation": {
+			"msg": "tmp example issue",
+		}
 	}
 }
 `,
@@ -234,10 +238,127 @@ audit[result] {
 			},
 		},
 		{
-			description: "no audit errors",
-			auditRego: `package validator.gcp
+			description: "empty metadata",
+			auditRego: `package validator.gcp.lib
 audit[result] {
-	
+	result := {
+		"constraint": "example_constraint_metadata_name_name",
+		"asset": "some_asset_name",
+		"violation": {
+			"msg": "tmp example issue",
+			"details": {}
+		}
+	}
+}
+`,
+			expectedResult: &validator.AuditResponse{
+				Violations: []*validator.Violation{
+					{
+						Constraint: "example_constraint_metadata_name_name",
+						Resource:   "some_asset_name",
+						Message:    "tmp example issue",
+						Metadata:   mustConvertToProtoVal(struct{}{}),
+					},
+				},
+			},
+		},
+		{
+			description: "Single level metadata",
+			auditRego: `package validator.gcp.lib
+audit[result] {
+	result := {
+		"constraint": "example_constraint_metadata_name_name",
+		"asset": "some_asset_name",
+		"violation": {"msg":"tmp example issue", "details": {"some":"random","things":"4u"}}
+	}
+}
+`,
+			expectedResult: &validator.AuditResponse{
+				Violations: []*validator.Violation{
+					{
+						Constraint: "example_constraint_metadata_name_name",
+						Resource:   "some_asset_name",
+						Message:    "tmp example issue",
+						Metadata: mustConvertToProtoVal(map[string]interface{}{
+							"some": "random",
+							"things": "4u",
+						}),
+					},
+				},
+			},
+		},
+		{
+			description: "multilevel nested metadata",
+			auditRego: `package validator.gcp.lib
+audit[result] {
+	result := {
+		"constraint": "example_constraint_metadata_name_name",
+		"asset": "some_asset_name",
+    "violation": {"msg":"tmp example issue", "details": {"some":{"really":"random"},"things":"4u"}}
+	}
+}
+`,
+			expectedResult: &validator.AuditResponse{
+				Violations: []*validator.Violation{
+					{
+						Constraint: "example_constraint_metadata_name_name",
+						Resource:   "some_asset_name",
+						Message:    "tmp example issue",
+						Metadata: mustConvertToProtoVal(map[string]interface{}{
+							"some": map[string]interface{} {
+								"really": "random",
+							},
+							"things": "4u",
+						}),
+					},
+				},
+			},
+		},
+		{
+			description: "Multiple results",
+			auditRego: `package validator.gcp.lib
+audit[result] {
+	examples = ["example_1","example_2"]
+  example := examples[_]
+
+  result := {
+		"constraint": example,
+		"asset": "some_asset_name",
+		"violation": {
+			"msg": "tmp example issue",
+		}
+	}
+}
+`,
+			expectedResult: &validator.AuditResponse{
+				Violations: []*validator.Violation{
+					{
+						Constraint: "example_1",
+						Resource:   "some_asset_name",
+						Message:    "tmp example issue",
+					},
+					{
+						Constraint: "example_2",
+						Resource:   "some_asset_name",
+						Message:    "tmp example issue",
+					},
+				},
+			},
+		},
+		{
+			description: "no audit errors",
+			auditRego: `package validator.gcp.lib
+audit[result] {
+	examples = []
+  example := examples[_]
+
+  result := {
+    "asset": example,
+		"asset": "some_asset_name",
+		"violation": {
+			"msg": "tmp example issue",
+		}
+  }
 }
 `,
 			expectedResult: &validator.AuditResponse{
@@ -266,23 +387,78 @@ audit[result] {
 }
 
 func TestCF_Audit_MalformedOutput(t *testing.T) {
-	cf, err := New(map[string]string{
-		"mock_audit": `package validator.gcp
+	testCases := []struct {
+		description string
+		auditRego   string
+	}{
+		{
+			description: "missing constraint field",
+			auditRego: `package validator.gcp.lib
 audit[result] {
 	result := {
 		"NOT_constraint": "example_constraint_metadata_name_name",
 		"asset": "some_asset_name",
-		"violation": "tmp example issue",
+		"violation": {
+			"msg": "tmp example issue",
+		}
 	}
 }
 `,
-	})
-	if err != nil {
-		t.Fatal(err)
+		},
+		{
+			description: "missing asset field",
+			auditRego: `package validator.gcp.lib
+audit[result] {
+	result := {
+		"constraint": "example_constraint_metadata_name_name",
+		"NOT_asset": "some_asset_name",
+		"violation": {
+			"msg": "tmp example issue",
+		}
 	}
-	result, err := cf.Audit(context.Background())
-	if err == nil {
-		t.Fatalf("error expected, but non thrown, instead provided result %v", result)
+}
+`,
+		},
+		{
+			description: "missing violation field",
+			auditRego: `package validator.gcp.lib
+audit[result] {
+	result := {
+		"constraint": "example_constraint_metadata_name_name",
+		"asset": "some_asset_name",
+		"NOT_violation": "missing field",
+	}
+}
+`,
+		},
+		{
+			description: "missing audit func",
+			auditRego: `package validator.gcp.lib
+NOT_audit[result] {
+	result := {
+		"constraint": "example_constraint_metadata_name_name",
+		"asset": "some_asset_name",
+		"violation": {
+			"msg": "tmp example issue",
+		}
+	}
+}
+`,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			cf, err := New(map[string]string{
+				"mock_audit": tc.auditRego,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := cf.Audit(context.Background())
+			if err == nil {
+				t.Fatalf("error expected, but non thrown, instead provided result %v", result)
+			}
+		})
 	}
 }
 
@@ -330,6 +506,14 @@ func makeTemplate(data string) *configs.ConstraintTemplate {
 	return constraint.(*configs.ConstraintTemplate)
 }
 
-func getRegDependencies() map[string]string {
+func getRegoDependencies() map[string]string {
 	return map[string]string{}
+}
+
+func mustConvertToProtoVal(from interface{}) *pb.Value {
+	converted, err := convertToProtoVal(from)
+	if err != nil {
+		panic(err)
+	}
+	return converted
 }

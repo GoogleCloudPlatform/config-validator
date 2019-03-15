@@ -18,6 +18,7 @@ package gcv
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/pkg/errors"
@@ -46,6 +47,7 @@ type Validator struct {
 	policyPath string
 	// policy dependencies directory points to rego files that provide supporting code for templates.
 	// These rego dependencies should be packaged with the GCV deployment.
+	// Right now expected to be set to point to "//policies/validator/lib" folder
 	policyLibraryDir    string
 	constraintFramework *cf.ConstraintFramework
 }
@@ -62,6 +64,9 @@ func PolicyPath(p string) Option {
 	}
 }
 
+// PolicyLibraryDir returns an Option that sets the policy library directory with rego files.
+// This function is expected to be removed in the future when all assumed dependant rego code is inlined in template files,
+// and this validator includes the audit.rego files
 func PolicyLibraryDir(dir string) Option {
 	return func(v *Validator) error {
 		v.policyLibraryDir = dir
@@ -171,11 +176,12 @@ func (v *Validator) AddData(request *validator.AddDataRequest) error {
 		if err := m.Marshal(buf, asset); err != nil {
 			return status.Error(codes.Internal, errors.Wrap(err, "marshalling to json").Error())
 		}
-		// TODO(morgantep): verify this is how data is expected to be provided
-		//  Assumption: data will be provided under different paths, alternative would be to provide all the data under a single var with a repeated field.
-		// resource names are unique: https://cloud.google.com/apis/design/resource_names
-		// More info on CAI's resource name format: https://cloud.google.com/resource-manager/docs/cloud-asset-inventory/resource-name-format
-		v.constraintFramework.AddData(asset.Name, buf.String())
+		var f interface{}
+		err := json.Unmarshal(buf.Bytes(), &f)
+		if err != nil {
+			return status.Error(codes.Internal, errors.Wrap(err, "converting from json").Error())
+		}
+		v.constraintFramework.AddData(f)
 	}
 
 	return nil
@@ -191,5 +197,4 @@ func (v *Validator) Reset() error {
 func (v *Validator) Audit(ctx context.Context) (*validator.AuditResponse, error) {
 	response, err := v.constraintFramework.Audit(ctx)
 	return response, err
-
 }
