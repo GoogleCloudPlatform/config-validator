@@ -25,7 +25,8 @@ RUN mv /tmp/googleapis/google /proto/google
 
 WORKDIR /go/src/partner-code.googlesource.com/gcv/gcv
 COPY ./go.mod ./go.sum ./
-COPY ./api ./api
 
 ENV GO111MODULE=on
 RUN go install github.com/golang/protobuf/protoc-gen-go
+
+COPY ./api ./api
