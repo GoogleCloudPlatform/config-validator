@@ -30,13 +30,13 @@ type Asset struct {
 	// GCP resource name as defined by Cloud Asset Inventory.
 	// See https://cloud.google.com/resource-manager/docs/cloud-asset-inventory/resource-name-format for the format.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Cloud Asset Inventory type. Example: "google.cloud.sql.Instance" is the type of Cloud SQL instance.
+	// Cloud Asset Inventory type (CAI API v1 format). Example: "sqladmin.googleapis.com/Instance" is the type of Cloud SQL instance.
 	// This field has a redundant "asset" prefix to be consistent with Cloud Asset Inventory output.
 	// See https://cloud.google.com/resource-manager/docs/cloud-asset-inventory/overview#supported_resource_types for the list of types.
 	AssetType string `protobuf:"bytes,2,opt,name=asset_type,json=assetType,proto3" json:"asset_type,omitempty"`
 	// Ancestral project/folder/org information in a path-like format.
 	// For example, a GCP project that is nested under a folder may have the following path:
-	// organization/9999/folders/8888/projects/7777
+	// organization/9999/folder/8888/project/7777
 	AncestryPath string `protobuf:"bytes,3,opt,name=ancestry_path,json=ancestryPath,proto3" json:"ancestry_path,omitempty"`
 	// GCP resource metadata. The schema is type dependent.
 	Resource *_struct.Value `protobuf:"bytes,4,opt,name=resource,proto3" json:"resource,omitempty"`
@@ -51,7 +51,7 @@ func (m *Asset) Reset()         { *m = Asset{} }
 func (m *Asset) String() string { return proto.CompactTextString(m) }
 func (*Asset) ProtoMessage()    {}
 func (*Asset) Descriptor() ([]byte, []int) {
-	return fileDescriptor_validator_47e5ef083b847fbd, []int{0}
+	return fileDescriptor_validator_139835c7aa0ef505, []int{0}
 }
 func (m *Asset) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Asset.Unmarshal(m, b)
@@ -126,7 +126,7 @@ func (m *Violation) Reset()         { *m = Violation{} }
 func (m *Violation) String() string { return proto.CompactTextString(m) }
 func (*Violation) ProtoMessage()    {}
 func (*Violation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_validator_47e5ef083b847fbd, []int{1}
+	return fileDescriptor_validator_139835c7aa0ef505, []int{1}
 }
 func (m *Violation) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Violation.Unmarshal(m, b)
@@ -185,7 +185,7 @@ func (m *AddDataRequest) Reset()         { *m = AddDataRequest{} }
 func (m *AddDataRequest) String() string { return proto.CompactTextString(m) }
 func (*AddDataRequest) ProtoMessage()    {}
 func (*AddDataRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_validator_47e5ef083b847fbd, []int{2}
+	return fileDescriptor_validator_139835c7aa0ef505, []int{2}
 }
 func (m *AddDataRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AddDataRequest.Unmarshal(m, b)
@@ -222,7 +222,7 @@ func (m *AddDataResponse) Reset()         { *m = AddDataResponse{} }
 func (m *AddDataResponse) String() string { return proto.CompactTextString(m) }
 func (*AddDataResponse) ProtoMessage()    {}
 func (*AddDataResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_validator_47e5ef083b847fbd, []int{3}
+	return fileDescriptor_validator_139835c7aa0ef505, []int{3}
 }
 func (m *AddDataResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AddDataResponse.Unmarshal(m, b)
@@ -252,7 +252,7 @@ func (m *AuditRequest) Reset()         { *m = AuditRequest{} }
 func (m *AuditRequest) String() string { return proto.CompactTextString(m) }
 func (*AuditRequest) ProtoMessage()    {}
 func (*AuditRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_validator_47e5ef083b847fbd, []int{4}
+	return fileDescriptor_validator_139835c7aa0ef505, []int{4}
 }
 func (m *AuditRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AuditRequest.Unmarshal(m, b)
@@ -283,7 +283,7 @@ func (m *AuditResponse) Reset()         { *m = AuditResponse{} }
 func (m *AuditResponse) String() string { return proto.CompactTextString(m) }
 func (*AuditResponse) ProtoMessage()    {}
 func (*AuditResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_validator_47e5ef083b847fbd, []int{5}
+	return fileDescriptor_validator_139835c7aa0ef505, []int{5}
 }
 func (m *AuditResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AuditResponse.Unmarshal(m, b)
@@ -320,7 +320,7 @@ func (m *ResetRequest) Reset()         { *m = ResetRequest{} }
 func (m *ResetRequest) String() string { return proto.CompactTextString(m) }
 func (*ResetRequest) ProtoMessage()    {}
 func (*ResetRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_validator_47e5ef083b847fbd, []int{6}
+	return fileDescriptor_validator_139835c7aa0ef505, []int{6}
 }
 func (m *ResetRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ResetRequest.Unmarshal(m, b)
@@ -350,7 +350,7 @@ func (m *ResetResponse) Reset()         { *m = ResetResponse{} }
 func (m *ResetResponse) String() string { return proto.CompactTextString(m) }
 func (*ResetResponse) ProtoMessage()    {}
 func (*ResetResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_validator_47e5ef083b847fbd, []int{7}
+	return fileDescriptor_validator_139835c7aa0ef505, []int{7}
 }
 func (m *ResetResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ResetResponse.Unmarshal(m, b)
@@ -525,9 +525,9 @@ var _Validator_serviceDesc = grpc.ServiceDesc{
 	Metadata: "validator.proto",
 }
 
-func init() { proto.RegisterFile("validator.proto", fileDescriptor_validator_47e5ef083b847fbd) }
+func init() { proto.RegisterFile("validator.proto", fileDescriptor_validator_139835c7aa0ef505) }
 
-var fileDescriptor_validator_47e5ef083b847fbd = []byte{
+var fileDescriptor_validator_139835c7aa0ef505 = []byte{
 	// 431 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x51, 0x4d, 0x6f, 0xd3, 0x40,
 	0x10, 0xad, 0x69, 0xd3, 0xe2, 0x69, 0xd3, 0xc0, 0x8a, 0x0f, 0x63, 0x01, 0x8a, 0xcc, 0x25, 0x27,
