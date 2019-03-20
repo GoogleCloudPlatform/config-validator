@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/jsonpb"
-	structpb "github.com/golang/protobuf/ptypes/struct"
+	"github.com/golang/protobuf/ptypes/struct"
 )
 
 func TestCleanProtoValues(t *testing.T) {

@@ -1,7 +1,7 @@
 package gcv
 
 import (
-	structpb "github.com/golang/protobuf/ptypes/struct"
+	"github.com/golang/protobuf/ptypes/struct"
 )
 
 // cleanProtoValue recursively updates proto Values that have a nil .Kind field
