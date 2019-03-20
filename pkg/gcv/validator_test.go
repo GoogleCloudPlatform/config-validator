@@ -66,7 +66,7 @@ func TestAudit(t *testing.T) {
 	}
 
 	if len(result.Violations) == 0 {
-		t.Fatal("unexpected violations recieved none")
+		t.Fatal("unexpected violations received none")
 	}
 	expectedResourceName := getStorageAssetNoLogging().Name
 	foundExpectedViolation := false
