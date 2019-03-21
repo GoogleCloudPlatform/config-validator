@@ -61,8 +61,8 @@ type Constraint struct {
 }
 
 const (
-	validTemplateGroup   = "gatekeeper.sh/v1"
-	validConstraintGroup = "constraints.gatekeeper.sh/v1"
+	validTemplateGroup   = "templates.gatekeeper.sh/v1alpha1"
+	validConstraintGroup = "constraints.gatekeeper.sh/v1alpha1"
 	expectedTarget       = "validation.gcp.forsetisecurity.org"
 )
 

@@ -203,7 +203,7 @@ func TestCategorizeYAMLFile(t *testing.T) {
 		},
 		{
 			description: "invalid template kind",
-			data: `apiVersion: gatekeeper.sh/v1
+			data: `apiVersion: templates.gatekeeper.sh/v1alpha1
 kind: INCORRECT_KIND  # Error here
 metadata:
   name: really_cool_template_metadata_name
@@ -241,7 +241,7 @@ spec:
 		},
 		{
 			description: "invalid template api version (using constraint kind)",
-			data: `apiVersion: constraints.gatekeeper.sh/v1  # Error here
+			data: `apiVersion: constraints.gatekeeper.sh/v1alpha1  # Error here
 kind: ConstraintTemplate
 metadata:
   name: really_cool_template_metadata_name
@@ -260,7 +260,7 @@ spec:
 		},
 		{
 			description: "invalid template invalid target",
-			data: `apiVersion: gatekeeper.sh/v1
+			data: `apiVersion: templates.gatekeeper.sh/v1alpha1
 kind: ConstraintTemplate
 metadata:
   name: really_cool_template_metadata_name
@@ -279,7 +279,7 @@ spec:
 		},
 		{
 			description: "invalid template no generated kind",
-			data: `apiVersion: gatekeeper.sh/v1
+			data: `apiVersion: templates.gatekeeper.sh/v1alpha1
 kind: ConstraintTemplate
 metadata:
   name: really_cool_template_metadata_name
@@ -298,7 +298,7 @@ spec:
 		},
 		{
 			description: "parse template",
-			data: `apiVersion: gatekeeper.sh/v1
+			data: `apiVersion: templates.gatekeeper.sh/v1alpha1
 kind: ConstraintTemplate  # Confirm comments WAI
 metadata:
   name: really_cool_template_metadata_name
@@ -319,11 +319,11 @@ spec:
 # rego code
 `,
 				Confg: UnclassifiedConstraintBuilder(&UnclassifiedConfig{
-					Group:        "gatekeeper.sh/v1",
+					Group:        "templates.gatekeeper.sh/v1alpha1",
 					MetadataName: "really_cool_template_metadata_name",
 					Kind:         "ConstraintTemplate",
 					FilePath:     "parse template", // will be a copy of the description
-				}, `apiVersion: gatekeeper.sh/v1
+				}, `apiVersion: templates.gatekeeper.sh/v1alpha1
 kind: ConstraintTemplate  # Confirm comments WAI
 metadata:
   name: really_cool_template_metadata_name
@@ -342,7 +342,7 @@ spec:
 		},
 		{
 			description: "invalid constraint uses template kind",
-			data: `apiVersion: constraints.gatekeeper.sh/v1
+			data: `apiVersion: constraints.gatekeeper.sh/v1alpha1
 kind: ConstraintTemplate # Error Here
 metadata:
   name: really_cool_constraint_metadata_name
@@ -351,7 +351,7 @@ metadata:
 		},
 		{
 			description: "invalid constraint uses template api version",
-			data: `apiVersion: gatekeeper.sh/v1 # Error here
+			data: `apiVersion: templates.gatekeeper.sh/v1alpha1 # Error here
 kind: KindWillConnectWithTemplate
 metadata:
   name: really_cool_constraint_metadata_name
@@ -369,7 +369,7 @@ metadata:
 		},
 		{
 			description: "invalid constraint no kind",
-			data: `apiVersion: constraints.gatekeeper.sh/v1
+			data: `apiVersion: constraints.gatekeeper.sh/v1alpha1
 metadata:
   name: really_cool_constraint_metadata_name
 `,
@@ -377,7 +377,7 @@ metadata:
 		},
 		{
 			description: "invalid constraint no metadata",
-			data: `apiVersion: constraints.gatekeeper.sh/v1
+			data: `apiVersion: constraints.gatekeeper.sh/v1alpha1
 kind: KindWillConnectWithTemplate
 `,
 			errExpected: true,
@@ -392,18 +392,18 @@ metadata:
 		},
 		{
 			description: "parse constraint",
-			data: `apiVersion: constraints.gatekeeper.sh/v1
+			data: `apiVersion: constraints.gatekeeper.sh/v1alpha1
 kind: KindWillConnectWithTemplate
 metadata:
   name: really_cool_constraint_metadata_name
 `,
 			expected: &Constraint{
 				Confg: UnclassifiedConstraintBuilder(&UnclassifiedConfig{
-					Group:        "constraints.gatekeeper.sh/v1",
+					Group:        "constraints.gatekeeper.sh/v1alpha1",
 					MetadataName: "really_cool_constraint_metadata_name",
 					Kind:         "KindWillConnectWithTemplate",
 					FilePath:     "parse constraint", // will be a copy of the description
-				}, `apiVersion: constraints.gatekeeper.sh/v1
+				}, `apiVersion: constraints.gatekeeper.sh/v1alpha1
 kind: KindWillConnectWithTemplate
 metadata:
   name: really_cool_constraint_metadata_name

@@ -906,7 +906,7 @@ func makeTestData(name string, assetType string) interface{} {
 
 func makeTestConstraint(kind, metadataName string, assetType string) *configs.Constraint {
 	return mustMakeConstraint(fmt.Sprintf(`
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1alpha1
 kind: %s
 metadata:
   name: %s
@@ -918,7 +918,7 @@ spec:
 
 func makeTestTemplate(kind string) *configs.ConstraintTemplate {
 	return mustMakeTemplate(fmt.Sprintf(`
-apiVersion: gatekeeper.sh/v1
+apiVersion: templates.gatekeeper.sh/v1alpha1
 kind: ConstraintTemplate
 metadata:
   name: my-really-cool-test-template
