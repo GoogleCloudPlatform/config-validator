@@ -8,6 +8,9 @@ import (
 // to be a NullValue to avoid issues with the jsonpb.Marshaler.
 // This issue arose when calling GCV from python.
 func cleanProtoValue(v *structpb.Value) {
+	if v == nil {
+		return
+	}
 	switch t := v.Kind.(type) {
 	case *structpb.Value_NullValue, *structpb.Value_NumberValue, *structpb.Value_StringValue, *structpb.Value_BoolValue:
 	case *structpb.Value_StructValue:

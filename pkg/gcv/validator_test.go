@@ -16,13 +16,13 @@ package gcv
 
 import (
 	"context"
+	"github.com/golang/protobuf/jsonpb"
+	"github.com/golang/protobuf/ptypes/struct"
 	"io/ioutil"
 	"os"
+	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
 	"path/filepath"
 	"testing"
-
-	"github.com/golang/protobuf/jsonpb"
-	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
 )
 
 const (
@@ -43,6 +43,91 @@ func TestDefaultTestDataCreatesValidator(t *testing.T) {
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
+}
+
+func TestAddData(t *testing.T) {
+	testCases := []struct{
+		description string
+		shouldFail bool
+		request *validator.AddDataRequest
+	}{
+		{
+			description: "empty request",
+			shouldFail: false,
+			request: &validator.AddDataRequest{},
+		},
+		{
+			description: "empty array",
+			shouldFail: false,
+			request: &validator.AddDataRequest{
+				Assets: []*validator.Asset{},
+			},
+		},
+		{
+			description: "empty entry in array",
+			shouldFail: false,
+			request: &validator.AddDataRequest{
+				Assets: []*validator.Asset{
+					{},
+				},
+			},
+		},
+		{
+			description: "just string fields",
+			shouldFail: false,
+			request: &validator.AddDataRequest{
+				Assets: []*validator.Asset{
+					{
+						Name:"Some Name",
+						AssetType:"some type",
+						AncestryPath: "some path",
+					},
+				},
+			},
+		},
+		{
+			description: "nil resource",
+			shouldFail: false,
+			request: &validator.AddDataRequest{
+				Assets: []*validator.Asset{
+					{
+						Name:"Some Name",
+						AssetType:"some type",
+						AncestryPath: "some path",
+						Resource: nil,
+					},
+				},
+			},
+		},
+		{
+			description: "empty resource struct",
+			shouldFail: false,
+			request: &validator.AddDataRequest{
+				Assets: []*validator.Asset{
+					{
+						Name:"Some Name",
+						AssetType:"some type",
+						AncestryPath: "some path",
+						Resource: &structpb.Value{},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			v, err := NewValidator(generateDefaultTestOptions())
+			if err != nil {
+				t.Fatal("unexpected error", err)
+			}
+			err = v.AddData(tc.request)
+			if err != nil != tc.shouldFail {
+				t.Fatalf("unexpected error state, expected %v got %v", tc.shouldFail, err)
+			}
+		})
+	}
+
 }
 
 func TestAudit(t *testing.T) {
