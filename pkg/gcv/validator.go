@@ -30,6 +30,8 @@ import (
 	"partner-code.googlesource.com/gcv/gcv/pkg/gcv/configs"
 )
 
+const logRequestsVerboseLevel = 2
+
 // Validator checks GCP resource metadata for constraint violation.
 //
 // Expected usage pattern:
@@ -81,6 +83,7 @@ func loadRegoFiles(dir string) (map[string]string, error) {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	for _, filePath := range files {
+		glog.V(logRequestsVerboseLevel).Infof("Loading rego file: %s", filePath)
 		if _, exists := loadedFiles[filePath]; exists {
 			// This shouldn't happen
 			return nil, status.Errorf(codes.Internal, "Unexpected file collision with file %s", filePath)
@@ -102,6 +105,7 @@ func loadYAMLFiles(dir string) ([]*configs.ConstraintTemplate, []*configs.Constr
 		return nil, nil, err
 	}
 	for _, filePath := range files {
+		glog.V(logRequestsVerboseLevel).Infof("Loading yaml file: %s", filePath)
 		fileContents, err := ioutil.ReadFile(filePath)
 		if err != nil {
 			return nil, nil, status.Error(codes.InvalidArgument, errors.Wrapf(err, "unable to read file %s", filePath).Error())
@@ -141,6 +145,7 @@ func NewValidator(options ...Option) (*Validator, error) {
 		return nil, status.Errorf(codes.InvalidArgument, "No policy library set")
 	}
 
+	glog.V(logRequestsVerboseLevel).Infof("loading policy library dir: %s", ret.policyLibraryDir)
 	regoLib, err := loadRegoFiles(ret.policyLibraryDir)
 	if err != nil {
 		return nil, err
@@ -150,6 +155,7 @@ func NewValidator(options ...Option) (*Validator, error) {
 	if err != nil {
 		return nil, err
 	}
+	glog.V(logRequestsVerboseLevel).Infof("loading policy dir: %s", ret.policyPath)
 	templates, constraints, err := loadYAMLFiles(ret.policyPath)
 	if err != nil {
 		return nil, err
@@ -171,15 +177,16 @@ func NewValidator(options ...Option) (*Validator, error) {
 // AddData adds GCP resource metadata to be audited later.
 func (v *Validator) AddData(request *validator.AddDataRequest) error {
 	m := &jsonpb.Marshaler{}
-	for _, asset := range request.Assets {
+	for i, asset := range request.Assets {
+		glog.V(logRequestsVerboseLevel).Infof("converting asset to golang interface: %v", asset)
 		buf := new(bytes.Buffer)
 		if err := m.Marshal(buf, asset); err != nil {
-			return status.Error(codes.Internal, errors.Wrap(err, "marshalling to json").Error())
+			return status.Error(codes.Internal, errors.Wrapf(err, "marshalling to json asset[%d] %s", i, asset.Name).Error())
 		}
 		var f interface{}
 		err := json.Unmarshal(buf.Bytes(), &f)
 		if err != nil {
-			return status.Error(codes.Internal, errors.Wrap(err, "converting from json").Error())
+			return status.Error(codes.Internal, errors.Wrapf(err, "converting from json asset[%d] %s", i, asset.Name).Error())
 		}
 		v.constraintFramework.AddData(f)
 	}
