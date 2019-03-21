@@ -18,10 +18,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/golang/glog"
-	"google.golang.org/grpc"
 	"log"
 	"net"
+
+	"github.com/golang/glog"
+	"google.golang.org/grpc"
 	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
 	"partner-code.googlesource.com/gcv/gcv/pkg/gcv"
 )

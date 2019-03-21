@@ -2,6 +2,7 @@ package cf
 
 import (
 	"encoding/json"
+
 	"github.com/golang/protobuf/jsonpb"
 	pb "github.com/golang/protobuf/ptypes/struct"
 	"github.com/open-policy-agent/opa/rego"
@@ -21,10 +22,18 @@ type expressionVal struct {
 }
 
 func validateExpression(expr *expressionVal) error {
-	if expr.Asset == "" { return errors.New("No asset field found") }
-	if expr.Constraint == "" { return errors.New("No constraint field found") }
-	if expr.Violation == nil { return errors.New("No violation field found") }
-	if expr.Violation.Msg == ""{ return errors.New("No violation.msg field found") }
+	if expr.Asset == "" {
+		return errors.New("No asset field found")
+	}
+	if expr.Constraint == "" {
+		return errors.New("No constraint field found")
+	}
+	if expr.Violation == nil {
+		return errors.New("No violation field found")
+	}
+	if expr.Violation.Msg == "" {
+		return errors.New("No violation.msg field found")
+	}
 	return nil
 }
 
@@ -38,7 +47,7 @@ func parseExpression(expression *rego.ExpressionValue) ([]*expressionVal, error)
 		return nil, err
 	}
 	// Validate fields
-	for _,expr := range ret {
+	for _, expr := range ret {
 		if validationError := validateExpression(expr); validationError != nil {
 			return nil, validationError
 		}
@@ -65,7 +74,7 @@ func convertToViolations(expression *rego.ExpressionValue) ([]*validator.Violati
 			}
 			violationToAdd.Metadata = convertedMetadata
 		}
-		violations = append(violations,violationToAdd)
+		violations = append(violations, violationToAdd)
 	}
 	return violations, nil
 }

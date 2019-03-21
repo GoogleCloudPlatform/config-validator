@@ -16,12 +16,13 @@ package gcv
 
 import (
 	"context"
-	"github.com/golang/protobuf/jsonpb"
 	"io/ioutil"
 	"os"
-	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
 	"path/filepath"
 	"testing"
+
+	"github.com/golang/protobuf/jsonpb"
+	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
 )
 
 const (
@@ -70,7 +71,7 @@ func TestAudit(t *testing.T) {
 	}
 	expectedResourceName := getStorageAssetNoLogging().Name
 	foundExpectedViolation := false
-	for _,violation := range result.Violations {
+	for _, violation := range result.Violations {
 		if violation.Resource == expectedResourceName {
 			foundExpectedViolation = true
 			break

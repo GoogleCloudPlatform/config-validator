@@ -17,6 +17,7 @@ package cf
 import (
 	"context"
 	"fmt"
+
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage/inmem"
@@ -71,7 +72,7 @@ func New(dependencyCode map[string]string) (*ConstraintFramework, error) {
 
 // AddData adds GCP resource metadata to be audited later.
 func (cf *ConstraintFramework) AddData(objJSON interface{}) {
-	cf.userInputData = append(cf.userInputData,objJSON)
+	cf.userInputData = append(cf.userInputData, objJSON)
 }
 
 // getTemplatePkgPath constructs a package prefix based off the generated type.
@@ -188,9 +189,9 @@ func (cf *ConstraintFramework) buildRegoObject() (*rego.Rego, error) {
 		rego.Query(regoLibraryRule),
 		rego.Compiler(compiler),
 		rego.Store(inmem.NewFromObject(map[string]interface{}{
-				inputDataPrefix:      cf.userInputData,
-				constraintPathPrefix: constraints,
-			})))
+			inputDataPrefix:      cf.userInputData,
+			constraintPathPrefix: constraints,
+		})))
 	return r, nil
 }
 
@@ -216,7 +217,7 @@ func getAuditExpressionResult(ctx context.Context, r *rego.Rego) (*rego.Expressi
 
 // Audit checks the GCP resource metadata that has been added via AddData to determine if any of the constraint is violated.
 func (cf *ConstraintFramework) Audit(ctx context.Context) (*validator.AuditResponse, error) {
-	r , err := cf.buildRegoObject()
+	r, err := cf.buildRegoObject()
 	if err != nil {
 		return nil, err
 	}

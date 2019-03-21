@@ -280,7 +280,7 @@ audit[result] {
 						Resource:   "some_asset_name",
 						Message:    "tmp example issue",
 						Metadata: mustConvertToProtoVal(map[string]interface{}{
-							"some": "random",
+							"some":   "random",
 							"things": "4u",
 						}),
 					},
@@ -305,7 +305,7 @@ audit[result] {
 						Resource:   "some_asset_name",
 						Message:    "tmp example issue",
 						Metadata: mustConvertToProtoVal(map[string]interface{}{
-							"some": map[string]interface{} {
+							"some": map[string]interface{}{
 								"really": "random",
 							},
 							"things": "4u",
