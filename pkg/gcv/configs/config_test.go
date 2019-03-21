@@ -213,7 +213,7 @@ spec:
       names:
         kind: GCPExternalIpAccessConstraint
   targets:
-   admission.kubernetes.gatekeeper.sh:
+   validation.gcp.forsetisecurity.org:
       rego: |
             # Some random
             # rego code
@@ -232,7 +232,7 @@ spec:
       names:
         kind: GCPExternalIpAccessConstraint
   targets:
-   admission.kubernetes.gatekeeper.sh:
+   validation.gcp.forsetisecurity.org:
       rego: |
             # Some random
             # rego code
@@ -251,7 +251,7 @@ spec:
       names:
         kind: GCPExternalIpAccessConstraint
   targets:
-   admission.kubernetes.gatekeeper.sh:
+   validation.gcp.forsetisecurity.org:
       rego: |
             # Some random
             # rego code
@@ -289,7 +289,7 @@ spec:
       names:
         kind_doesnt_exist': GCPExternalIpAccessConstraint # Error here
   targets:
-   admission.kubernetes.gatekeeper.sh:
+   validation.gcp.forsetisecurity.org:
       rego: |
             # Some random
             # rego code
@@ -308,7 +308,7 @@ spec:
       names:
         kind: GCPExternalIpAccessConstraint
   targets:
-   admission.kubernetes.gatekeeper.sh:
+   validation.gcp.forsetisecurity.org:
       rego: |
             # Some random
             # rego code
@@ -333,7 +333,7 @@ spec:
       names:
         kind: GCPExternalIpAccessConstraint
   targets:
-   admission.kubernetes.gatekeeper.sh:
+   validation.gcp.forsetisecurity.org:
       rego: |
             # Some random
             # rego code

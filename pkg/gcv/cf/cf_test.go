@@ -490,7 +490,7 @@ spec:
       names:
         kind: %s # name inserted here
   targets:
-   admission.kubernetes.gatekeeper.sh:
+   validation.gcp.forsetisecurity.org:
       rego: |
             # Some random
             # rego code`, generatedKind))

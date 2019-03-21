@@ -64,10 +64,7 @@ type Constraint struct {
 const (
 	validTemplateGroup   = "gatekeeper.sh/v1"
 	validConstraintGroup = "constraints.gatekeeper.sh/v1"
-	// TODO(corb): This target is currently being renamed. Right now the state reflects the config in the repo.
-	//  admission.kubernetes.gatekeeper.sh is reserved for k8, we need to have a new one for GCP
-	//  This will also require renaming field in the template yaml files when we agree on a name
-	expectedTarget = "admission.kubernetes.gatekeeper.sh"
+	expectedTarget       = "validation.gcp.forsetisecurity.org"
 )
 
 // AsInterface returns the the config data as a structured golang object. This uses json.Unmarshal to create this object.
