@@ -16,7 +16,6 @@
 package configs
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/ghodss/yaml"
 	"os"
@@ -67,17 +66,12 @@ const (
 	expectedTarget       = "validation.gcp.forsetisecurity.org"
 )
 
-// AsInterface returns the the config data as a structured golang object. This uses json.Unmarshal to create this object.
+// AsInterface returns the the config data as a structured golang object. This uses yaml.Unmarshal to create this object.
 func (c *UnclassifiedConfig) AsInterface() (interface{}, error) {
-	// Since the file is valid yaml, convert to proper json to allow using json.Unmarshal
-	j, err := yaml.YAMLToJSON([]byte(c.RawFile))
-	if err != nil {
-		return nil, errors.Wrap(err, "converting to YAML")
-	}
-	// Use json.Unmarshal to create a proper golang object that maintains the same structure
+	// Use yaml.Unmarshal to create a proper golang object that maintains the same structure
 	var f interface{}
-	if err := json.Unmarshal(j, &f); err != nil {
-		return nil, errors.Wrap(err, "converting from json")
+	if err := yaml.Unmarshal([]byte(c.RawFile), &f); err != nil {
+		return nil, errors.Wrap(err, "converting from yaml")
 	}
 	return f, nil
 }
