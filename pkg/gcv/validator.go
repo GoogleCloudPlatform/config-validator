@@ -19,12 +19,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io/ioutil"
+
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"io/ioutil"
 	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
 	"partner-code.googlesource.com/gcv/gcv/pkg/gcv/cf"
 	"partner-code.googlesource.com/gcv/gcv/pkg/gcv/configs"
@@ -178,6 +179,7 @@ func NewValidator(options ...Option) (*Validator, error) {
 func (v *Validator) AddData(request *validator.AddDataRequest) error {
 	m := &jsonpb.Marshaler{}
 	for i, asset := range request.Assets {
+		cleanProtoValue(asset.Resource)
 		glog.V(logRequestsVerboseLevel).Infof("converting asset to golang interface: %v", asset)
 		buf := new(bytes.Buffer)
 		if err := m.Marshal(buf, asset); err != nil {
