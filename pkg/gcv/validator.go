@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gcv provides a library and a RPC service for Google Config Validation.
+// Package gcv provides a library and a RPC service for Forseti Config Validator.
 package gcv
 
 import (
