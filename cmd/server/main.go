@@ -76,8 +76,7 @@ func main() {
 		log.Fatalf("Failed to load server %v", err)
 	}
 	validator.RegisterValidatorServer(grpcServer, serverImpl)
-	err = grpcServer.Serve(lis)
-	if err != nil {
+	if err := grpcServer.Serve(lis); err != nil {
 		glog.Fatalf("RPC server ungracefully stopped: %v", err)
 	}
 }

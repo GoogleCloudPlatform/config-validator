@@ -39,33 +39,29 @@ func TestCreateValidatorWithNoOptions(t *testing.T) {
 }
 
 func TestDefaultTestDataCreatesValidator(t *testing.T) {
-	_, err := NewValidator(generateDefaultTestOptions())
+	_, err := NewValidator(testOptions())
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
 }
 
 func TestAddData(t *testing.T) {
-	testCases := []struct{
+	testCases := []struct {
 		description string
-		shouldFail bool
-		request *validator.AddDataRequest
+		request     *validator.AddDataRequest
 	}{
 		{
 			description: "empty request",
-			shouldFail: false,
-			request: &validator.AddDataRequest{},
+			request:     &validator.AddDataRequest{},
 		},
 		{
 			description: "empty array",
-			shouldFail: false,
 			request: &validator.AddDataRequest{
 				Assets: []*validator.Asset{},
 			},
 		},
 		{
 			description: "empty entry in array",
-			shouldFail: false,
 			request: &validator.AddDataRequest{
 				Assets: []*validator.Asset{
 					{},
@@ -74,12 +70,11 @@ func TestAddData(t *testing.T) {
 		},
 		{
 			description: "just string fields",
-			shouldFail: false,
 			request: &validator.AddDataRequest{
 				Assets: []*validator.Asset{
 					{
-						Name:"Some Name",
-						AssetType:"some type",
+						Name:         "Some Name",
+						AssetType:    "some type",
 						AncestryPath: "some path",
 					},
 				},
@@ -87,28 +82,26 @@ func TestAddData(t *testing.T) {
 		},
 		{
 			description: "nil resource",
-			shouldFail: false,
 			request: &validator.AddDataRequest{
 				Assets: []*validator.Asset{
 					{
-						Name:"Some Name",
-						AssetType:"some type",
+						Name:         "Some Name",
+						AssetType:    "some type",
 						AncestryPath: "some path",
-						Resource: nil,
+						Resource:     nil,
 					},
 				},
 			},
 		},
 		{
 			description: "empty resource struct",
-			shouldFail: false,
 			request: &validator.AddDataRequest{
 				Assets: []*validator.Asset{
 					{
-						Name:"Some Name",
-						AssetType:"some type",
+						Name:         "Some Name",
+						AssetType:    "some type",
 						AncestryPath: "some path",
-						Resource: &structpb.Value{},
+						Resource:     &structpb.Value{},
 					},
 				},
 			},
@@ -117,13 +110,13 @@ func TestAddData(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			v, err := NewValidator(generateDefaultTestOptions())
+			v, err := NewValidator(testOptions())
 			if err != nil {
 				t.Fatal("unexpected error", err)
 			}
 			err = v.AddData(tc.request)
-			if err != nil != tc.shouldFail {
-				t.Fatalf("unexpected error state, expected %v got %v", tc.shouldFail, err)
+			if err != nil {
+				t.Fatalf("got %v, want nil", err)
 			}
 		})
 	}
@@ -131,15 +124,15 @@ func TestAddData(t *testing.T) {
 }
 
 func TestAudit(t *testing.T) {
-	v, err := NewValidator(generateDefaultTestOptions())
+	v, err := NewValidator(testOptions())
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
 	err = v.AddData(&validator.AddDataRequest{
 		Assets: []*validator.Asset{
-			getStorageAssetNoLogging(),
-			getStorageAssetWithLogging(),
-			getStorageAssetWithSecureLogging(),
+			storageAssetNoLogging(),
+			storageAssetWithLogging(),
+			storageAssetWithSecureLogging(),
 		},
 	})
 	if err != nil {
@@ -154,7 +147,7 @@ func TestAudit(t *testing.T) {
 	if len(result.Violations) == 0 {
 		t.Fatal("unexpected violations received none")
 	}
-	expectedResourceName := getStorageAssetNoLogging().Name
+	expectedResourceName := storageAssetNoLogging().Name
 	foundExpectedViolation := false
 	for _, violation := range result.Violations {
 		if violation.Resource == expectedResourceName {
@@ -167,64 +160,61 @@ func TestAudit(t *testing.T) {
 	}
 }
 
-func TestCreate_NoDir(t *testing.T) {
+func TestCreateNoDir(t *testing.T) {
 	emptyFolder, err := ioutil.TempDir("", "emptyPolicyDir")
-	defer cleanupTmpDir(t, emptyFolder)
+	defer cleanup(t, emptyFolder)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = NewValidator(
+	if _, err = NewValidator(
 		PolicyPath(filepath.Join(emptyFolder, "someDirThatDoesntExist")),
 		PolicyLibraryDir(filepath.Join(emptyFolder, "someDirThatDoesntExist")),
-	)
-	if err == nil {
+	); err == nil {
 		t.Fatal("expected a file system error but got no error")
 	}
 }
 
-func TestCreate_NoReadAccess(t *testing.T) {
+func TestCreateNoReadAccess(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "InvalidAccessTest")
 	if err != nil {
 		t.Fatal("creating temp dir:", err)
 	}
-	defer cleanupTmpDir(t, tmpDir)
+	defer cleanup(t, tmpDir)
 	// create dir with restrictive permissions
 	if err := os.MkdirAll(filepath.Join(tmpDir, "invalidDir"), 0000); err != nil {
 		t.Fatal("creating temp dir sub dir:", err)
 	}
 
-	_, err = NewValidator(
+	if _, err = NewValidator(
 		PolicyPath(tmpDir),
 		PolicyLibraryDir(tmpDir),
-	)
-	if err == nil {
+	); err == nil {
 		t.Fatal("expected a file system error but got no error")
 	}
 }
 
-func TestCreate_EmptyDir(t *testing.T) {
+func TestCreateEmptyDir(t *testing.T) {
 	policyDir, err := ioutil.TempDir("", "emptyPolicyDir")
-	defer cleanupTmpDir(t, policyDir)
+	defer cleanup(t, policyDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	policyLibDir, err := ioutil.TempDir("", "emptyPolicyDir")
-	defer cleanupTmpDir(t, policyLibDir)
+	defer cleanup(t, policyLibDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = NewValidator(
+	if _, err = NewValidator(
 		PolicyPath(policyDir),
 		PolicyLibraryDir(policyLibDir),
-	)
-	if err != nil {
+	); err != nil {
 		t.Fatal("empty dir not expected to provide error: ", err)
 	}
 }
 
-func cleanupTmpDir(t *testing.T, dir string) {
+func cleanup(t *testing.T, dir string) {
 	if err := os.RemoveAll(dir); err != nil {
 		t.Log(err)
 	}
@@ -242,9 +232,9 @@ func groupOptions(options ...Option) Option {
 	}
 }
 
-// generateDefaultTestOptions provides a set of default options that allows the successful creation
+// testOptions provides a set of default options that allows the successful creation
 // of a validator.
-func generateDefaultTestOptions() Option {
+func testOptions() Option {
 	// Add default options to this list
 	return groupOptions(
 		PolicyPath(localPolicyDir),
@@ -252,7 +242,7 @@ func generateDefaultTestOptions() Option {
 	)
 }
 
-func getStorageAssetNoLogging() *validator.Asset {
+func storageAssetNoLogging() *validator.Asset {
 	return mustMakeAsset(`{
   "name": "//storage.googleapis.com/my-storage-bucket",
   "asset_type": "google.cloud.storage.Bucket",
@@ -294,7 +284,7 @@ func getStorageAssetNoLogging() *validator.Asset {
   }
 }`)
 }
-func getStorageAssetWithLogging() *validator.Asset {
+func storageAssetWithLogging() *validator.Asset {
 	return mustMakeAsset(`{
   "name": "//storage.googleapis.com/my-storage-bucket-with-logging",
   "asset_type": "google.cloud.storage.Bucket",
@@ -339,7 +329,7 @@ func getStorageAssetWithLogging() *validator.Asset {
   }
 }`)
 }
-func getStorageAssetWithSecureLogging() *validator.Asset {
+func storageAssetWithSecureLogging() *validator.Asset {
 	return mustMakeAsset(`{
   "name": "//storage.googleapis.com/my-storage-bucket-with-secure-logging",
   "asset_type": "google.cloud.storage.Bucket",

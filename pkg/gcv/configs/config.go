@@ -76,11 +76,11 @@ func (c *UnclassifiedConfig) AsInterface() (interface{}, error) {
 	return f, nil
 }
 
-// getAsConstraint attempts to convert to constraint
+// asConstraint attempts to convert to constraint
 // Returns:
 //   *Constraint: only set if valid constraint
 //   bool: (always set) if this is a constraint
-func getAsConstraint(data *UnclassifiedConfig) (*Constraint, bool) {
+func asConstraint(data *UnclassifiedConfig) (*Constraint, bool) {
 	// There is no validation matching this constraint to the template here that happens after
 	// basic parsing has happened when we have more context.
 	if data.Group != validConstraintGroup {
@@ -94,11 +94,11 @@ func getAsConstraint(data *UnclassifiedConfig) (*Constraint, bool) {
 	}, true
 }
 
-// getAsConstraintTemplate attempts to convert to template
+// asConstraintTemplate attempts to convert to template
 // Returns:
 //   *ConstraintTemplate: only set if valid template
 //   bool: (always set) if this is a template
-func getAsConstraintTemplate(data *UnclassifiedConfig) (*ConstraintTemplate, bool) {
+func asConstraintTemplate(data *UnclassifiedConfig) (*ConstraintTemplate, bool) {
 	if data.Group != validTemplateGroup {
 		return nil, false // group is not a valid group for templates
 	}
@@ -209,11 +209,11 @@ func CategorizeYAMLFile(data []byte, dataSource string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	if template, valid := getAsConstraintTemplate(unclassified); valid {
+	if template, valid := asConstraintTemplate(unclassified); valid {
 		// Successfully converted as a template
 		return template, nil
 	}
-	if constraint, valid := getAsConstraint(unclassified); valid {
+	if constraint, valid := asConstraint(unclassified); valid {
 		// Successfully converted as a constraint
 		return constraint, nil
 	}

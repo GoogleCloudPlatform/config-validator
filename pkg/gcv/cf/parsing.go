@@ -22,19 +22,18 @@ type expressionVal struct {
 }
 
 func validateExpression(expr *expressionVal) error {
-	if expr.Asset == "" {
+	switch {
+	case expr.Asset == "":
 		return errors.New("No asset field found")
-	}
-	if expr.Constraint == "" {
+	case expr.Constraint == "":
 		return errors.New("No constraint field found")
-	}
-	if expr.Violation == nil {
+	case expr.Violation == nil:
 		return errors.New("No violation field found")
-	}
-	if expr.Violation.Msg == "" {
+	case expr.Violation.Msg == "":
 		return errors.New("No violation.msg field found")
+	default:
+		return nil
 	}
-	return nil
 }
 
 func parseExpression(expression *rego.ExpressionValue) ([]*expressionVal, error) {

@@ -28,28 +28,26 @@ import (
 	"partner-code.googlesource.com/gcv/gcv/pkg/gcv/configs"
 )
 
-func TestCMF_TemplateSetup(t *testing.T) {
+func TestCMFTemplateSetup(t *testing.T) {
 	testCasts := []struct {
-		description         string
-		templates           []*configs.ConstraintTemplate
-		expectTemplateError bool
+		description string
+		templates   []*configs.ConstraintTemplate
+		wantErr     bool
 	}{
 		{
-			description:         "no templates",
-			expectTemplateError: false,
-			templates:           []*configs.ConstraintTemplate{},
+			description: "no templates",
+			templates:   []*configs.ConstraintTemplate{},
 		},
 		{
-			description:         "colliding types",
-			expectTemplateError: true,
+			description: "colliding types",
+			wantErr:     true,
 			templates: []*configs.ConstraintTemplate{
 				makeTestTemplate("template_1"),
 				makeTestTemplate("template_1"),
 			},
 		},
 		{
-			description:         "dummy helper method WAI",
-			expectTemplateError: false,
+			description: "dummy helper method WAI",
 			templates: []*configs.ConstraintTemplate{
 				makeTestTemplate("template_1"),
 			},
@@ -57,7 +55,7 @@ func TestCMF_TemplateSetup(t *testing.T) {
 	}
 	for _, tc := range testCasts {
 		t.Run(tc.description, func(t *testing.T) {
-			cf, err := New(getRegoDependencies())
+			cf, err := New(regoDependencies())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -69,37 +67,35 @@ func TestCMF_TemplateSetup(t *testing.T) {
 				}
 			}
 
-			if len(errs) == 0 && tc.expectTemplateError {
-				t.Errorf("want errors %v got errors %v", tc.expectTemplateError, errs)
+			if len(errs) == 0 && tc.wantErr {
+				t.Errorf("want errors %v got errors %v", tc.wantErr, errs)
 			}
 		})
 	}
 }
 
-func TestCMF_ConstraintSetup(t *testing.T) {
+func TestCMFConstraintSetup(t *testing.T) {
 	testCasts := []struct {
-		description           string
-		templates             []*configs.ConstraintTemplate
-		constraints           []*configs.Constraint
-		expectConstraintError bool
+		description string
+		templates   []*configs.ConstraintTemplate
+		constraints []*configs.Constraint
+		wantErr     bool
 	}{
 		{
-			description:           "no templates or constraints",
-			expectConstraintError: false,
-			templates:             []*configs.ConstraintTemplate{},
-			constraints:           []*configs.Constraint{},
+			description: "no templates or constraints",
+			templates:   []*configs.ConstraintTemplate{},
+			constraints: []*configs.Constraint{},
 		},
 		{
-			description:           "no constraints",
-			expectConstraintError: false,
+			description: "no constraints",
 			templates: []*configs.ConstraintTemplate{
 				makeTestTemplate("random_kind"),
 			},
 			constraints: []*configs.Constraint{},
 		},
 		{
-			description:           "constraint kind doesn't match templates",
-			expectConstraintError: true,
+			description: "constraint kind doesn't match templates",
+			wantErr:     true,
 			templates: []*configs.ConstraintTemplate{
 				makeTestTemplate("the_template_kind"),
 			},
@@ -108,8 +104,7 @@ func TestCMF_ConstraintSetup(t *testing.T) {
 			},
 		},
 		{
-			description:           "valid colliding constraint kinds, unique metadata names",
-			expectConstraintError: false,
+			description: "valid colliding constraint kinds, unique metadata names",
 			templates: []*configs.ConstraintTemplate{
 				makeTestTemplate("the_best_kind"),
 			},
@@ -119,8 +114,7 @@ func TestCMF_ConstraintSetup(t *testing.T) {
 			},
 		},
 		{
-			description:           "valid colliding constraint metadata names with unique kinds",
-			expectConstraintError: false,
+			description: "valid colliding constraint metadata names with unique kinds",
 			templates: []*configs.ConstraintTemplate{
 				makeTestTemplate("template_1"),
 				makeTestTemplate("template_2"),
@@ -131,8 +125,8 @@ func TestCMF_ConstraintSetup(t *testing.T) {
 			},
 		},
 		{
-			description:           "metadata name collision",
-			expectConstraintError: true,
+			description: "metadata name collision",
+			wantErr:     true,
 			templates: []*configs.ConstraintTemplate{
 				makeTestTemplate("template_1"),
 			},
@@ -142,8 +136,7 @@ func TestCMF_ConstraintSetup(t *testing.T) {
 			},
 		},
 		{
-			description:           "template without constraint",
-			expectConstraintError: false,
+			description: "template without constraint",
 			templates: []*configs.ConstraintTemplate{
 				makeTestTemplate("template_1"),
 				makeTestTemplate("UNMATCHED_template"),
@@ -155,7 +148,7 @@ func TestCMF_ConstraintSetup(t *testing.T) {
 	}
 	for _, tc := range testCasts {
 		t.Run(tc.description, func(t *testing.T) {
-			cf, err := New(getRegoDependencies())
+			cf, err := New(regoDependencies())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -173,25 +166,25 @@ func TestCMF_ConstraintSetup(t *testing.T) {
 				}
 			}
 
-			if len(errs) == 0 && tc.expectConstraintError {
-				t.Errorf("want errors %v got errors %v", tc.expectConstraintError, errs)
+			if len(errs) == 0 && tc.wantErr {
+				t.Errorf("want errors %v got errors %v", tc.wantErr, errs)
 			}
 		})
 	}
 }
 
-func TestCF_New_CompilerError(t *testing.T) {
+func TestCFNew_CompilerError(t *testing.T) {
 	_, err := New(map[string]string{"invalid_rego": "this isn't valid rego"})
 	if err == nil {
 		t.Fatal("Expected error, got none")
 	}
 }
 
-func TestCF_AuditParsing_WithMockAudit(t *testing.T) {
+func TestCFAuditParsing_WithMockAudit(t *testing.T) {
 	testCases := []struct {
-		description    string
-		auditRego      string
-		expectedResult *validator.AuditResponse
+		description string
+		auditRego   string
+		want        *validator.AuditResponse
 	}{
 		{
 			description: "no  metadata",
@@ -206,7 +199,7 @@ audit[result] {
   }
 }
 `,
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{
 					{
 						Constraint: "example_constraint_metadata_name_name",
@@ -230,7 +223,7 @@ audit[result] {
   }
 }
 `,
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{
 					{
 						Constraint: "example_constraint_metadata_name_name",
@@ -252,7 +245,7 @@ audit[result] {
   }
 }
 `,
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{
 					{
 						Constraint: "example_constraint_metadata_name_name",
@@ -277,7 +270,7 @@ audit[result] {
   }
 }
 `,
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{
 					{
 						Constraint: "example_constraint_metadata_name_name",
@@ -309,7 +302,7 @@ audit[result] {
   }
 }
 `,
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{
 					{
 						Constraint: "example_1",
@@ -340,7 +333,7 @@ audit[result] {
   }
 }
 `,
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{},
 			},
 		},
@@ -358,27 +351,27 @@ audit[result] {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(sortViolations(tc.expectedResult), sortViolations(result)); diff != "" {
+			if diff := cmp.Diff(sortViolations(tc.want), sortViolations(result)); diff != "" {
 				t.Errorf("unexpected result (-want +got) %v", diff)
 			}
 		})
 	}
 }
 
-func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
+func TestCFAuditParsing_WithRealAudit(t *testing.T) {
 	testCases := []struct {
-		description    string
-		templates      []*configs.ConstraintTemplate
-		constraints    []*configs.Constraint
-		data           []interface{}
-		expectedResult *validator.AuditResponse
+		description string
+		templates   []*configs.ConstraintTemplate
+		constraints []*configs.Constraint
+		data        []interface{}
+		want        *validator.AuditResponse
 	}{
 		{
 			description: "everything empty",
 			templates:   []*configs.ConstraintTemplate{},
 			constraints: []*configs.Constraint{},
 			data:        []interface{}{},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{},
 			},
 		},
@@ -389,7 +382,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 			data: []interface{}{
 				makeTestData("nothing really", "matters"),
 			},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{},
 			},
 		},
@@ -402,7 +395,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 			data: []interface{}{
 				makeTestData("nothing really", "matters"),
 			},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{},
 			},
 		},
@@ -417,7 +410,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 			data: []interface{}{
 				makeTestData("my_data", "legit"),
 			},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{},
 			},
 		},
@@ -432,7 +425,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 			data: []interface{}{
 				makeTestData("my_data", "invalid"),
 			},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{
 					{
 						Constraint: "constraint",
@@ -454,7 +447,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 				makeTestData("my_data_1", "legit"),
 				makeTestData("my_data_2", "legit"),
 			},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{},
 			},
 		},
@@ -470,7 +463,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 				makeTestData("my_data_1", "legit"),
 				makeTestData("my_data_2", "invalid"),
 			},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{
 					{
 						Constraint: "constraint",
@@ -492,7 +485,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 				makeTestData("my_data_1", "invalid"),
 				makeTestData("my_data_2", "invalid"),
 			},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{
 					{
 						Constraint: "constraint",
@@ -520,7 +513,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 				makeTestData("my_data_1", "legit"),
 				makeTestData("my_data_2", "legit"),
 			},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{},
 			},
 		},
@@ -536,7 +529,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 			data: []interface{}{
 				makeTestData("my_asset", "legit"),
 			},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{
 					{
 						Constraint: "constraint_fail",
@@ -558,7 +551,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 			data: []interface{}{
 				makeTestData("my_asset", "legit"),
 			},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{
 					{
 						Constraint: "constraint_fail_1",
@@ -586,7 +579,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 				makeTestData("my_asset_1", "pass_1"),
 				makeTestData("my_asset_2", "pass_2"),
 			},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{
 					{
 						Constraint: "constraint_2",
@@ -614,7 +607,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 				makeTestData("my_asset_1", "invalid"),
 				makeTestData("my_asset_2", "invalid"),
 			},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{
 					{
 						Constraint: "constraint_1",
@@ -655,7 +648,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 				makeTestData("my_data_1", "legit"),
 				makeTestData("my_data_2", "legit"),
 			},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{},
 			},
 		},
@@ -675,7 +668,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 				makeTestData("my_data_1", "legit"),
 				makeTestData("my_data_2", "legit"),
 			},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{
 					{
 						Constraint: "constraint_b1",
@@ -716,7 +709,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 				makeTestData("my_data_1", "sad_face"),
 				makeTestData("my_data_2", "sad_face"),
 			},
-			expectedResult: &validator.AuditResponse{
+			want: &validator.AuditResponse{
 				Violations: []*validator.Violation{
 					{
 						Constraint: "constraint_a1",
@@ -763,7 +756,7 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 		},
 	}
 
-	auditCode := getRealAuditCode()
+	auditCode := realAuditCode()
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
@@ -792,14 +785,14 @@ func TestCF_AuditParsing_WithRealAudit(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(sortViolations(tc.expectedResult), sortViolations(result)); diff != "" {
+			if diff := cmp.Diff(sortViolations(tc.want), sortViolations(result)); diff != "" {
 				t.Errorf("unexpected result (-want +got) %v", diff)
 			}
 		})
 	}
 }
 
-func TestCF_Audit_MalformedOutput(t *testing.T) {
+func TestCFAudit_MalformedOutput(t *testing.T) {
 	testCases := []struct {
 		description string
 		auditRego   string
@@ -867,8 +860,7 @@ NOT_audit[result] {
 			if err != nil {
 				t.Fatal(err)
 			}
-			result, err := cf.Audit(context.Background())
-			if err == nil {
+			if result, err := cf.Audit(context.Background()); err == nil {
 				t.Fatalf("error expected, but non thrown, instead provided result %v", result)
 			}
 		})
@@ -885,7 +877,7 @@ func sortViolations(in *validator.AuditResponse) *validator.AuditResponse {
 	return in
 }
 
-func getRegoDependencies() map[string]string {
+func regoDependencies() map[string]string {
 	return map[string]string{}
 }
 
@@ -931,7 +923,7 @@ spec:
    validation.gcp.forsetisecurity.org:
       rego: |
             package templates.gcp.%s
-            
+
             deny[{
             	"msg": message,
             }] {
@@ -945,7 +937,7 @@ spec:
 `, kind, kind))
 }
 
-func getRealAuditCode() string {
+func realAuditCode() string {
 	auditFile, err := ioutil.ReadFile("../../../../policies/validator/lib/audit.rego")
 	if err != nil {
 		panic(err)

@@ -75,8 +75,8 @@ func (cf *ConstraintFramework) AddData(objJSON interface{}) {
 	cf.userInputData = append(cf.userInputData, objJSON)
 }
 
-// getTemplatePkgPath constructs a package prefix based off the generated type.
-func getTemplatePkgPath(t *configs.ConstraintTemplate) string {
+// templatePkgPath constructs a package prefix based off the generated type.
+func templatePkgPath(t *configs.ConstraintTemplate) string {
 	return fmt.Sprintf("templates.gcp%s", t.GeneratedKind)
 }
 
@@ -84,7 +84,7 @@ func getTemplatePkgPath(t *configs.ConstraintTemplate) string {
 func (cf *ConstraintFramework) validateTemplate(t *configs.ConstraintTemplate) error {
 	// validate rego code can be compiled
 	_, err := staticCompile(cf.dependencyCode, map[string]*configs.ConstraintTemplate{
-		getTemplatePkgPath(t): t,
+		templatePkgPath(t): t,
 	})
 	return err
 }
@@ -134,7 +134,7 @@ func staticCompile(dependencyCode map[string]string, templates map[string]*confi
 		regoCode[key] = depRego
 	}
 	for _, template := range templates {
-		key := getTemplatePkgPath(template)
+		key := templatePkgPath(template)
 		if _, exists := regoCode[key]; exists {
 			return nil, fmt.Errorf("template overrides library package @ key %s", key)
 		}
@@ -195,7 +195,7 @@ func (cf *ConstraintFramework) buildRegoObject() (*rego.Rego, error) {
 	return r, nil
 }
 
-func getAuditExpressionResult(ctx context.Context, r *rego.Rego) (*rego.ExpressionValue, error) {
+func auditExpressionResult(ctx context.Context, r *rego.Rego) (*rego.ExpressionValue, error) {
 	rs, err := r.Eval(ctx)
 	if err != nil {
 		return nil, err
@@ -222,7 +222,7 @@ func (cf *ConstraintFramework) Audit(ctx context.Context) (*validator.AuditRespo
 		return nil, err
 	}
 
-	expressionVal, err := getAuditExpressionResult(ctx, r)
+	expressionVal, err := auditExpressionResult(ctx, r)
 	if err != nil {
 		return nil, err
 	}

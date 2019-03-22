@@ -101,7 +101,7 @@ func TestListYAMLFiles(t *testing.T) {
 			if err != nil {
 				t.Fatal("creating temp dir:", err)
 			}
-			defer cleanupTmpDir(t, tmpDir)
+			defer cleanup(t, tmpDir)
 			// create files and expected list
 			var expectedFiles []string
 			for _, fileData := range tc.fileState {
@@ -119,8 +119,11 @@ func TestListYAMLFiles(t *testing.T) {
 
 			scannedFiles, err := tc.listFunction(tmpDir)
 
-			diff := cmp.Diff(expectedFiles, scannedFiles, cmpopts.SortSlices(func(a, b string) bool { return strings.Compare(a, b) > 0 }))
-			if diff != "" {
+			if diff := cmp.Diff(
+				expectedFiles,
+				scannedFiles,
+				cmpopts.SortSlices(func(a, b string) bool { return strings.Compare(a, b) > 0 }),
+			); diff != "" {
 				t.Errorf("unexpected file scan (-want +got) %v", diff)
 			}
 		})
@@ -142,11 +145,10 @@ func TestListFilesEmptyDir(t *testing.T) {
 			if err != nil {
 				t.Fatal("creating temp dir:", err)
 			}
-			defer cleanupTmpDir(t, tmpDir)
+			defer cleanup(t, tmpDir)
 			scannedFiles, err := tc.listFunction(tmpDir)
 
-			diff := cmp.Diff([]string{}, scannedFiles)
-			if diff != "" {
+			if diff := cmp.Diff([]string{}, scannedFiles); diff != "" {
 				t.Errorf("unexpected file scan (-want +got) %v", diff)
 			}
 		})
@@ -168,15 +170,13 @@ func TestListFilesInvalidDirPerms(t *testing.T) {
 			if err != nil {
 				t.Fatal("creating temp dir:", err)
 			}
-			defer cleanupTmpDir(t, tmpDir)
+			defer cleanup(t, tmpDir)
 			// create dir with restrictive permissions
 			if err := os.MkdirAll(filepath.Join(tmpDir, "invalidDir"), 0000); err != nil {
 				t.Fatal("creating temp dir sub dir:", err)
 			}
 
-			_, err = tc.listFunction(tmpDir)
-
-			if err == nil {
+			if _, err := tc.listFunction(tmpDir); err == nil {
 				t.Fatal("expected permission error, got none")
 			}
 		})
@@ -189,17 +189,17 @@ func TestCategorizeYAMLFile(t *testing.T) {
 		description string
 		data        string
 		expected    interface{}
-		errExpected bool
+		wantErr     bool
 	}{
 		{
 			description: "empty file",
 			data:        "",
-			errExpected: true,
+			wantErr:     true,
 		},
 		{
 			description: "invalid yaml",
 			data:        "dis ain't yaml!",
-			errExpected: true,
+			wantErr:     true,
 		},
 		{
 			description: "invalid template kind",
@@ -218,7 +218,7 @@ spec:
             # Some random
             # rego code
 `,
-			errExpected: true,
+			wantErr: true,
 		},
 		{
 			description: "invalid template api version",
@@ -237,7 +237,7 @@ spec:
             # Some random
             # rego code
 `,
-			errExpected: true,
+			wantErr: true,
 		},
 		{
 			description: "invalid template api version (using constraint kind)",
@@ -256,7 +256,7 @@ spec:
             # Some random
             # rego code
 `,
-			errExpected: true,
+			wantErr: true,
 		},
 		{
 			description: "invalid template invalid target",
@@ -275,7 +275,7 @@ spec:
             # Some random
             # rego code
 `,
-			errExpected: true,
+			wantErr: true,
 		},
 		{
 			description: "invalid template no generated kind",
@@ -294,7 +294,7 @@ spec:
             # Some random
             # rego code
 `,
-			errExpected: true,
+			wantErr: true,
 		},
 		{
 			description: "parse template",
@@ -347,7 +347,7 @@ kind: ConstraintTemplate # Error Here
 metadata:
   name: really_cool_constraint_metadata_name
 `,
-			errExpected: true,
+			wantErr: true,
 		},
 		{
 			description: "invalid constraint uses template api version",
@@ -356,7 +356,7 @@ kind: KindWillConnectWithTemplate
 metadata:
   name: really_cool_constraint_metadata_name
 `,
-			errExpected: true,
+			wantErr: true,
 		},
 		{
 			description: "invalid constraint uses invalid api version",
@@ -365,7 +365,7 @@ kind: KindWillConnectWithTemplate
 metadata:
   name: really_cool_constraint_metadata_name
 `,
-			errExpected: true,
+			wantErr: true,
 		},
 		{
 			description: "invalid constraint no kind",
@@ -373,14 +373,14 @@ metadata:
 metadata:
   name: really_cool_constraint_metadata_name
 `,
-			errExpected: true,
+			wantErr: true,
 		},
 		{
 			description: "invalid constraint no metadata",
 			data: `apiVersion: constraints.gatekeeper.sh/v1alpha1
 kind: KindWillConnectWithTemplate
 `,
-			errExpected: true,
+			wantErr: true,
 		},
 		{
 			description: "invalid constraint no api version",
@@ -388,7 +388,7 @@ kind: KindWillConnectWithTemplate
 metadata:
   name: really_cool_constraint_metadata_name
 `,
-			errExpected: true,
+			wantErr: true,
 		},
 		{
 			description: "parse constraint",
@@ -417,8 +417,8 @@ metadata:
 			if diff := cmp.Diff(tc.expected, result, cmpopts.IgnoreUnexported(simpleyaml.Yaml{})); diff != "" {
 				t.Errorf("%s (-want, +got) %v", tc.description, diff)
 			}
-			if err == nil && tc.errExpected {
-				t.Errorf("want err %v got %v", tc.errExpected, err)
+			if err == nil && tc.wantErr {
+				t.Errorf("want err %v, got %v", tc.wantErr, err)
 			}
 		})
 	}
@@ -434,7 +434,7 @@ func UnclassifiedConstraintBuilder(existingConfig *UnclassifiedConfig, validYaml
 	return existingConfig
 }
 
-func cleanupTmpDir(t *testing.T, dir string) {
+func cleanup(t *testing.T, dir string) {
 	if err := os.RemoveAll(dir); err != nil {
 		t.Log(err)
 	}
