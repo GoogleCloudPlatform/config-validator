@@ -16,13 +16,14 @@ package gcv
 
 import (
 	"context"
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/ptypes/struct"
 	"io/ioutil"
 	"os"
-	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
 	"path/filepath"
 	"testing"
+
+	"github.com/golang/protobuf/jsonpb"
+	"github.com/golang/protobuf/ptypes/struct"
+	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
 )
 
 const (

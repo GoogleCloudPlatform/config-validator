@@ -17,7 +17,6 @@ package cf
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"sort"
 	"testing"
@@ -28,7 +27,7 @@ import (
 	"partner-code.googlesource.com/gcv/gcv/pkg/gcv/configs"
 )
 
-func TestCMFTemplateSetup(t *testing.T) {
+func TestCFTemplateSetup(t *testing.T) {
 	testCasts := []struct {
 		description string
 		templates   []*configs.ConstraintTemplate
@@ -74,7 +73,37 @@ func TestCMFTemplateSetup(t *testing.T) {
 	}
 }
 
-func TestCMFConstraintSetup(t *testing.T) {
+func TestCFTemplateDependencyCodeCollision(t *testing.T) {
+	// The rego compiler takes a single map[string]string as input to compile, but there are 2 maps
+	// saved in the config validator.
+	// One for the dependency code (user provided) and one for the templates (generated).
+	// These map's have to be combined for the rego compiler, but they shouldn't have collisions on
+	// their keys.
+	//
+	// Attempt to make a key collision by using `templatePkgPath` (which is used in the map key for
+	// templates) when providing a user specified rego dependency
+
+	// Currently (Mar 2019): the dependency code is intended to be deprecated when template's inline
+	// any rego libraries. Once that happens this shouldn't be a concern any more.
+	template := makeTestTemplate("someKind")
+	randomRegoCode := makeTestTemplate("someOtherKind").Rego
+	cf, err := New(map[string]string{
+		templatePkgPath(template): randomRegoCode,
+	})
+	if err := cf.AddTemplate(template); err != nil {
+		t.Fatal(err)
+	}
+	compiler, err := cf.compile()
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantModuleCount := 3 // audit + dependency code + template
+	if len(compiler.Modules) != wantModuleCount {
+		t.Fatalf("unexpected number of compiled modules: got %d want %d", len(compiler.Modules), wantModuleCount)
+	}
+}
+
+func TestCFConstraintSetup(t *testing.T) {
 	testCasts := []struct {
 		description string
 		templates   []*configs.ConstraintTemplate
@@ -341,12 +370,11 @@ audit[result] {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			cf, err := New(map[string]string{
-				"mock_audit": tc.auditRego,
-			})
+			cf, err := New(map[string]string{})
 			if err != nil {
 				t.Fatal(err)
 			}
+			cf.auditScript = tc.auditRego
 			result, err := cf.Audit(context.Background())
 			if err != nil {
 				t.Fatal(err)
@@ -756,13 +784,9 @@ func TestCFAuditParsing_WithRealAudit(t *testing.T) {
 		},
 	}
 
-	auditCode := realAuditCode()
-
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			cf, err := New(map[string]string{
-				"audit": auditCode,
-			})
+			cf, err := New(map[string]string{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -854,12 +878,11 @@ NOT_audit[result] {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			cf, err := New(map[string]string{
-				"mock_audit": tc.auditRego,
-			})
+			cf, err := New(map[string]string{})
 			if err != nil {
 				t.Fatal(err)
 			}
+			cf.auditScript = tc.auditRego
 			if result, err := cf.Audit(context.Background()); err == nil {
 				t.Fatalf("error expected, but non thrown, instead provided result %v", result)
 			}
@@ -935,14 +958,6 @@ spec:
             }
             #ENDINLINE
 `, kind, kind))
-}
-
-func realAuditCode() string {
-	auditFile, err := ioutil.ReadFile("../../../../policies/validator/lib/audit.rego")
-	if err != nil {
-		panic(err)
-	}
-	return string(auditFile)
 }
 
 // mustMakeConstraint compiles a constraint or panics.

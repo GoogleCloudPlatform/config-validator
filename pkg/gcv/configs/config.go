@@ -17,11 +17,11 @@ package configs
 
 import (
 	"fmt"
-	"github.com/ghodss/yaml"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	"github.com/smallfish/simpleyaml"
 	"google.golang.org/grpc/codes"

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gobuffalo/packr/v2"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage/inmem"
@@ -36,23 +37,14 @@ type ConstraintFramework struct {
 	templates map[string]*configs.ConstraintTemplate
 	// map[kind]map[metadataname]constraint
 	constraints map[string]map[string]*configs.Constraint
+	auditScript string
 }
 
 const (
-	constraintTemplatesPackagePrefix    = "data.templates.gcp."
-	constraintDependenciesPackagePrefix = "data.constraint_dep."
-	inputDataPrefix                     = "inventory"
-	constraintPathPrefix                = "constraints"
-	regoLibraryRule                     = "data.validator.gcp.lib.audit"
+	inputDataPrefix      = "inventory"
+	constraintPathPrefix = "constraints"
+	regoLibraryRule      = "data.validator.gcp.lib.audit"
 )
-
-func prefixMaxKeys(prefix string, src map[string]string) map[string]string {
-	ret := make(map[string]string)
-	for key, val := range src {
-		ret[prefix+key] = val
-	}
-	return ret
-}
 
 // New creates a new ConstraintFramework
 // args:
@@ -66,7 +58,13 @@ func New(dependencyCode map[string]string) (*ConstraintFramework, error) {
 		return nil, status.Error(codes.InvalidArgument, compileErrors.Error())
 	}
 	// Adding this prefix will ensure there are no collisions with templates
-	cf.dependencyCode = prefixMaxKeys(constraintDependenciesPackagePrefix, dependencyCode)
+	cf.dependencyCode = dependencyCode
+	auditScript, err := packr.New("staticAssets", "./rego").FindString("audit.rego")
+	if err != nil {
+		return nil, status.Error(codes.Internal, "unable to load static asset audit.rego")
+	}
+	cf.auditScript = auditScript
+
 	return &cf, nil
 }
 
@@ -83,7 +81,7 @@ func templatePkgPath(t *configs.ConstraintTemplate) string {
 // validateTemplate verifies template compiles
 func (cf *ConstraintFramework) validateTemplate(t *configs.ConstraintTemplate) error {
 	// validate rego code can be compiled
-	_, err := staticCompile(cf.dependencyCode, map[string]*configs.ConstraintTemplate{
+	_, err := staticCompile(cf.auditScript, cf.dependencyCode, map[string]*configs.ConstraintTemplate{
 		templatePkgPath(t): t,
 	})
 	return err
@@ -127,24 +125,24 @@ func (cf *ConstraintFramework) AddConstraint(c *configs.Constraint) error {
 	return nil
 }
 
-func staticCompile(dependencyCode map[string]string, templates map[string]*configs.ConstraintTemplate) (*ast.Compiler, error) {
+func staticCompile(auditScript string, dependencyCode map[string]string, templates map[string]*configs.ConstraintTemplate) (*ast.Compiler, error) {
+	// Use different key prefixes to ensure no collisions when joining these maps
 	regoCode := make(map[string]string)
 
+	regoCode["core.dependencies.audit"] = auditScript
+
 	for key, depRego := range dependencyCode {
-		regoCode[key] = depRego
+		regoCode[fmt.Sprintf("dependencies.%s", key)] = depRego
 	}
 	for _, template := range templates {
 		key := templatePkgPath(template)
-		if _, exists := regoCode[key]; exists {
-			return nil, fmt.Errorf("template overrides library package @ key %s", key)
-		}
-		regoCode[key] = template.Rego
+		regoCode[fmt.Sprintf("templates.%s", key)] = template.Rego
 	}
 	return ast.CompileModules(regoCode)
 }
 
 func (cf *ConstraintFramework) compile() (*ast.Compiler, error) {
-	return staticCompile(cf.dependencyCode, cf.templates)
+	return staticCompile(cf.auditScript, cf.dependencyCode, cf.templates)
 }
 
 // Reset the user provided data, preserving the constraint and template information.
