@@ -57,7 +57,6 @@ func New(dependencyCode map[string]string) (*ConstraintFramework, error) {
 	if compileErrors != nil {
 		return nil, status.Error(codes.InvalidArgument, compileErrors.Error())
 	}
-	// Adding this prefix will ensure there are no collisions with templates
 	cf.dependencyCode = dependencyCode
 	auditScript, err := packr.New("staticAssets", "./rego").FindString("audit.rego")
 	if err != nil {

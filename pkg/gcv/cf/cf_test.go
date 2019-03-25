@@ -76,7 +76,9 @@ func TestCFTemplateSetup(t *testing.T) {
 func TestCFTemplateDependencyCodeCollision(t *testing.T) {
 	// The rego compiler takes a single map[string]string as input to compile, but there are 2 maps
 	// saved in the config validator.
-	// One for the dependency code (user provided) and one for the templates (generated).
+	// One for the dependency code (this map is provided as input to cf. So cf doesn't control the map keys)
+	// and one for the templates (cf creates this map so has full control over the map keys).
+	//
 	// These map's have to be combined for the rego compiler, but they shouldn't have collisions on
 	// their keys.
 	//
