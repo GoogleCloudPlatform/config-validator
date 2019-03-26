@@ -29,4 +29,4 @@ clean:
 reformat:
 	go fmt ./...
 
-.PHONY: test build release $(PLATFORMS) clean proto proto-builder
+.PHONY: test build release $(PLATFORMS) clean proto proto-builder reformat

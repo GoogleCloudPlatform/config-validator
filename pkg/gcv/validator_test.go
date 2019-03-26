@@ -16,13 +16,15 @@ package gcv
 
 import (
 	"context"
+	"github.com/google/go-cmp/cmp"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/ptypes/struct"
+	_struct "github.com/golang/protobuf/ptypes/struct"
+	"google.golang.org/genproto/googleapis/cloud/asset/v1"
 	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
 )
 
@@ -102,7 +104,7 @@ func TestAddData(t *testing.T) {
 						Name:         "Some Name",
 						AssetType:    "some type",
 						AncestryPath: "some path",
-						Resource:     &structpb.Value{},
+						Resource:     &asset.Resource{},
 					},
 				},
 			},
@@ -158,6 +160,74 @@ func TestAudit(t *testing.T) {
 	}
 	if !foundExpectedViolation {
 		t.Fatalf("unexpected result resource %s not found", expectedResourceName)
+	}
+}
+
+func TestConvertResourceToInterface(t *testing.T) {
+	testCases := []struct {
+		description string
+		input       *validator.Asset
+		want        interface{}
+	}{
+		{
+			description: "asset proto preserves underscores",
+			input: &validator.Asset{
+				Name:      "some name",
+				AssetType: "some type",
+			},
+			want: map[string]interface{}{
+				"name":       "some name",
+				"asset_type": "some type",
+			},
+		},
+		{
+			description: "resource proto preserves underscores",
+			input: &validator.Asset{
+				Name: "some asset name",
+				Resource: &asset.Resource{
+					DiscoveryName: "some really cool name",
+				},
+			},
+			want: map[string]interface{}{
+				"name": "some asset name",
+				"resource": map[string]interface{}{
+					"discovery_name": "some really cool name",
+				},
+			},
+		},
+		{
+			description: "resource proto's data preserves underscores",
+			input: &validator.Asset{
+				Name: "some asset name",
+				Resource: &asset.Resource{
+					Data: &_struct.Struct{
+						Fields: map[string]*_struct.Value{
+							"a_field_with_underscores": {Kind: &_struct.Value_BoolValue{BoolValue: true}},
+						},
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"name": "some asset name",
+				"resource": map[string]interface{}{
+					"data": map[string]interface{}{
+						"a_field_with_underscores": true,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			got, err := convertResourceViaJSONToInterface(tc.input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("%s (-want, +got) %v", tc.description, diff)
+			}
+		})
 	}
 }
 

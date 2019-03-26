@@ -177,23 +177,36 @@ func NewValidator(options ...Option) (*Validator, error) {
 
 // AddData adds GCP resource metadata to be audited later.
 func (v *Validator) AddData(request *validator.AddDataRequest) error {
-	m := &jsonpb.Marshaler{}
+
 	for i, asset := range request.Assets {
-		cleanProtoValue(asset.Resource)
-		glog.V(logRequestsVerboseLevel).Infof("converting asset to golang interface: %v", asset)
-		buf := new(bytes.Buffer)
-		if err := m.Marshal(buf, asset); err != nil {
-			return status.Error(codes.Internal, errors.Wrapf(err, "marshalling to json asset[%d] %s", i, asset.Name).Error())
-		}
-		var f interface{}
-		err := json.Unmarshal(buf.Bytes(), &f)
+		f, err := convertResourceViaJSONToInterface(asset)
 		if err != nil {
-			return status.Error(codes.Internal, errors.Wrapf(err, "converting from json asset[%d] %s", i, asset.Name).Error())
+			return status.Error(codes.Internal, errors.Wrapf(err, "index %d", i).Error())
 		}
 		v.constraintFramework.AddData(f)
 	}
 
 	return nil
+}
+
+func convertResourceViaJSONToInterface(asset *validator.Asset) (interface{}, error) {
+	m := &jsonpb.Marshaler{
+		OrigName: true,
+	}
+	if asset != nil && asset.Resource != nil {
+		cleanStructValue(asset.Resource.Data)
+	}
+	glog.V(logRequestsVerboseLevel).Infof("converting asset to golang interface: %v", asset)
+	var buf bytes.Buffer
+	if err := m.Marshal(&buf, asset); err != nil {
+		return nil, errors.Wrapf(err, "marshalling to json with asset %s: %v", asset.Name, asset)
+	}
+	var f interface{}
+	err := json.Unmarshal(buf.Bytes(), &f)
+	if err != nil {
+		return nil, errors.Wrapf(err, "marshalling from json with asset %s: %v", asset.Name, asset)
+	}
+	return f, nil
 }
 
 // Reset clears previously added data from the underlying query evaluation engine.

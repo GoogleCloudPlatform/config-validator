@@ -14,11 +14,7 @@ func cleanProtoValue(v *structpb.Value) {
 	switch t := v.Kind.(type) {
 	case *structpb.Value_NullValue, *structpb.Value_NumberValue, *structpb.Value_StringValue, *structpb.Value_BoolValue:
 	case *structpb.Value_StructValue:
-		if strct := t.StructValue; strct != nil {
-			for k := range strct.Fields {
-				cleanProtoValue(strct.Fields[k])
-			}
-		}
+		cleanStructValue(t.StructValue)
 	case *structpb.Value_ListValue:
 		if list := t.ListValue; list != nil {
 			for i := range list.Values {
@@ -27,5 +23,13 @@ func cleanProtoValue(v *structpb.Value) {
 		}
 	default: // No other kinds should be allowed (including nil).
 		v.Kind = &structpb.Value_NullValue{}
+	}
+}
+func cleanStructValue(strct *structpb.Struct) {
+	if strct == nil {
+		return
+	}
+	for k := range strct.Fields {
+		cleanProtoValue(strct.Fields[k])
 	}
 }

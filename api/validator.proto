@@ -19,25 +19,27 @@ package validator;
 
 import "google/iam/v1/policy.proto";
 import "google/protobuf/struct.proto";
+import "google/cloud/asset/v1/assets.proto";
 
 // Asset contains GCP resource metadata and additional metadata set on a resource, such as Cloud IAM policy.
-// Converting this proto to json should recreate the same structure as CAI.
+// WARNING: these field names are directly used to structure data passed to templates.
+// Changes in field names will result in changes to the data provided to the templates.
 message Asset {
   // GCP resource name as defined by Cloud Asset Inventory.
   // See https://cloud.google.com/resource-manager/docs/cloud-asset-inventory/resource-name-format for the format.
-  string name = 1 [json_name = "name"] ;
+  string name = 1;
   // Cloud Asset Inventory type (CAI API v1 format). Example: "sqladmin.googleapis.com/Instance" is the type of Cloud SQL instance.
   // This field has a redundant "asset" prefix to be consistent with Cloud Asset Inventory output.
   // See https://cloud.google.com/resource-manager/docs/cloud-asset-inventory/overview#supported_resource_types for the list of types.
-  string asset_type = 2 [json_name = "asset_type"] ;
+  string asset_type = 2;
   // Ancestral project/folder/org information in a path-like format.
   // For example, a GCP project that is nested under a folder may have the following path:
   // organization/9999/folder/8888/project/7777
-  string ancestry_path = 3 [json_name = "ancestry_path"] ;
-  // GCP resource metadata. The schema is type dependent.
-  google.protobuf.Value resource = 4 [json_name = "resource"] ;
+  string ancestry_path = 3;
+  // GCP resource metadata.
+  google.cloud.asset.v1.Resource resource = 4;
   // IAM policy associated with the resource.
-  google.iam.v1.Policy iam_policy = 5 [json_name = "iam_policy"] ;
+  google.iam.v1.Policy iam_policy = 5;
 }
 
 // Violation contains the relevant information to explain how a constraint is violated.
