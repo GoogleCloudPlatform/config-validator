@@ -27,9 +27,9 @@ import (
 )
 
 const (
-	repoRoot          = "../../../"
-	localPolicyDir    = repoRoot + "policies/"
-	localPolicyDepDir = repoRoot + "policies/validator/lib"
+	testRoot = "../../test/cf"
+	localPolicyDir    = testRoot
+	localPolicyDepDir = testRoot+"/library"
 )
 
 func TestCreateValidatorWithNoOptions(t *testing.T) {
@@ -124,6 +124,7 @@ func TestAddData(t *testing.T) {
 
 }
 
+// TODO(corb): Fix this test: This test started breaking, not sure why
 func TestAudit(t *testing.T) {
 	v, err := NewValidator(testOptions())
 	if err != nil {
