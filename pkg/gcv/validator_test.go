@@ -124,7 +124,6 @@ func TestAddData(t *testing.T) {
 
 }
 
-// TODO(corb): Fix this test: This test started breaking, not sure why
 func TestAudit(t *testing.T) {
 	v, err := NewValidator(testOptions())
 	if err != nil {
@@ -247,7 +246,7 @@ func testOptions() Option {
 func storageAssetNoLogging() *validator.Asset {
 	return mustMakeAsset(`{
   "name": "//storage.googleapis.com/my-storage-bucket",
-  "asset_type": "google.cloud.storage.Bucket",
+  "asset_type": "storage.googleapis.com/Bucket",
   "resource": {
     "version": "v1",
     "discovery_document_uri": "https://www.googleapis.com/discovery/v1/apis/storage/v1/rest",
@@ -289,7 +288,7 @@ func storageAssetNoLogging() *validator.Asset {
 func storageAssetWithLogging() *validator.Asset {
 	return mustMakeAsset(`{
   "name": "//storage.googleapis.com/my-storage-bucket-with-logging",
-  "asset_type": "google.cloud.storage.Bucket",
+  "asset_type": "storage.googleapis.com/Bucket",
   "resource": {
     "version": "v1",
     "discovery_document_uri": "https://www.googleapis.com/discovery/v1/apis/storage/v1/rest",
@@ -334,7 +333,7 @@ func storageAssetWithLogging() *validator.Asset {
 func storageAssetWithSecureLogging() *validator.Asset {
 	return mustMakeAsset(`{
   "name": "//storage.googleapis.com/my-storage-bucket-with-secure-logging",
-  "asset_type": "google.cloud.storage.Bucket",
+  "asset_type": "storage.googleapis.com/Bucket",
   "resource": {
     "version": "v1",
     "discovery_document_uri": "https://www.googleapis.com/discovery/v1/apis/storage/v1/rest",
