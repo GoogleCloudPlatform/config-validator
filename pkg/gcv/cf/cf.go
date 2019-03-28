@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gobuffalo/packr/v2"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage/inmem"
@@ -58,11 +57,7 @@ func New(dependencyCode map[string]string) (*ConstraintFramework, error) {
 		return nil, status.Error(codes.InvalidArgument, compileErrors.Error())
 	}
 	cf.dependencyCode = dependencyCode
-	auditScript, err := packr.New("staticAssets", "./rego").FindString("audit.rego")
-	if err != nil {
-		return nil, status.Error(codes.Internal, "unable to load static asset audit.rego")
-	}
-	cf.auditScript = auditScript
+	cf.auditScript = AuditRego
 
 	return &cf, nil
 }

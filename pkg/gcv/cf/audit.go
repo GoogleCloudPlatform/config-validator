@@ -1,3 +1,7 @@
+package cf
+
+
+const AuditRego = `
 #
 # Copyright 2018 Google LLC
 #
@@ -36,3 +40,4 @@ audit[result] {
 		"violation": violation,
 	}
 }
+`
