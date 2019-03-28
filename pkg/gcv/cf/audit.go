@@ -1,6 +1,5 @@
 package cf
 
-
 const AuditRego = `
 #
 # Copyright 2018 Google LLC
