@@ -27,9 +27,9 @@ import (
 )
 
 const (
-	testRoot = "../../test/cf"
+	testRoot          = "../../test/cf"
 	localPolicyDir    = testRoot
-	localPolicyDepDir = testRoot+"/library"
+	localPolicyDepDir = testRoot + "/library"
 )
 
 func TestCreateValidatorWithNoOptions(t *testing.T) {
