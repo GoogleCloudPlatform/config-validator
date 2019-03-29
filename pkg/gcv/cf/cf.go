@@ -18,13 +18,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/forseti-security/config-validator/pkg/api/validator"
+	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage/inmem"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
-	"partner-code.googlesource.com/gcv/gcv/pkg/gcv/configs"
 )
 
 // Constraint model framework organizes constraints/templates/data and handles evaluation.

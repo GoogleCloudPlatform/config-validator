@@ -23,7 +23,7 @@ RUN git clone https://github.com/googleapis/googleapis /tmp/googleapis
 # Maintain expected import paths when using protoc -I/proto
 RUN mv /tmp/googleapis/google /proto/google
 
-WORKDIR /go/src/partner-code.googlesource.com/gcv/gcv
+WORKDIR /go/src/github.com/forseti-security/config-validator
 COPY ./go.mod ./go.sum ./
 
 ENV GO111MODULE=on

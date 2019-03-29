@@ -3,11 +3,11 @@ package cf
 import (
 	"encoding/json"
 
+	"github.com/forseti-security/config-validator/pkg/api/validator"
 	"github.com/golang/protobuf/jsonpb"
 	pb "github.com/golang/protobuf/ptypes/struct"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/pkg/errors"
-	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
 )
 
 // expressionVal is patterned off of the response object provided by the audit script.

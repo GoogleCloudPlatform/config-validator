@@ -21,10 +21,10 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/forseti-security/config-validator/pkg/api/validator"
+	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 	pb "github.com/golang/protobuf/ptypes/struct"
 	"github.com/google/go-cmp/cmp"
-	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
-	"partner-code.googlesource.com/gcv/gcv/pkg/gcv/configs"
 )
 
 func TestCFTemplateSetup(t *testing.T) {

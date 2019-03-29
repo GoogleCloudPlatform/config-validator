@@ -1,4 +1,4 @@
-module partner-code.googlesource.com/gcv/gcv
+module github.com/forseti-security/config-validator
 
 go 1.12
 

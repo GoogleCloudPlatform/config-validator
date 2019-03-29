@@ -21,14 +21,14 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
+	"github.com/forseti-security/config-validator/pkg/api/validator"
+	"github.com/forseti-security/config-validator/pkg/gcv/cf"
+	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
-	"partner-code.googlesource.com/gcv/gcv/pkg/gcv/cf"
-	"partner-code.googlesource.com/gcv/gcv/pkg/gcv/configs"
 )
 
 const logRequestsVerboseLevel = 2

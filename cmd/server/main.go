@@ -21,10 +21,10 @@ import (
 	"log"
 	"net"
 
+	"github.com/forseti-security/config-validator/pkg/api/validator"
+	"github.com/forseti-security/config-validator/pkg/gcv"
 	"github.com/golang/glog"
 	"google.golang.org/grpc"
-	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
-	"partner-code.googlesource.com/gcv/gcv/pkg/gcv"
 )
 
 var (

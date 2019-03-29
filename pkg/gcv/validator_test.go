@@ -16,16 +16,17 @@ package gcv
 
 import (
 	"context"
-	"github.com/google/go-cmp/cmp"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
+	"github.com/forseti-security/config-validator/pkg/api/validator"
 	"github.com/golang/protobuf/jsonpb"
 	_struct "github.com/golang/protobuf/ptypes/struct"
 	"google.golang.org/genproto/googleapis/cloud/asset/v1"
-	"partner-code.googlesource.com/gcv/gcv/pkg/api/validator"
 )
 
 const (
