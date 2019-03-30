@@ -1,7 +1,7 @@
 PROTO_DOCKER_IMAGE=gcv-proto-builder
 PLATFORMS := linux windows darwin
 BUILD_DIR=./bin
-NAME=constraint-validator
+NAME=config-validator
 
 proto-builder:
 	docker build -t $(PROTO_DOCKER_IMAGE) -f ./build/proto/Dockerfile .
@@ -16,12 +16,12 @@ test:
 	GO111MODULE=on go test ./...
 
 build:
-	GO111MODULE=on go build -o ${BUILD_DIR}/${NAME}
+	GO111MODULE=on go build -o ${BUILD_DIR}/${NAME} cmd/server/main.go
 
 release: $(PLATFORMS)
 
 $(PLATFORMS):
-	GO111MODULE=on GOOS=$@ GOARCH=amd64 go build -o "${BUILD_DIR}/${NAME}-$@-amd64" .
+	GO111MODULE=on GOOS=$@ GOARCH=amd64 CGO_ENABLED=0 go build -o "${BUILD_DIR}/${NAME}-$@-amd64" cmd/server/main.go
 
 clean:
 	rm bin/${NAME}*
