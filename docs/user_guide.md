@@ -2,7 +2,7 @@
 
 ### Go from setup to proof-of-concept in under 1 hour
 
-## Overview {#overview}
+## Overview
 
 As your business shifts towards an infrastructure-as-code workflow, security and
 cloud governance administrators are concerned about misconfigurations that may
@@ -44,9 +44,9 @@ The following guide will walk you through initial setup steps and instructions
 on how to use Config Validator, so you have a proof-of-concept to explore and
 build your foundation upon.
 
-## How to set up constraints with Policy Library {#how-to-set-up-constraints-with-policy-library}
+## How to set up constraints with Policy Library
 
-### Set up policy library repository {#set-up-policy-library-repository}
+### Set up policy library repository
 
 The policy library repository contains the following directories:
 
@@ -85,7 +85,7 @@ git remote add policy-library "${GIT_REPO_ADDR}"
 git push -u policy-library master
 ```
 
-### Instantiate constraints {#instantiate-constraints}
+### Instantiate constraints
 
 The constraint template library only contains templates. Templates specify the
 constraint logic, and you must create constraints based on those templates in
@@ -203,9 +203,9 @@ spec:
     - //compute.googleapis.com/projects/test-project/zones/us-east1-b/instances/two
 ```
 
-## How to use Terraform Validator {#how-to-use-terraform-validator}
+## How to use Terraform Validator
 
-### Install Terraform Validator {#install-terraform-validator}
+### Install Terraform Validator
 
 The released binaries are available under the `gs://terraform-validator` Google
 Cloud Storage bucket for Linux, Windows, and Mac. They are organized by release
@@ -229,7 +229,7 @@ gsutil cp gs://terraform-validator/releases/2019-04-02/terraform-validator-linux
 chmod 755 terraform-validator-linux-amd64
 ```
 
-### For local development environments {#for-local-development-environments}
+### For local development environments
 
 These instructions assume you have forked a branch and is working locally.
 
@@ -274,7 +274,7 @@ found`." You can then apply a plan locally on a development environment:
 terraform apply
 ```
 
-### For Production Environments {#for-production-environments}
+### For Production Environments
 
 These instructions assume that the developer has merged their local branch back
 with master. We want to make sure the master deployment into production is
@@ -287,9 +287,9 @@ return a `2` exit code if violations are found or `0` if no violations were
 found. Therefore, you should configure your CI to only proceed to the next step
 (for example, `terraform apply`) or merge if the validator exits successfully.
 
-## How to Use Forseti Config Validator {#how-to-use-forseti-config-validator}
+## How to Use Forseti Config Validator
 
-### Install Forseti {#install-forseti}
+### Install Forseti
 
 Follow the standard installation process. This guide assumes Terraform is used
 to install Forseti, and Forseti can be installed via its own
@@ -321,7 +321,7 @@ module "forseti" {
 The one important additions is the `config_validator_enabled` field. It is not
 enabled by default; therefore you need to explicitly enable it.
 
-### Copy over policy library repository {#copy-over-policy-library-repository}
+### Copy over policy library repository
 
 The policy library repository specifies the constraints to be enforced. In order
 for Forseti server to access it, you need to copy it over to Forseti server's
@@ -335,12 +335,12 @@ gsutil cp -r ${POLICY_LIBRARY_PATH} gs://${FORSETI_BUCKET}/policy-library/
 ```
 
 Example result:
-![GCS Bucket Content]("user_guide_bucket.png")
+![GCS Bucket Content](user_guide_bucket.png)
 
 After this is done, Forseti will pick up the new policy library content in the
 next scanner run.
 
-### How to change the run frequency of Forseti {#how-to-change-the-run-frequency-of-forseti}
+### How to change the run frequency of Forseti
 
 The Forseti inventory and scanning processes is scheduled to run by a cron job.
 To update the run frequency of this cron job, you need to understand
@@ -362,7 +362,7 @@ value to your desired time format. For example, <code><em>"0 */2 * *
 Run _terraform plan_ command to see the change and _terraform apply_ command to
 apply the change.
 
-### How to handle scaling for large resource sets {#how-to-handle-scaling-for-large-resource-sets}
+### How to handle scaling for large resource sets
 
 If you want to scale for large resource sets, you should need to add more RAM to
 your server**.** Upgrading the Forseti server VM to n1-standard-4 (15GB of RAM)
@@ -376,7 +376,7 @@ In the future, we will consider the following changes:
 *   Use streaming GRPC or paging the violation results.
 *   Split the dataset into multiple chunks and process them separately.
 
-### How to connect violation results with CSCC {#how-to-connect-violation-results-with-cscc}
+### How to connect violation results with CSCC
 
 Forseti has a plugin with Cloud Security Command Center (CSCC) which allows you
 to receive PubSubs with CSCC. By subscribing to the PubSub feed, you have
@@ -397,7 +397,7 @@ Google Cloud Platform (GCP) UI. For example:
 
 <p id="gdcalert2" ><span style="color: red; font-weight: bold">>>>>  GDC alert: inline image link here (to images/Config-Validator1.png). Store image on your image server and adjust path/filename if necessary. </span><br>(<a href="#">Back to top</a>)(<a href="#gdcalert3">Next alert</a>)<br><span style="color: red; font-weight: bold">>>>> </span></p>
 
-![CSCC Integration]("user_guide_cscc.png")
+![CSCC Integration](user_guide_cscc.png)
 
 In **main.tf**, under module "forseti", include _cscc_source_id_ and
 _cscc_violations_enabled_. Set _cscc_source_id_ to the source ID generated by
@@ -414,7 +414,7 @@ CSCC for Forseti, and _cscc_violations_enabled** **_to** _true_**.
 Run _terraform plan_ command to see the change and _terraform apply_ command to
 apply the change.
 
-## End to end workflow with sample constraint {#end-to-end-workflow-with-sample-constraint}
+## End to end workflow with sample constraint
 
 In this section, you will apply a constraint that enforces IAM policy member
 domain restriction using [Cloud Shell](https://cloud.google.com/shell/).
@@ -523,13 +523,13 @@ terraform plan -out=test.tfplan
 
 The command above should result in no violations found.
 
-## How to build your own custom constraint templates {#how-to-build-your-own-custom-constraint-templates}
+## How to build your own custom constraint templates
 
 This section is only applicable to advanced users who wish to create custom
 constraint templates. If the existing templates are sufficient, you can skip
 this section.
 
-#### Validate your constraint goals and target resources {#validate-your-constraint-goals-and-target-resources}
+#### Validate your constraint goals and target resources
 
 Before beginning to develop your constraint template, you should write a
 concrete definition of your goals in plain language. In writing this definition,
@@ -542,7 +542,7 @@ For example:
 The External IP Access Constraint will scan GCP VM instances and validate that the Access Config of their network interface does not include an external IP address.
 ```
 
-#### Gather sample resource data {#gather-sample-resource-data}
+#### Gather sample resource data
 
 Before proceeding to develop your template, you should verify that Cloud Asset
 Inventory
@@ -594,7 +594,7 @@ assigned to the VM.
 ]
 ```
 
-#### Write Rego rule for constraint template {#write-rego-rule-for-constraint-template}
+#### Write Rego rule for constraint template
 
 In order to develop a constraint template, you must develop a Rego rule to back
 it. Before you begin, read about
@@ -667,7 +667,7 @@ target_instance_match_count(mode) = 1 {
 }
 ```
 
-#### Write constraint and resource fixtures for your constraint template {#write-constraint-and-resource-fixtures-for-your-constraint-template}
+#### Write constraint and resource fixtures for your constraint template
 
 To test your rule, create fixtures of the expected resources and constraints
 leveraging your rule. To implement your test cases, gather resource fixtures
@@ -698,7 +698,7 @@ The rule above says that the external IP constraint applies to all
 organizations, but the GCE instance `vm-external-ip` under `test-project` in
 `us-east1-b` is exempt.
 
-#### Write Rego tests for your rule {#write-rego-tests-for-your-rule}
+#### Write Rego tests for your rule
 
 As you develop your constraint template, implement test cases that ensure your
 logic doesn't break over time. Open Policy Agent allows you to
@@ -749,7 +749,7 @@ test_external_whitelist_ip_violates_one {
 
 ```
 
-#### Create constraint template YAML definition {#create-constraint-template-yaml-definition}
+#### Create constraint template YAML definition
 
 Once you have a working Rego rule, you are ready to package it into a constraint
 template. You can do this by writing a YAML file which defines the expected
