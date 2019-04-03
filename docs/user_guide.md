@@ -5,24 +5,24 @@
 ## Overview
 
 As your business shifts towards an infrastructure-as-code workflow, security and
-cloud governance administrators are concerned about misconfigurations that may
-cause security, compliance, and best practice violations of governance rules.
+cloud administrators are concerned about misconfigurations that may
+cause security and governance violations.
 
 Administrators need to be able to put up guardrails that follow security best
-practices and help drive the environment towards programmatic compliance while
-speeding up developers.
+practices and help drive the environment towards programmatic security and governance while
+enabling developers to go fast.
 
 Config Validator allows your administrators to enforce constraints that validate
 whether deployments can be provisioned while still enabling developers to move
-quickly within these safe guardrails. Validator accomplishes this through a few
+quickly within these safe guardrails. Validator accomplishes this through a three
 key components:
 
 **One way to define constraints**
 
 Constraints are defined so that they can work across an ecosystem of
 pre-deployment and monitoring tools. These constraints live in your
-organization's repository as the source of truth for your compliance and
-infrastructure best practice constraints. You can obtain constraints from the
+organization's repository as the source of truth for your security and
+governance requirements. You can obtain constraints from the
 [Policy Library](#how-to-set-up-constraints-with-policy-library), or
 [build your own constraints](#how-to-build-your-own-custom-constraint-templates).
 
@@ -41,14 +41,14 @@ be built into a number of monitoring tools. For details,
 [check out Forseti Validator](#how-to-use-forseti-config-validator).
 
 The following guide will walk you through initial setup steps and instructions
-on how to use Config Validator, so you have a proof-of-concept to explore and
-build your foundation upon.
+on how to use Config Validator. By the end, you will have a proof-of-concept to experiment with and
+to build your foundation upon.
 
 ## How to set up constraints with Policy Library
 
-### Set up policy library repository
+### Get started with the Policy Library repository
 
-The policy library repository contains the following directories:
+The Policy Library repository contains the following directories:
 
 *   `policies`
     *   `constraints`: This is initially empty. You should place your constraint
@@ -155,7 +155,7 @@ both, it will be excluded.
 The schema of the <code><em>parameters</em></code> field is defined in the
 constraint template, using the
 [OpenAPI V3](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#schemaObject)
-schema. This is the same validation schema in Kubernetes' custom resource
+schema. This is the same validation schema in Kubernetes's custom resource
 definition. Every template contains a <code><em>validation</em></code> section
 that looks like the following:
 
@@ -239,7 +239,7 @@ Generate a Terraform plan for the current environment by running:
 terraform plan -out=tfplan.tfplan
 ```
 
-To validate the Terraform plan based on the constraints specified under you
+To validate the Terraform plan based on the constraints specified under your
 local policy library repository, run:
 
 ```
@@ -323,7 +323,7 @@ enabled by default; therefore you need to explicitly enable it.
 
 ### Copy over policy library repository
 
-The policy library repository specifies the constraints to be enforced. In order
+Your policy library repository specifies the constraints to be enforced. In order
 for Forseti server to access it, you need to copy it over to Forseti server's
 GCS bucket. Assuming you already have a local copy of your policy library
 repository:
@@ -364,10 +364,10 @@ apply the change.
 
 ### How to handle scaling for large resource sets
 
-If you want to scale for large resource sets, you should need to add more RAM to
+If you want to scale for large resource sets, you need to add more RAM to
 your server**.** Upgrading the Forseti server VM to n1-standard-4 (15GB of RAM)
 should be able to handle most use cases. Depending on the state and size of your
-data, they may trigger a large number of violations. Currently GRPC has a
+data, this may trigger a large number of violations. Currently GRPC has a
 payload size limitation of 4MB. If a scanner run results in > 4MB of violation
 data to be generated, that will result in an error.
 
@@ -376,7 +376,7 @@ In the future, we will consider the following changes:
 *   Use streaming GRPC or paging the violation results.
 *   Split the dataset into multiple chunks and process them separately.
 
-### How to connect violation results with CSCC
+### How to connect violation results with Cloud Security Command Center (CSCC)
 
 Forseti has a plugin with Cloud Security Command Center (CSCC) which allows you
 to receive PubSubs with CSCC. By subscribing to the PubSub feed, you have
@@ -422,7 +422,7 @@ domain restriction using [Cloud Shell](https://cloud.google.com/shell/).
 First click on this
 [link](https://console.cloud.google.com/cloudshell/open?cloudshell_image=gcr.io/graphite-cloud-shell-images/terraform:latest&cloudshell_git_repo=https://github.com/forseti-security/policy-library.git)
 to open a new Cloud Shell session. The Cloud Shell session has Terraform
-pre-installed and the policy library repository cloned. Once you have the
+pre-installed and the Policy Library repository cloned. Once you have the
 session open, the next step is to copy over the sample IAM domain restriction
 constraint:
 
