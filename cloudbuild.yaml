@@ -1,7 +1,7 @@
 steps:
-- name: 'gcr.io/cloud-builders/go'
-  env: ['GO111MODULE=on', 'GOPATH=.']
-  args: ['build', './...']
-- name: 'gcr.io/cloud-builders/go'
-  env: ['GO111MODULE=on', 'GOPATH=.']
-  args: ['test', './...']
+- name: 'golang'
+  env: ['GO111MODULE=on']
+  args: ['go', 'build', './...']
+- name: 'golang'
+  env: ['GO111MODULE=on']
+  args: ['go', 'test', './...']
