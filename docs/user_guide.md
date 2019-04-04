@@ -214,18 +214,18 @@ date, for example:
 ```
 $ gsutil ls -r gs://terraform-validator/releases
 ...
-gs://terraform-validator/releases/2019-04-02/terraform-validator-darwin-amd64
-gs://terraform-validator/releases/2019-04-02/terraform-validator-linux-amd64
-gs://terraform-validator/releases/2019-04-02/terraform-validator-windows-amd64
+gs://terraform-validator/releases/2019-04-04/terraform-validator-darwin-amd64
+gs://terraform-validator/releases/2019-04-04/terraform-validator-linux-amd64
+gs://terraform-validator/releases/2019-04-04/terraform-validator-windows-amd64
 ```
 
 To download the binary, you need to
 [install](https://cloud.google.com/storage/docs/gsutil_install#install) the
 `gsutil` tool first. The following command downloads the Linux version of
-Terraform Validator from 2019-04-02 release to your local directory:
+Terraform Validator from 2019-04-04 release to your local directory:
 
 ```
-gsutil cp gs://terraform-validator/releases/2019-04-02/terraform-validator-linux-amd64 .
+gsutil cp gs://terraform-validator/releases/2019-04-04/terraform-validator-linux-amd64 .
 chmod 755 terraform-validator-linux-amd64
 ```
 
@@ -247,8 +247,7 @@ terraform-validator-linux-amd64 validate tfplan.tfplan --policy-path=${POLICY_PA
 ```
 
 The policy-path flag is set to the local clone of your Git repository that
-contains the constraints and templates. This is described in the "Set up
-constraint repository" section.
+contains the constraints and templates. This is described in the ["How to set up constraints with Policy Library"]((#how-to-set-up-constraints-with-policy-library) section.
 
 Terraform Validator also accepts an optional --project flag which is set to the
 Terraform Google provider project. See the
@@ -551,8 +550,8 @@ the resources you want. Assuming it does, you should gather some sample data to
 use in developing and testing your rule by creating resources of the appropriate
 type and creating a CAI export of those resources (see
 [CAI quickstart](https://cloud.google.com/resource-manager/docs/cloud-asset-inventory/quickstart-cloud-asset-inventory)).
-If the desired resource is not supported, please get in touch with the Config
-Validator team.
+If the desired resource is not supported, please open a GitHub issue and/or
+email validator-support@google.com.
 
 For example, you might gather the following JSON export for external IP address
 constraint (for brevity, most fields are omitted). In the same data below, the
@@ -794,3 +793,7 @@ spec:
 The Rego rule is supposed to be inlined in the YAML file. To do that, run `make
 build`. That will format the rego rules and inline them in the YAML files under
 the `#INLINE` directive.
+
+## Contact Info
+
+Questions or comments? Please contact validator-support@google.com.
