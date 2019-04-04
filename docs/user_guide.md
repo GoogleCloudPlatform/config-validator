@@ -247,7 +247,9 @@ terraform-validator-linux-amd64 validate tfplan.tfplan --policy-path=${POLICY_PA
 ```
 
 The policy-path flag is set to the local clone of your Git repository that
-contains the constraints and templates. This is described in the ["How to set up constraints with Policy Library"]((#how-to-set-up-constraints-with-policy-library) section.
+contains the constraints and templates. This is described in the
+["How to set up constraints with Policy Library"](#how-to-set-up-constraints-with-policy-library)
+section.
 
 Terraform Validator also accepts an optional --project flag which is set to the
 Terraform Google provider project. See the
