@@ -8,7 +8,7 @@ As your business shifts towards an infrastructure-as-code workflow, security and
 cloud administrators are concerned about misconfigurations that may
 cause security and governance violations.
 
-Administrators need to be able to put up guardrails that follow security best
+Cloud Administrators need to be able to put up guardrails that follow security best
 practices and help drive the environment towards programmatic security and governance while
 enabling developers to go fast.
 
