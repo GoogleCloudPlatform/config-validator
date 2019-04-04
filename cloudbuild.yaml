@@ -4,4 +4,4 @@ steps:
   args: ['go', 'build', './...']
 - name: 'golang'
   env: ['GO111MODULE=on']
-  args: ['go', 'test', './...']
+  args: ['go', 'test', '-v', '-cover', './...']
