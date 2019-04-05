@@ -92,7 +92,11 @@ func TestCFTemplateDependencyCodeCollision(t *testing.T) {
 	cf, err := New(map[string]string{
 		templatePkgPath(template): randomRegoCode,
 	})
-	if err := cf.AddTemplate(template); err != nil {
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = cf.AddTemplate(template)
+	if err != nil {
 		t.Fatal(err)
 	}
 	compiler, err := cf.compile()

@@ -34,7 +34,7 @@ type yamlFile struct {
 	fileContents []byte
 }
 
-// UnclassifiedConfig stores loosly parsed information not specific to constraints or templates.
+// UnclassifiedConfig stores loosely parsed information not specific to constraints or templates.
 type UnclassifiedConfig struct {
 	Group        string
 	MetadataName string
@@ -197,12 +197,12 @@ func convertYAMLToUnclassifiedConfig(config *yamlFile) (*UnclassifiedConfig, err
 // Returns either a *ConstraintTemplate or a *Constraint or an error
 // dataSource should be helpful documentation to help rediscover the source of this information.
 func CategorizeYAMLFile(data []byte, dataSource string) (interface{}, error) {
-	yaml, err := simpleyaml.NewYaml(data)
+	y, err := simpleyaml.NewYaml(data)
 	if err != nil {
 		return nil, err
 	}
 	unclassified, err := convertYAMLToUnclassifiedConfig(&yamlFile{
-		yaml:         yaml,
+		yaml:         y,
 		fileContents: data,
 		source:       dataSource,
 	})

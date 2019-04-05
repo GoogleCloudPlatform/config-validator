@@ -6,10 +6,15 @@ config policy support to new projects without having to integrate
 Rego parsing directly.
 
 ## Development
-### Regenerating protobufs
+### Available Commands
 
 ```sh
-make proto
+make proto     rebuilt protobuf library
+make test      run unit tests
+make build     rebuilt and reformat
+make release   build binaries
+make clear     delete binaries
+make format    reformat code
 ```
 
 ## Disclaimer
