@@ -1,0 +1,7 @@
+steps:
+- name: 'golang'
+  env: ['GO111MODULE=on']
+  args: ['go', 'build', './...']
+- name: 'golang'
+  env: ['GO111MODULE=on']
+  args: ['go', 'test', '-v', '-cover', './...']
