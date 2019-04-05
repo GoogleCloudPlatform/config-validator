@@ -29,10 +29,7 @@ import (
 
 var (
 	policyPath = flag.String("policyPath", "", "directory containing policy templates and configs")
-	// TODO(corb): Template development will eventually inline library code, but the currently template examples have dependency rego code.
-	//  This flag will be deprecated when the template tooling is complete.
-	policyLibraryPath = flag.String("policyLibraryPath", "", "directory containing policy templates and configs")
-	port              = flag.Int("port", 10000, "The server port")
+	port       = flag.Int("port", 10000, "The server port")
 )
 
 type gcvServer struct {
@@ -54,9 +51,9 @@ func (s *gcvServer) Reset(ctx context.Context, request *validator.ResetRequest) 
 	return &validator.ResetResponse{}, err
 }
 
-func newServer(policyPath, policyLibraryPath string) (*gcvServer, error) {
+func newServer(policyPath string) (*gcvServer, error) {
 	s := &gcvServer{}
-	v, err := gcv.NewValidator(gcv.PolicyPath(policyPath), gcv.PolicyLibraryDir(policyLibraryPath))
+	v, err := gcv.NewValidator(gcv.PolicyPath(policyPath))
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +68,7 @@ func main() {
 		log.Fatalf("failed to listen on port %d: %v", *port, err)
 	}
 	grpcServer := grpc.NewServer()
-	serverImpl, err := newServer(*policyPath, *policyLibraryPath)
+	serverImpl, err := newServer(*policyPath)
 	if err != nil {
 		log.Fatalf("Failed to load server %v", err)
 	}

@@ -54,14 +54,10 @@ func TestCFTemplateSetup(t *testing.T) {
 	}
 	for _, tc := range testCasts {
 		t.Run(tc.description, func(t *testing.T) {
-			cf, err := New(regoDependencies())
-			if err != nil {
-				t.Fatal(err)
-			}
+			cf := New()
 			var errs []error
 			for _, template := range tc.templates {
-				err := cf.AddTemplate(template)
-				if err != nil {
+				if err := cf.AddTemplate(template); err != nil {
 					errs = append(errs, err)
 				}
 			}
@@ -70,42 +66,6 @@ func TestCFTemplateSetup(t *testing.T) {
 				t.Errorf("want errors %v got errors %v", tc.wantErr, errs)
 			}
 		})
-	}
-}
-
-func TestCFTemplateDependencyCodeCollision(t *testing.T) {
-	// The rego compiler takes a single map[string]string as input to compile, but there are 2 maps
-	// saved in the config validator.
-	// One for the dependency code (this map is provided as input to cf. So cf doesn't control the map keys)
-	// and one for the templates (cf creates this map so has full control over the map keys).
-	//
-	// These map's have to be combined for the rego compiler, but they shouldn't have collisions on
-	// their keys.
-	//
-	// Attempt to make a key collision by using `templatePkgPath` (which is used in the map key for
-	// templates) when providing a user specified rego dependency
-
-	// Currently (Mar 2019): the dependency code is intended to be deprecated when template's inline
-	// any rego libraries. Once that happens this shouldn't be a concern any more.
-	template := makeTestTemplate("someKind")
-	randomRegoCode := makeTestTemplate("someOtherKind").Rego
-	cf, err := New(map[string]string{
-		templatePkgPath(template): randomRegoCode,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = cf.AddTemplate(template)
-	if err != nil {
-		t.Fatal(err)
-	}
-	compiler, err := cf.compile()
-	if err != nil {
-		t.Fatal(err)
-	}
-	wantModuleCount := 3 // audit + dependency code + template
-	if len(compiler.Modules) != wantModuleCount {
-		t.Fatalf("unexpected number of compiled modules: got %d want %d", len(compiler.Modules), wantModuleCount)
 	}
 }
 
@@ -183,20 +143,15 @@ func TestCFConstraintSetup(t *testing.T) {
 	}
 	for _, tc := range testCasts {
 		t.Run(tc.description, func(t *testing.T) {
-			cf, err := New(regoDependencies())
-			if err != nil {
-				t.Fatal(err)
-			}
+			cf := New()
 			for _, template := range tc.templates {
-				err := cf.AddTemplate(template)
-				if err != nil {
+				if err := cf.AddTemplate(template); err != nil {
 					t.Error("unexpected error adding template: ", err)
 				}
 			}
 			var errs []error
 			for _, constraint := range tc.constraints {
-				err := cf.AddConstraint(constraint)
-				if err != nil {
+				if err := cf.AddConstraint(constraint); err != nil {
 					errs = append(errs, err)
 				}
 			}
@@ -205,13 +160,6 @@ func TestCFConstraintSetup(t *testing.T) {
 				t.Errorf("want errors %v got errors %v", tc.wantErr, errs)
 			}
 		})
-	}
-}
-
-func TestCFNew_CompilerError(t *testing.T) {
-	_, err := New(map[string]string{"invalid_rego": "this isn't valid rego"})
-	if err == nil {
-		t.Fatal("Expected error, got none")
 	}
 }
 
@@ -376,10 +324,7 @@ audit[result] {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			cf, err := New(map[string]string{})
-			if err != nil {
-				t.Fatal(err)
-			}
+			cf := New()
 			cf.auditScript = tc.auditRego
 			result, err := cf.Audit(context.Background())
 			if err != nil {
@@ -792,19 +737,14 @@ func TestCFAuditParsing_WithRealAudit(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			cf, err := New(map[string]string{})
-			if err != nil {
-				t.Fatal(err)
-			}
+			cf := New()
 			for _, template := range tc.templates {
-				err = cf.AddTemplate(template)
-				if err != nil {
+				if err := cf.AddTemplate(template); err != nil {
 					t.Fatal(err)
 				}
 			}
 			for _, constraint := range tc.constraints {
-				err = cf.AddConstraint(constraint)
-				if err != nil {
+				if err := cf.AddConstraint(constraint); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -884,10 +824,7 @@ NOT_audit[result] {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			cf, err := New(map[string]string{})
-			if err != nil {
-				t.Fatal(err)
-			}
+			cf := New()
 			cf.auditScript = tc.auditRego
 			if result, err := cf.Audit(context.Background()); err == nil {
 				t.Fatalf("error expected, but non thrown, instead provided result %v", result)
@@ -904,10 +841,6 @@ func sortViolations(in *validator.AuditResponse) *validator.AuditResponse {
 		return in.Violations[i].String() < in.Violations[j].String()
 	})
 	return in
-}
-
-func regoDependencies() map[string]string {
-	return map[string]string{}
 }
 
 func mustConvertToProtoVal(from interface{}) *pb.Value {

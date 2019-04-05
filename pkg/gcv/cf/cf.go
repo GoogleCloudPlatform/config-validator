@@ -30,8 +30,6 @@ import (
 // Constraint model framework organizes constraints/templates/data and handles evaluation.
 type ConstraintFramework struct {
 	userInputData []interface{}
-	// map[userDefined]regoCode
-	dependencyCode map[string]string
 	// map[kind]template
 	templates map[string]*configs.ConstraintTemplate
 	// map[kind]map[metadataName]constraint
@@ -46,20 +44,13 @@ const (
 )
 
 // New creates a new ConstraintFramework
-// args:
-//   dependencyCode: map[debugString]regoCode: The debugString key will be referenced in compiler errors. It should help identify the source of the rego code.
-func New(dependencyCode map[string]string) (*ConstraintFramework, error) {
+func New() *ConstraintFramework {
 	cf := ConstraintFramework{}
 	cf.templates = make(map[string]*configs.ConstraintTemplate)
 	cf.constraints = make(map[string]map[string]*configs.Constraint)
-	_, compileErrors := ast.CompileModules(dependencyCode)
-	if compileErrors != nil {
-		return nil, status.Error(codes.InvalidArgument, compileErrors.Error())
-	}
-	cf.dependencyCode = dependencyCode
 	cf.auditScript = AuditRego
 
-	return &cf, nil
+	return &cf
 }
 
 // AddData adds GCP resource metadata to be audited later.
@@ -75,7 +66,7 @@ func templatePkgPath(t *configs.ConstraintTemplate) string {
 // validateTemplate verifies template compiles
 func (cf *ConstraintFramework) validateTemplate(t *configs.ConstraintTemplate) error {
 	// validate rego code can be compiled
-	_, err := staticCompile(cf.auditScript, cf.dependencyCode, map[string]*configs.ConstraintTemplate{
+	_, err := staticCompile(cf.auditScript, map[string]*configs.ConstraintTemplate{
 		templatePkgPath(t): t,
 	})
 	return err
@@ -119,15 +110,12 @@ func (cf *ConstraintFramework) AddConstraint(c *configs.Constraint) error {
 	return nil
 }
 
-func staticCompile(auditScript string, dependencyCode map[string]string, templates map[string]*configs.ConstraintTemplate) (*ast.Compiler, error) {
+func staticCompile(auditScript string, templates map[string]*configs.ConstraintTemplate) (*ast.Compiler, error) {
 	// Use different key prefixes to ensure no collisions when joining these maps
 	regoCode := make(map[string]string)
 
 	regoCode["core.dependencies.audit"] = auditScript
 
-	for key, depRego := range dependencyCode {
-		regoCode[fmt.Sprintf("dependencies.%s", key)] = depRego
-	}
 	for _, template := range templates {
 		key := templatePkgPath(template)
 		regoCode[fmt.Sprintf("templates.%s", key)] = template.Rego
@@ -136,7 +124,7 @@ func staticCompile(auditScript string, dependencyCode map[string]string, templat
 }
 
 func (cf *ConstraintFramework) compile() (*ast.Compiler, error) {
-	return staticCompile(cf.auditScript, cf.dependencyCode, cf.templates)
+	return staticCompile(cf.auditScript, cf.templates)
 }
 
 // Reset the user provided data, preserving the constraint and template information.

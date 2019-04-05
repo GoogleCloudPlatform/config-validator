@@ -47,11 +47,7 @@ const logRequestsVerboseLevel = 2
 // To avoid out of memory errors, callers can invoke Reset to delete existing data.
 type Validator struct {
 	// policyPath points to a directory where the constraints and constraint templates are stored as yaml files.
-	policyPath string
-	// policy dependencies directory points to rego files that provide supporting code for templates.
-	// These rego dependencies should be packaged with the GCV deployment.
-	// Right now expected to be set to point to "//policies/validator/lib" folder
-	policyLibraryDir    string
+	policyPath          string
 	constraintFramework *cf.ConstraintFramework
 }
 
@@ -65,37 +61,6 @@ func PolicyPath(p string) Option {
 		v.policyPath = p
 		return nil
 	}
-}
-
-// PolicyLibraryDir returns an Option that sets the policy library directory with rego files.
-// This function is expected to be removed in the future when all assumed dependant rego code is inlined in template files,
-// and this validator includes the audit.rego files
-func PolicyLibraryDir(dir string) Option {
-	return func(v *Validator) error {
-		v.policyLibraryDir = dir
-		return nil
-	}
-}
-
-func loadRegoFiles(dir string) (map[string]string, error) {
-	loadedFiles := make(map[string]string)
-	files, err := configs.ListRegoFiles(dir)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	for _, filePath := range files {
-		glog.V(logRequestsVerboseLevel).Infof("Loading rego file: %s", filePath)
-		if _, exists := loadedFiles[filePath]; exists {
-			// This shouldn't happen
-			return nil, status.Errorf(codes.Internal, "Unexpected file collision with file %s", filePath)
-		}
-		fileBytes, err := ioutil.ReadFile(filePath)
-		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, errors.Wrapf(err, "unable to read file %s", filePath).Error())
-		}
-		loadedFiles[filePath] = string(fileBytes)
-	}
-	return loadedFiles, nil
 }
 
 func loadYAMLFiles(dir string) ([]*configs.ConstraintTemplate, []*configs.Constraint, error) {
@@ -142,20 +107,8 @@ func NewValidator(options ...Option) (*Validator, error) {
 	if ret.policyPath == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "No policy path set, provide an option to set the policy path gcv.PolicyPath")
 	}
-	if ret.policyLibraryDir == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "No policy library set")
-	}
 
-	glog.V(logRequestsVerboseLevel).Infof("loading policy library dir: %s", ret.policyLibraryDir)
-	regoLib, err := loadRegoFiles(ret.policyLibraryDir)
-	if err != nil {
-		return nil, err
-	}
-
-	ret.constraintFramework, err = cf.New(regoLib)
-	if err != nil {
-		return nil, err
-	}
+	ret.constraintFramework = cf.New()
 	glog.V(logRequestsVerboseLevel).Infof("loading policy dir: %s", ret.policyPath)
 	templates, constraints, err := loadYAMLFiles(ret.policyPath)
 	if err != nil {

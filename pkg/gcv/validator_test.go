@@ -30,9 +30,7 @@ import (
 )
 
 const (
-	testRoot          = "../../test/cf"
-	localPolicyDir    = testRoot
-	localPolicyDepDir = testRoot + "/library"
+	localPolicyDir = "../../test/cf"
 )
 
 func TestCreateValidatorWithNoOptions(t *testing.T) {
@@ -180,8 +178,8 @@ func TestConvertResourceToInterface(t *testing.T) {
 	}{
 		{
 			description: "nil input",
-			input: nil,
-			want: nil,
+			input:       nil,
+			want:        nil,
 		},
 		{
 			description: "asset proto preserves underscores",
@@ -254,7 +252,6 @@ func TestCreateNoDir(t *testing.T) {
 
 	if _, err = NewValidator(
 		PolicyPath(filepath.Join(emptyFolder, "someDirThatDoesntExist")),
-		PolicyLibraryDir(filepath.Join(emptyFolder, "someDirThatDoesntExist")),
 	); err == nil {
 		t.Fatal("expected a file system error but got no error")
 	}
@@ -273,7 +270,6 @@ func TestCreateNoReadAccess(t *testing.T) {
 
 	if _, err = NewValidator(
 		PolicyPath(tmpDir),
-		PolicyLibraryDir(tmpDir),
 	); err == nil {
 		t.Fatal("expected a file system error but got no error")
 	}
@@ -293,7 +289,6 @@ func TestCreateEmptyDir(t *testing.T) {
 
 	if _, err = NewValidator(
 		PolicyPath(policyDir),
-		PolicyLibraryDir(policyLibDir),
 	); err != nil {
 		t.Fatal("empty dir not expected to provide error: ", err)
 	}
@@ -323,7 +318,6 @@ func testOptions() Option {
 	// Add default options to this list
 	return groupOptions(
 		PolicyPath(localPolicyDir),
-		PolicyLibraryDir(localPolicyDepDir),
 	)
 }
 
