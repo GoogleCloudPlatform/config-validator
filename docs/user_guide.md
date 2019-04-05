@@ -394,9 +394,6 @@ to set CSCC up for Forseti.
 
 Once you have CSCC set up, you can navigate to the CSCC settings page from the
 Google Cloud Platform (GCP) UI. For example:
-
-<p id="gdcalert2" ><span style="color: red; font-weight: bold">>>>>  GDC alert: inline image link here (to images/Config-Validator1.png). Store image on your image server and adjust path/filename if necessary. </span><br>(<a href="#">Back to top</a>)(<a href="#gdcalert3">Next alert</a>)<br><span style="color: red; font-weight: bold">>>>> </span></p>
-
 ![CSCC Integration](user_guide_cscc.png)
 
 In **main.tf**, under module "forseti", include _cscc_source_id_ and
