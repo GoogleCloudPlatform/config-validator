@@ -160,15 +160,6 @@ func ListYAMLFiles(dir string) ([]string, error) {
 	return arrayFilterSuffix(files, ".yaml"), nil
 }
 
-// ListRegoFiles returns a list of rego files under a dir. Errors will be grpc errors.
-func ListRegoFiles(dir string) ([]string, error) {
-	files, err := listFiles(dir)
-	if err != nil {
-		return nil, err
-	}
-	return arrayFilterSuffix(files, ".rego"), nil
-}
-
 // convertYAMLToUnclassifiedConfig converts yaml file to an unclassified config, if expected fields don't exist, a log message is printed and the config is skipped.
 func convertYAMLToUnclassifiedConfig(config *yamlFile) (*UnclassifiedConfig, error) {
 	kind, err := config.yaml.Get("kind").String()

@@ -76,24 +76,6 @@ func TestListYAMLFiles(t *testing.T) {
 				{path: "/a/really/nested_directory/with_some.yaml", expected: true},
 			},
 		},
-		{
-			description:  "ListRegoFiles",
-			listFunction: ListRegoFiles,
-			fileState: []fileToScan{
-				{path: "notRegoFile.lol", expected: false},
-				// file contents should be ignored
-				{path: "malformed.rego", data: "what even i\"s r'e'g'u format", expected: true},
-				{path: "valid.rego", data: "really_valid_things: yes", expected: true},
-				{path: "CAPS.REGO", expected: true},
-				{path: "MiXeD.ReGo", expected: true},
-				{path: "/nested_directory/with_some.rego", expected: true},
-				{path: "/some/dir/with.rego", expected: true},
-				{path: "/some/dir/multiple.rego", expected: true},
-				{path: "/some/dir/files.rego", expected: true},
-				{path: "/some/dir/andOther.files", expected: false},
-				{path: "/a/really/nested_directory/with_some.rego", expected: true},
-			},
-		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
@@ -137,7 +119,6 @@ func TestListFilesEmptyDir(t *testing.T) {
 	}{
 		{description: "listFiles", listFunction: listFiles},
 		{description: "ListYAMLFiles", listFunction: ListYAMLFiles},
-		{description: "ListRegoFiles", listFunction: ListRegoFiles},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
@@ -162,7 +143,6 @@ func TestListFilesInvalidDirPerms(t *testing.T) {
 	}{
 		{description: "listFiles", listFunction: listFiles},
 		{description: "ListYAMLFiles", listFunction: ListYAMLFiles},
-		{description: "ListRegoFiles", listFunction: ListRegoFiles},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
