@@ -331,7 +331,7 @@ repository:
 
 ```
 export FORSETI_BUCKET=`terraform output -module=forseti forseti-server-storage-bucket`
-export POLICY_LIBRARY_PATH=path/to/local/policies/library
+export POLICY_LIBRARY_PATH=path/to/local/policy-library
 gsutil -m rsync -d -r ${POLICY_LIBRARY_PATH}/policies gs://${FORSETI_BUCKET}/policy-library/policies
 gsutil -m rsync -d -r ${POLICY_LIBRARY_PATH}/lib gs://${FORSETI_BUCKET}/policy-library/lib
 ```
