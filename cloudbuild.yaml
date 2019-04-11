@@ -1,0 +1,9 @@
+steps:
+- name: 'golang'
+  env: ['GO111MODULE=on']
+  args: ['go', 'build', './...']
+# We need to set the CLOUDBUILD env var as a signal to skip tests that are
+# not passing in Cloud Build yet. See issue #24.
+- name: 'golang'
+  env: ['GO111MODULE=on', 'CLOUDBUILD=on']
+  args: ['go', 'test', '-v', '-cover', './...']

@@ -261,6 +261,10 @@ func TestCreateNoDir(t *testing.T) {
 }
 
 func TestCreateNoReadAccess(t *testing.T) {
+	if _, ok := os.LookupEnv("CLOUDBUILD"); ok {
+		t.Logf("Skipping %s in Cloud Build environment", t.Name())
+		return
+	}
 	tmpDir, err := ioutil.TempDir("", "InvalidAccessTest")
 	if err != nil {
 		t.Fatal("creating temp dir:", err)
