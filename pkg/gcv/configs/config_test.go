@@ -156,6 +156,10 @@ func TestListFilesEmptyDir(t *testing.T) {
 }
 
 func TestListFilesInvalidDirPerms(t *testing.T) {
+	if _, ok := os.LookupEnv("CLOUDBUILD"); ok {
+		t.Logf("Skipping %s in Cloud Build environment", t.Name())
+		return
+	}
 	testCases := []struct {
 		description  string
 		listFunction func(string) ([]string, error)
