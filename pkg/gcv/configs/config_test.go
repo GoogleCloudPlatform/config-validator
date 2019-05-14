@@ -62,7 +62,7 @@ func TestListYAMLFiles(t *testing.T) {
 			description:  "ListYAMLFiles",
 			listFunction: ListYAMLFiles,
 			fileState: []fileToScan{
-				{path: "notYamlfile.lol", expected: false},
+				{path: "notYamlFile.lol", expected: false},
 				// file contents should be ignored
 				{path: "malformed.yaml", data: "impro\"per y'a'm'l format", expected: true},
 				{path: "valid.yaml", data: "really_valid_things: yes", expected: true},
@@ -80,7 +80,7 @@ func TestListYAMLFiles(t *testing.T) {
 			description:  "ListRegoFiles",
 			listFunction: ListRegoFiles,
 			fileState: []fileToScan{
-				{path: "notRegofile.lol", expected: false},
+				{path: "notRegoFile.lol", expected: false},
 				// file contents should be ignored
 				{path: "malformed.rego", data: "what even i\"s r'e'g'u format", expected: true},
 				{path: "valid.rego", data: "really_valid_things: yes", expected: true},

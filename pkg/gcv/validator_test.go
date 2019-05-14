@@ -73,6 +73,14 @@ func TestAddData(t *testing.T) {
 			},
 		},
 		{
+			description: "nil entry in array",
+			request: &validator.AddDataRequest{
+				Assets: []*validator.Asset{
+					nil,
+				},
+			},
+		},
+		{
 			description: "just string fields",
 			request: &validator.AddDataRequest{
 				Assets: []*validator.Asset{
@@ -170,6 +178,11 @@ func TestConvertResourceToInterface(t *testing.T) {
 		input       *validator.Asset
 		want        interface{}
 	}{
+		{
+			description: "nil input",
+			input: nil,
+			want: nil,
+		},
 		{
 			description: "asset proto preserves underscores",
 			input: &validator.Asset{
@@ -452,9 +465,9 @@ func storageAssetWithSecureLogging() *validator.Asset {
 }
 
 func mustMakeAsset(assetJson string) *validator.Asset {
-	asset := &validator.Asset{}
-	if err := jsonpb.UnmarshalString(assetJson, asset); err != nil {
+	data := &validator.Asset{}
+	if err := jsonpb.UnmarshalString(assetJson, data); err != nil {
 		panic(err)
 	}
-	return asset
+	return data
 }
