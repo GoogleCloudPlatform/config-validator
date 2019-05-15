@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
+	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"github.com/smallfish/simpleyaml"
 	"google.golang.org/grpc/codes"
@@ -107,10 +108,12 @@ func asConstraintTemplate(data *UnclassifiedConfig) (*ConstraintTemplate, bool) 
 	}
 	generatedKind, err := data.Yaml.GetPath("spec", "crd", "spec", "names", "kind").String()
 	if err != nil {
+		glog.Errorf("Failed to retrieve kind field in %s: %v", data.FilePath, err)
 		return nil, false // field expected to exist
 	}
 	rego, err := extractRego(data.Yaml)
 	if err != nil {
+		glog.Errorf("Failed to retrieve rego field in %s: %v", data.FilePath, err)
 		return nil, false // field expected to exist
 	}
 	return &ConstraintTemplate{
