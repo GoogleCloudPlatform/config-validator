@@ -217,7 +217,7 @@ spec:
       names:
         kind: GCPExternalIpAccessConstraint
   targets:
-   validation.gcp.forsetisecurity.org:
+    - target:validation.gcp.forsetisecurity.org
       rego: |
             # Some random
             # rego code
@@ -236,7 +236,7 @@ spec:
       names:
         kind: GCPExternalIpAccessConstraint
   targets:
-   validation.gcp.forsetisecurity.org:
+    - target:validation.gcp.forsetisecurity.org
       rego: |
             # Some random
             # rego code
@@ -255,7 +255,7 @@ spec:
       names:
         kind: GCPExternalIpAccessConstraint
   targets:
-   validation.gcp.forsetisecurity.org:
+    - target:validation.gcp.forsetisecurity.org
       rego: |
             # Some random
             # rego code
@@ -274,7 +274,7 @@ spec:
       names:
         kind: GCPExternalIpAccessConstraint
   targets:
-   This_is_the_wrong_field:
+    This_is_the_wrong_field:
       rego: |
             # Some random
             # rego code
@@ -293,7 +293,7 @@ spec:
       names:
         kind_doesnt_exist': GCPExternalIpAccessConstraint # Error here
   targets:
-   validation.gcp.forsetisecurity.org:
+    - target:validation.gcp.forsetisecurity.org
       rego: |
             # Some random
             # rego code
@@ -301,7 +301,7 @@ spec:
 			wantErr: true,
 		},
 		{
-			description: "parse template",
+			description: "legacy template without target list",
 			data: `apiVersion: templates.gatekeeper.sh/v1alpha1
 kind: ConstraintTemplate  # Confirm comments WAI
 metadata:
@@ -312,7 +312,7 @@ spec:
       names:
         kind: GCPExternalIpAccessConstraint
   targets:
-   validation.gcp.forsetisecurity.org:
+    validation.gcp.forsetisecurity.org:
       rego: |
             # Some random
             # rego code
@@ -326,7 +326,7 @@ spec:
 					Group:        "templates.gatekeeper.sh/v1alpha1",
 					MetadataName: "really_cool_template_metadata_name",
 					Kind:         "ConstraintTemplate",
-					FilePath:     "parse template", // will be a copy of the description
+					FilePath:     "legacy template without target list", // will be a copy of the description
 				}, `apiVersion: templates.gatekeeper.sh/v1alpha1
 kind: ConstraintTemplate  # Confirm comments WAI
 metadata:
@@ -337,7 +337,51 @@ spec:
       names:
         kind: GCPExternalIpAccessConstraint
   targets:
-   validation.gcp.forsetisecurity.org:
+    validation.gcp.forsetisecurity.org:
+      rego: |
+            # Some random
+            # rego code
+`),
+			},
+		},
+		{
+			description: "constraint template",
+			data: `apiVersion: templates.gatekeeper.sh/v1alpha1
+kind: ConstraintTemplate  # Confirm comments WAI
+metadata:
+  name: really_cool_template_metadata_name
+spec:
+  crd:
+    spec:
+      names:
+        kind: GCPExternalIpAccessConstraint
+  targets:
+    - target: validation.gcp.forsetisecurity.org
+      rego: |
+            # Some random
+            # rego code
+`,
+			expected: &ConstraintTemplate{
+				GeneratedKind: "GCPExternalIpAccessConstraint",
+				Rego: `# Some random
+# rego code
+`,
+				Confg: UnclassifiedConstraintBuilder(&UnclassifiedConfig{
+					Group:        "templates.gatekeeper.sh/v1alpha1",
+					MetadataName: "really_cool_template_metadata_name",
+					Kind:         "ConstraintTemplate",
+					FilePath:     "constraint template", // will be a copy of the description
+				}, `apiVersion: templates.gatekeeper.sh/v1alpha1
+kind: ConstraintTemplate  # Confirm comments WAI
+metadata:
+  name: really_cool_template_metadata_name
+spec:
+  crd:
+    spec:
+      names:
+        kind: GCPExternalIpAccessConstraint
+  targets:
+    - target: validation.gcp.forsetisecurity.org
       rego: |
             # Some random
             # rego code
