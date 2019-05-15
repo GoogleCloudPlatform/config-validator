@@ -123,8 +123,16 @@ func asConstraintTemplate(data *UnclassifiedConfig) (*ConstraintTemplate, bool) 
 func extractRego(yaml *simpleyaml.Yaml) (string, error) {
 	targets := yaml.GetPath("spec", "targets")
 	if !targets.IsArray() {
+		// Old format looks like the following
+		// targets:
+		//   validation.gcp.forsetisecurity.org:
+		//     rego:
 		return targets.GetPath(expectedTarget, "rego").String()
 	}
+	// New format looks like the following
+	// targets:
+	//  - target: validation.gcp.forsetisecurity.org
+	//    rego:
 	size, err := targets.GetArraySize()
 	if err != nil {
 		return "", err
