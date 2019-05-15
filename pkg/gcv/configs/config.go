@@ -109,7 +109,7 @@ func asConstraintTemplate(data *UnclassifiedConfig) (*ConstraintTemplate, bool) 
 	if err != nil {
 		return nil, false // field expected to exist
 	}
-	rego, err := data.Yaml.GetPath("spec", "targets", expectedTarget, "rego").String()
+	rego, err := extractRego(data.Yaml)
 	if err != nil {
 		return nil, false // field expected to exist
 	}
@@ -118,6 +118,37 @@ func asConstraintTemplate(data *UnclassifiedConfig) (*ConstraintTemplate, bool) 
 		GeneratedKind: generatedKind,
 		Rego:          rego,
 	}, true
+}
+
+func extractRego(yaml *simpleyaml.Yaml) (string, error) {
+	targets := yaml.GetPath("spec", "targets")
+	if !targets.IsArray() {
+		// Old format looks like the following
+		// targets:
+		//   validation.gcp.forsetisecurity.org:
+		//     rego:
+		return targets.GetPath(expectedTarget, "rego").String()
+	}
+	// New format looks like the following
+	// targets:
+	//  - target: validation.gcp.forsetisecurity.org
+	//    rego:
+	size, err := targets.GetArraySize()
+	if err != nil {
+		return "", err
+	}
+	for i := 0; i < size; i++ {
+		target := targets.GetIndex(i)
+		targetString, err := target.Get("target").String()
+		if err != nil {
+			return "", err
+		}
+		if targetString == expectedTarget {
+			return target.Get("rego").String()
+		}
+	}
+
+	return "", status.Error(codes.InvalidArgument, "Unable to locate rego field in constraint template")
 }
 
 func arrayFilterSuffix(arr []string, suffix string) []string {
