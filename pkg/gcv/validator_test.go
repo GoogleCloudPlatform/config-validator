@@ -180,8 +180,8 @@ func TestConvertResourceToInterface(t *testing.T) {
 	}{
 		{
 			description: "nil input",
-			input: nil,
-			want: nil,
+			input:       nil,
+			want:        nil,
 		},
 		{
 			description: "asset proto preserves underscores",
