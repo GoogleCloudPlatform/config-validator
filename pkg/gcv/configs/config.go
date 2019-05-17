@@ -80,44 +80,44 @@ func (c *UnclassifiedConfig) AsInterface() (interface{}, error) {
 // Returns:
 //   *Constraint: only set if valid constraint
 //   bool: (always set) if this is a constraint
-func asConstraint(data *UnclassifiedConfig) (*Constraint, bool) {
+func asConstraint(data *UnclassifiedConfig) (*Constraint, error) {
 	// There is no validation matching this constraint to the template here that happens after
 	// basic parsing has happened when we have more context.
 	if data.Group != validConstraintGroup {
-		return nil, false // group is not a valid group
+		return nil, fmt.Errorf("group expected to be %s not %s", validConstraintGroup, data.Group)
 	}
 	if data.Kind == "ConstraintTemplate" {
-		return nil, false // kind should not be ConstraintTemplate
+		return nil, fmt.Errorf("kind should not be ConstraintTemplate")
 	}
 	return &Constraint{
 		Confg: data,
-	}, true
+	}, nil
 }
 
 // asConstraintTemplate attempts to convert to template
 // Returns:
 //   *ConstraintTemplate: only set if valid template
 //   bool: (always set) if this is a template
-func asConstraintTemplate(data *UnclassifiedConfig) (*ConstraintTemplate, bool) {
+func asConstraintTemplate(data *UnclassifiedConfig) (*ConstraintTemplate, error) {
 	if data.Group != validTemplateGroup {
-		return nil, false // group is not a valid group for templates
+		return nil, fmt.Errorf("group expected to be %s not %s", validTemplateGroup, data.Group)
 	}
 	if data.Kind != "ConstraintTemplate" {
-		return nil, false // kind is not ConstraintTemplate
+		return nil, fmt.Errorf("kind expected to be ConstraintTemplate not %s", data.Kind)
 	}
 	generatedKind, err := data.Yaml.GetPath("spec", "crd", "spec", "names", "kind").String()
 	if err != nil {
-		return nil, false // field expected to exist
+		return nil, err // field expected to exist
 	}
 	rego, err := extractRego(data.Yaml)
 	if err != nil {
-		return nil, false // field expected to exist
+		return nil, err // field expected to exist
 	}
 	return &ConstraintTemplate{
 		Confg:         data,
 		GeneratedKind: generatedKind,
 		Rego:          rego,
-	}, true
+	}, nil
 }
 
 func extractRego(yaml *simpleyaml.Yaml) (string, error) {
@@ -240,13 +240,11 @@ func CategorizeYAMLFile(data []byte, dataSource string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	if template, valid := asConstraintTemplate(unclassified); valid {
-		// Successfully converted as a template
-		return template, nil
-	}
-	if constraint, valid := asConstraint(unclassified); valid {
-		// Successfully converted as a constraint
-		return constraint, nil
+	switch unclassified.Group {
+	case validTemplateGroup:
+		return asConstraintTemplate(unclassified)
+	case validConstraintGroup:
+		return asConstraint(unclassified)
 	}
 	return nil, fmt.Errorf("unable to determine configuration type for data %s", dataSource)
 }
