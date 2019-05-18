@@ -462,11 +462,15 @@ metadata:
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
 			result, err := CategorizeYAMLFile([]byte(tc.data), tc.description)
+			gotErr := (err != nil)
+			if tc.wantErr != gotErr {
+				t.Errorf("want err %v, got %v", tc.wantErr, err)
+			}
+			if err != nil {
+				return
+			}
 			if diff := cmp.Diff(tc.expected, result, cmpopts.IgnoreUnexported(simpleyaml.Yaml{})); diff != "" {
 				t.Errorf("%s (-want, +got) %v", tc.description, diff)
-			}
-			if err == nil && tc.wantErr {
-				t.Errorf("want err %v, got %v", tc.wantErr, err)
 			}
 		})
 	}
