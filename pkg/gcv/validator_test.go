@@ -334,6 +334,7 @@ func testOptions() Option {
 func storageAssetNoLogging() *validator.Asset {
 	return mustMakeAsset(`{
   "name": "//storage.googleapis.com/my-storage-bucket",
+  "ancestry_path": "organization/1/folder/2/project/3",
   "asset_type": "storage.googleapis.com/Bucket",
   "resource": {
     "version": "v1",
@@ -376,6 +377,7 @@ func storageAssetNoLogging() *validator.Asset {
 func storageAssetWithLogging() *validator.Asset {
 	return mustMakeAsset(`{
   "name": "//storage.googleapis.com/my-storage-bucket-with-logging",
+  "ancestry_path": "organization/1/folder/2/project/3",
   "asset_type": "storage.googleapis.com/Bucket",
   "resource": {
     "version": "v1",
@@ -422,6 +424,7 @@ func storageAssetWithSecureLogging() *validator.Asset {
 	return mustMakeAsset(`{
   "name": "//storage.googleapis.com/my-storage-bucket-with-secure-logging",
   "asset_type": "storage.googleapis.com/Bucket",
+  "ancestry_path": "organization/1/folder/2/project/3",
   "resource": {
     "version": "v1",
     "discovery_document_uri": "https://www.googleapis.com/discovery/v1/apis/storage/v1/rest",
