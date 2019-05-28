@@ -955,6 +955,81 @@ spec:
 	}
 }
 
+func TestDefaultMatcher(t *testing.T) {
+	testCases := []struct {
+		description  string
+		target       []string
+		exclude      []string
+		ancestryPath string
+		wantMatch    bool
+	}{
+		{
+			description:  "default matches org",
+			ancestryPath: "organization/1",
+			wantMatch:    true,
+		},
+		{
+			description:  "default matches folder",
+			ancestryPath: "organization/1/folder/2",
+			wantMatch:    true,
+		},
+		{
+			description:  "default matches project",
+			ancestryPath: "organization/1/folder/2/project/3",
+			wantMatch:    true,
+		},
+		{
+			description:  "exclude works with default",
+			exclude:      []string{"organization/1/folder/2"},
+			ancestryPath: "organization/1/folder/2/project/3",
+			wantMatch:    false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			cf, err := New(map[string]string{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = cf.AddTemplate(makeTestTemplate("template"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			c := fmt.Sprintf(`
+apiVersion: constraints.gatekeeper.sh/v1alpha1
+kind: template
+metadata:
+  name: "constraint"
+spec:
+  match:
+    gcp:
+      exclude: [%s]
+  parameters:
+    asset_type_to_check: ""`, strings.Join(tc.exclude, ","))
+			err = cf.AddConstraint(mustMakeConstraint(c))
+			if err != nil {
+				t.Fatal(err)
+			}
+			cf.AddData(map[string]interface{}{
+				"name":          "data",
+				"asset_type":    "does_not_match",
+				"ancestry_path": tc.ancestryPath,
+			})
+			result, err := cf.Audit(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			// The constraint is guaranteed to violate because the asset type mismatch.
+			// Therefore if it's missing, it means that the target mechanism excluded it.
+			gotMatch := len(result.GetViolations()) > 0
+			if tc.wantMatch != gotMatch {
+				t.Errorf("want match: %t; got match: %t", tc.wantMatch, gotMatch)
+			}
+		})
+	}
+}
+
 func TestCFAuditMalformedOutput(t *testing.T) {
 	testCases := []struct {
 		description string
