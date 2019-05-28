@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
@@ -208,14 +209,14 @@ func TestCFConstraintSetup(t *testing.T) {
 	}
 }
 
-func TestCFNew_CompilerError(t *testing.T) {
+func TestCFNewCompilerError(t *testing.T) {
 	_, err := New(map[string]string{"invalid_rego": "this isn't valid rego"})
 	if err == nil {
 		t.Fatal("Expected error, got none")
 	}
 }
 
-func TestCFAuditParsing_WithMockAudit(t *testing.T) {
+func TestCFAuditParsingWithMockAudit(t *testing.T) {
 	testCases := []struct {
 		description string
 		auditRego   string
@@ -392,7 +393,7 @@ audit[result] {
 	}
 }
 
-func TestCFAuditParsing_WithRealAudit(t *testing.T) {
+func TestCFAuditParsingWithRealAudit(t *testing.T) {
 	testCases := []struct {
 		description string
 		templates   []*configs.ConstraintTemplate
@@ -821,8 +822,140 @@ func TestCFAuditParsing_WithRealAudit(t *testing.T) {
 		})
 	}
 }
+func TestTargetAndExclude(t *testing.T) {
+	testCases := []struct {
+		description  string
+		target       []string
+		exclude      []string
+		ancestryPath string
+		wantMatch    bool
+	}{
+		{
+			description:  "org wildcard",
+			target:       []string{"organization/*"},
+			ancestryPath: "organization/1/folder/2/project/3",
+			wantMatch:    true,
+		},
+		{
+			description:  "org match",
+			target:       []string{"organization/1"},
+			ancestryPath: "organization/1/folder/2/project/3",
+			wantMatch:    true,
+		},
+		{
+			description:  "org mismatch",
+			target:       []string{"organization/1001"},
+			ancestryPath: "organization/1/folder/2/project/3",
+			wantMatch:    false,
+		},
+		{
+			description:  "folder wildcard",
+			target:       []string{"organization/1/folder/*"},
+			ancestryPath: "organization/1/folder/2/project/3",
+			wantMatch:    true,
+		},
+		{
+			description:  "folder match",
+			target:       []string{"organization/1/folder/2"},
+			ancestryPath: "organization/1/folder/2/project/3",
+			wantMatch:    true,
+		},
+		{
+			description:  "folder mismatch",
+			target:       []string{"organization/1/folder/1001"},
+			ancestryPath: "organization/1/folder/2/project/3",
+			wantMatch:    false,
+		},
+		{
+			description:  "project wildcard",
+			target:       []string{"organization/1/folder/2/project/*"},
+			ancestryPath: "organization/1/folder/2/project3",
+			wantMatch:    true,
+		},
+		{
+			description:  "project match",
+			target:       []string{"organization/1/folder/2/project/3"},
+			ancestryPath: "organization/1/folder/2/project/3",
+			wantMatch:    true,
+		},
+		{
+			description:  "project mismatch",
+			target:       []string{"organization/1/folder/2/project/1001"},
+			ancestryPath: "organization/1/folder/2/project/3",
+			wantMatch:    false,
+		},
+		{
+			description: "multiple targets",
+			target: []string{
+				"organization/1001/folder/2/project/3",
+				"organization/1/folder/1001/project/3",
+				"organization/1/folder/2/project/3"},
+			ancestryPath: "organization/1/folder/2/project/3",
+			wantMatch:    true,
+		},
+		{
+			description:  "exclude takes precedence",
+			target:       []string{"organization/*"},
+			exclude:      []string{"organization/1/folder/2"},
+			ancestryPath: "organization/1/folder/2/project/3",
+			wantMatch:    false,
+		},
+		{
+			description:  "multiple excludes",
+			target:       []string{"organization/1"},
+			exclude:      []string{"organization/2", "organization/1/folder/2"},
+			ancestryPath: "organization/1/folder/2/project/3",
+			wantMatch:    false,
+		},
+	}
 
-func TestCFAudit_MalformedOutput(t *testing.T) {
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			cf, err := New(map[string]string{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = cf.AddTemplate(makeTestTemplate("template"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			c := fmt.Sprintf(`
+apiVersion: constraints.gatekeeper.sh/v1alpha1
+kind: template
+metadata:
+  name: "constraint"
+spec:
+  match:
+    gcp:
+      target: [%s]
+      exclude: [%s]
+  parameters:
+    asset_type_to_check: ""`,
+				strings.Join(tc.target, ","), strings.Join(tc.exclude, ","))
+			err = cf.AddConstraint(mustMakeConstraint(c))
+			if err != nil {
+				t.Fatal(err)
+			}
+			cf.AddData(map[string]interface{}{
+				"name":          "data",
+				"asset_type":    "does_not_match",
+				"ancestry_path": tc.ancestryPath,
+			})
+			result, err := cf.Audit(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			// The constraint is guaranteed to violate because the asset type mismatch.
+			// Therefore if it's missing, it means that the target mechanism excluded it.
+			gotMatch := len(result.GetViolations()) > 0
+			if tc.wantMatch != gotMatch {
+				t.Errorf("want match: %t; got match: %t", tc.wantMatch, gotMatch)
+			}
+		})
+	}
+}
+
+func TestCFAuditMalformedOutput(t *testing.T) {
 	testCases := []struct {
 		description string
 		auditRego   string
@@ -920,18 +1053,22 @@ func mustConvertToProtoVal(from interface{}) *pb.Value {
 
 func makeTestData(name string, assetType string) interface{} {
 	return map[string]interface{}{
-		"name":       name,
-		"asset_type": assetType,
+		"name":          name,
+		"asset_type":    assetType,
+		"ancestry_path": "organization/1/folder/2/project/3",
 	}
 }
 
-func makeTestConstraint(kind, metadataName string, assetType string) *configs.Constraint {
+func makeTestConstraint(kind, metadataName, assetType string) *configs.Constraint {
 	return mustMakeConstraint(fmt.Sprintf(`
 apiVersion: constraints.gatekeeper.sh/v1alpha1
 kind: %s
 metadata:
   name: %s
 spec:
+  match:
+    gcp:
+      target: ["organization/*"]
   parameters:
     asset_type_to_check: "%s"
 `, kind, metadataName, assetType))
