@@ -992,8 +992,7 @@ func TestDefaultMatcher(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = cf.AddTemplate(makeTestTemplate("template"))
-			if err != nil {
+			if err = cf.AddTemplate(makeTestTemplate("template")); err != nil {
 				t.Fatal(err)
 			}
 			c := fmt.Sprintf(`
@@ -1007,8 +1006,7 @@ spec:
       exclude: [%s]
   parameters:
     asset_type_to_check: ""`, strings.Join(tc.exclude, ","))
-			err = cf.AddConstraint(mustMakeConstraint(c))
-			if err != nil {
+			if err = cf.AddConstraint(mustMakeConstraint(c)); err != nil {
 				t.Fatal(err)
 			}
 			cf.AddData(map[string]interface{}{
