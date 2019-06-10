@@ -1309,7 +1309,7 @@ spec:
       names:
         kind: %s
   targets:
-   validation.gcp.forsetisecurity.org:
+    - target: validation.gcp.forsetisecurity.org
       rego: |
             package templates.gcp.%s
 
