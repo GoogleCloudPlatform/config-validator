@@ -824,17 +824,32 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 }
 func TestTargetAndExclude(t *testing.T) {
 	testCases := []struct {
-		description  string
-		target       []string
-		exclude      []string
-		ancestryPath string
-		wantMatch    bool
+		description    string
+		target         []string
+		exclude        []string
+		ancestryPath   string
+		wantMatch      bool
+		withGCPWrapper bool
 	}{
+		{
+			description:    "org wildcard (GCP wrapper)",
+			target:         []string{"organization/*"},
+			ancestryPath:   "organization/1/folder/2/project/3",
+			wantMatch:      true,
+			withGCPWrapper: true,
+		},
 		{
 			description:  "org wildcard",
 			target:       []string{"organization/*"},
 			ancestryPath: "organization/1/folder/2/project/3",
 			wantMatch:    true,
+		},
+		{
+			description:    "org match (GCP wrapper)",
+			target:         []string{"organization/1"},
+			ancestryPath:   "organization/1/folder/2/project/3",
+			wantMatch:      true,
+			withGCPWrapper: true,
 		},
 		{
 			description:  "org match",
@@ -843,10 +858,24 @@ func TestTargetAndExclude(t *testing.T) {
 			wantMatch:    true,
 		},
 		{
+			description:    "org mismatch (GCP wrapper)",
+			target:         []string{"organization/1001"},
+			ancestryPath:   "organization/1/folder/2/project/3",
+			wantMatch:      false,
+			withGCPWrapper: true,
+		},
+		{
 			description:  "org mismatch",
 			target:       []string{"organization/1001"},
 			ancestryPath: "organization/1/folder/2/project/3",
 			wantMatch:    false,
+		},
+		{
+			description:    "folder wildcard (GCP wrapper)",
+			target:         []string{"organization/1/folder/*"},
+			ancestryPath:   "organization/1/folder/2/project/3",
+			wantMatch:      true,
+			withGCPWrapper: true,
 		},
 		{
 			description:  "folder wildcard",
@@ -855,10 +884,24 @@ func TestTargetAndExclude(t *testing.T) {
 			wantMatch:    true,
 		},
 		{
+			description:    "folder match (GCP wrapper)",
+			target:         []string{"organization/1/folder/2"},
+			ancestryPath:   "organization/1/folder/2/project/3",
+			wantMatch:      true,
+			withGCPWrapper: true,
+		},
+		{
 			description:  "folder match",
 			target:       []string{"organization/1/folder/2"},
 			ancestryPath: "organization/1/folder/2/project/3",
 			wantMatch:    true,
+		},
+		{
+			description:    "folder mismatch (GCP wrapper)",
+			target:         []string{"organization/1/folder/1001"},
+			ancestryPath:   "organization/1/folder/2/project/3",
+			wantMatch:      false,
+			withGCPWrapper: true,
 		},
 		{
 			description:  "folder mismatch",
@@ -867,10 +910,24 @@ func TestTargetAndExclude(t *testing.T) {
 			wantMatch:    false,
 		},
 		{
+			description:    "project wildcard (GCP wrapper)",
+			target:         []string{"organization/1/folder/2/project/*"},
+			ancestryPath:   "organization/1/folder/2/project3",
+			wantMatch:      true,
+			withGCPWrapper: true,
+		},
+		{
 			description:  "project wildcard",
 			target:       []string{"organization/1/folder/2/project/*"},
 			ancestryPath: "organization/1/folder/2/project3",
 			wantMatch:    true,
+		},
+		{
+			description:    "project match (GCP wrapper)",
+			target:         []string{"organization/1/folder/2/project/3"},
+			ancestryPath:   "organization/1/folder/2/project/3",
+			wantMatch:      true,
+			withGCPWrapper: true,
 		},
 		{
 			description:  "project match",
@@ -879,10 +936,27 @@ func TestTargetAndExclude(t *testing.T) {
 			wantMatch:    true,
 		},
 		{
+			description:    "project mismatch (GCP wrapper)",
+			target:         []string{"organization/1/folder/2/project/1001"},
+			ancestryPath:   "organization/1/folder/2/project/3",
+			wantMatch:      false,
+			withGCPWrapper: true,
+		},
+		{
 			description:  "project mismatch",
 			target:       []string{"organization/1/folder/2/project/1001"},
 			ancestryPath: "organization/1/folder/2/project/3",
 			wantMatch:    false,
+		},
+		{
+			description: "multiple targets (GCP wrapper)",
+			target: []string{
+				"organization/1001/folder/2/project/3",
+				"organization/1/folder/1001/project/3",
+				"organization/1/folder/2/project/3"},
+			ancestryPath:   "organization/1/folder/2/project/3",
+			wantMatch:      true,
+			withGCPWrapper: true,
 		},
 		{
 			description: "multiple targets",
@@ -894,11 +968,27 @@ func TestTargetAndExclude(t *testing.T) {
 			wantMatch:    true,
 		},
 		{
+			description:    "exclude takes precedence (GCP wrapper)",
+			target:         []string{"organization/*"},
+			exclude:        []string{"organization/1/folder/2"},
+			ancestryPath:   "organization/1/folder/2/project/3",
+			wantMatch:      false,
+			withGCPWrapper: true,
+		},
+		{
 			description:  "exclude takes precedence",
 			target:       []string{"organization/*"},
 			exclude:      []string{"organization/1/folder/2"},
 			ancestryPath: "organization/1/folder/2/project/3",
 			wantMatch:    false,
+		},
+		{
+			description:    "multiple excludes (GCP wrapper)",
+			target:         []string{"organization/1"},
+			exclude:        []string{"organization/2", "organization/1/folder/2"},
+			ancestryPath:   "organization/1/folder/2/project/3",
+			wantMatch:      false,
+			withGCPWrapper: true,
 		},
 		{
 			description:  "multiple excludes",
@@ -919,19 +1009,7 @@ func TestTargetAndExclude(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			c := fmt.Sprintf(`
-apiVersion: constraints.gatekeeper.sh/v1alpha1
-kind: template
-metadata:
-  name: "constraint"
-spec:
-  match:
-    gcp:
-      target: [%s]
-      exclude: [%s]
-  parameters:
-    asset_type_to_check: ""`,
-				strings.Join(tc.target, ","), strings.Join(tc.exclude, ","))
+			c := constraintWithTargetAndExclude(tc.withGCPWrapper, tc.target, tc.exclude)
 			err = cf.AddConstraint(mustMakeConstraint(c))
 			if err != nil {
 				t.Fatal(err)
@@ -955,18 +1033,61 @@ spec:
 	}
 }
 
+func constraintWithTargetAndExclude(withGCPWrapper bool, target, exclude []string) string {
+	if withGCPWrapper {
+		return fmt.Sprintf(`
+apiVersion: constraints.gatekeeper.sh/v1alpha1
+kind: template
+metadata:
+  name: "constraint"
+spec:
+  match:
+    gcp:
+      target: [%s]
+      exclude: [%s]
+  parameters:
+    asset_type_to_check: ""`,
+			strings.Join(target, ","), strings.Join(exclude, ","))
+	} else {
+		return fmt.Sprintf(`
+apiVersion: constraints.gatekeeper.sh/v1alpha1
+kind: template
+metadata:
+  name: "constraint"
+spec:
+  match:
+    target: [%s]
+    exclude: [%s]
+  parameters:
+    asset_type_to_check: ""`,
+			strings.Join(target, ","), strings.Join(exclude, ","))
+	}
+}
+
 func TestDefaultMatcher(t *testing.T) {
 	testCases := []struct {
-		description  string
-		target       []string
-		exclude      []string
-		ancestryPath string
-		wantMatch    bool
+		description    string
+		exclude        []string
+		ancestryPath   string
+		wantMatch      bool
+		withGCPWrapper bool
 	}{
+		{
+			description:    "default matches org (GCP wrapper)",
+			ancestryPath:   "organization/1",
+			wantMatch:      true,
+			withGCPWrapper: true,
+		},
 		{
 			description:  "default matches org",
 			ancestryPath: "organization/1",
 			wantMatch:    true,
+		},
+		{
+			description:    "default matches folder (GCP wrapper)",
+			ancestryPath:   "organization/1/folder/2",
+			wantMatch:      true,
+			withGCPWrapper: true,
 		},
 		{
 			description:  "default matches folder",
@@ -974,9 +1095,22 @@ func TestDefaultMatcher(t *testing.T) {
 			wantMatch:    true,
 		},
 		{
+			description:    "default matches project (GCP wrapper)",
+			ancestryPath:   "organization/1/folder/2/project/3",
+			wantMatch:      true,
+			withGCPWrapper: true,
+		},
+		{
 			description:  "default matches project",
 			ancestryPath: "organization/1/folder/2/project/3",
 			wantMatch:    true,
+		},
+		{
+			description:    "exclude works with default (GCP wrapper)",
+			exclude:        []string{"organization/1/folder/2"},
+			ancestryPath:   "organization/1/folder/2/project/3",
+			wantMatch:      false,
+			withGCPWrapper: true,
 		},
 		{
 			description:  "exclude works with default",
@@ -995,17 +1129,7 @@ func TestDefaultMatcher(t *testing.T) {
 			if err = cf.AddTemplate(makeTestTemplate("template")); err != nil {
 				t.Fatal(err)
 			}
-			c := fmt.Sprintf(`
-apiVersion: constraints.gatekeeper.sh/v1alpha1
-kind: template
-metadata:
-  name: "constraint"
-spec:
-  match:
-    gcp:
-      exclude: [%s]
-  parameters:
-    asset_type_to_check: ""`, strings.Join(tc.exclude, ","))
+			c := constraintWithExclude(tc.withGCPWrapper, tc.exclude)
 			if err = cf.AddConstraint(mustMakeConstraint(c)); err != nil {
 				t.Fatal(err)
 			}
@@ -1025,6 +1149,33 @@ spec:
 				t.Errorf("want match: %t; got match: %t", tc.wantMatch, gotMatch)
 			}
 		})
+	}
+}
+
+func constraintWithExclude(gcpWrapper bool, exclude []string) string {
+	if gcpWrapper {
+		return fmt.Sprintf(`
+apiVersion: constraints.gatekeeper.sh/v1alpha1
+kind: template
+metadata:
+  name: "constraint"
+spec:
+  match:
+    gcp:
+      exclude: [%s]
+  parameters:
+    asset_type_to_check: ""`, strings.Join(exclude, ","))
+	} else {
+		return fmt.Sprintf(`
+apiVersion: constraints.gatekeeper.sh/v1alpha1
+kind: template
+metadata:
+  name: "constraint"
+spec:
+  match:
+    exclude: [%s]
+  parameters:
+    asset_type_to_check: ""`, strings.Join(exclude, ","))
 	}
 }
 
@@ -1139,9 +1290,8 @@ kind: %s
 metadata:
   name: %s
 spec:
-  match:
-    gcp:
-      target: ["organization/*"]
+  match:    
+    target: ["organization/*"]
   parameters:
     asset_type_to_check: "%s"
 `, kind, metadataName, assetType))
