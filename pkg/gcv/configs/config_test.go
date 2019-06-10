@@ -217,7 +217,7 @@ spec:
       names:
         kind: GCPExternalIpAccessConstraint
   targets:
-    - target:validation.gcp.forsetisecurity.org
+    - target: validation.gcp.forsetisecurity.org
       rego: |
             # Some random
             # rego code
@@ -236,7 +236,7 @@ spec:
       names:
         kind: GCPExternalIpAccessConstraint
   targets:
-    - target:validation.gcp.forsetisecurity.org
+    - target: validation.gcp.forsetisecurity.org
       rego: |
             # Some random
             # rego code
@@ -255,7 +255,7 @@ spec:
       names:
         kind: GCPExternalIpAccessConstraint
   targets:
-    - target:validation.gcp.forsetisecurity.org
+    - target: validation.gcp.forsetisecurity.org
       rego: |
             # Some random
             # rego code
@@ -293,7 +293,7 @@ spec:
       names:
         kind_doesnt_exist': GCPExternalIpAccessConstraint # Error here
   targets:
-    - target:validation.gcp.forsetisecurity.org
+    - target: validation.gcp.forsetisecurity.org
       rego: |
             # Some random
             # rego code
