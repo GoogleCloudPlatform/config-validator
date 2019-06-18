@@ -1355,7 +1355,6 @@ spec:
 
                 message := "it broke!"
             }
-            #ENDINLINE
 `, kind, kind))
 }
 
@@ -1380,7 +1379,6 @@ spec:
             }] {                
                 message := "always violate!"
             }
-            #ENDINLINE
 `, alwaysViolateConstraint))
 }
 
