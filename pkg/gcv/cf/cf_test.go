@@ -28,6 +28,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+const alwaysViolateConstraint = "GCPAlwaysViolatesConstraintV1"
+
 func TestCFTemplateSetup(t *testing.T) {
 	testCasts := []struct {
 		description string
@@ -1005,18 +1007,18 @@ func TestTargetAndExclude(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = cf.AddTemplate(makeTestTemplate("template"))
+			err = cf.AddTemplate(makeAlwaysViolateTemplate())
 			if err != nil {
 				t.Fatal(err)
 			}
-			c := constraintWithTargetAndExclude(tc.withGCPWrapper, tc.target, tc.exclude)
+			c := alwaysViolateWithTargetAndExclude(tc.withGCPWrapper, tc.target, tc.exclude)
 			err = cf.AddConstraint(mustMakeConstraint(c))
 			if err != nil {
 				t.Fatal(err)
 			}
 			cf.AddData(map[string]interface{}{
 				"name":          "data",
-				"asset_type":    "does_not_match",
+				"asset_type":    "asset_type",
 				"ancestry_path": tc.ancestryPath,
 			})
 			result, err := cf.Audit(context.Background())
@@ -1033,11 +1035,11 @@ func TestTargetAndExclude(t *testing.T) {
 	}
 }
 
-func constraintWithTargetAndExclude(withGCPWrapper bool, target, exclude []string) string {
+func alwaysViolateWithTargetAndExclude(withGCPWrapper bool, target, exclude []string) string {
 	if withGCPWrapper {
 		return fmt.Sprintf(`
 apiVersion: constraints.gatekeeper.sh/v1alpha1
-kind: template
+kind: %s
 metadata:
   name: "constraint"
 spec:
@@ -1047,11 +1049,11 @@ spec:
       exclude: [%s]
   parameters:
     asset_type_to_check: ""`,
-			strings.Join(target, ","), strings.Join(exclude, ","))
+			alwaysViolateConstraint, strings.Join(target, ","), strings.Join(exclude, ","))
 	} else {
 		return fmt.Sprintf(`
 apiVersion: constraints.gatekeeper.sh/v1alpha1
-kind: template
+kind: %s
 metadata:
   name: "constraint"
 spec:
@@ -1060,7 +1062,7 @@ spec:
     exclude: [%s]
   parameters:
     asset_type_to_check: ""`,
-			strings.Join(target, ","), strings.Join(exclude, ","))
+			alwaysViolateConstraint, strings.Join(target, ","), strings.Join(exclude, ","))
 	}
 }
 
@@ -1126,10 +1128,10 @@ func TestDefaultMatcher(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err = cf.AddTemplate(makeTestTemplate("template")); err != nil {
+			if err = cf.AddTemplate(makeAlwaysViolateTemplate()); err != nil {
 				t.Fatal(err)
 			}
-			c := constraintWithExclude(tc.withGCPWrapper, tc.exclude)
+			c := alwaysViolateWithExclude(tc.withGCPWrapper, tc.exclude)
 			if err = cf.AddConstraint(mustMakeConstraint(c)); err != nil {
 				t.Fatal(err)
 			}
@@ -1152,11 +1154,42 @@ func TestDefaultMatcher(t *testing.T) {
 	}
 }
 
-func constraintWithExclude(gcpWrapper bool, exclude []string) string {
+func TestDefaultMatcherWithoutSpec(t *testing.T) {
+	cf, err := New(map[string]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = cf.AddTemplate(makeAlwaysViolateTemplate()); err != nil {
+		t.Fatal(err)
+	}
+	c := fmt.Sprintf(`
+apiVersion: constraints.gatekeeper.sh/v1alpha1
+kind: %s
+metadata:
+  name: "constraint"
+`, alwaysViolateConstraint)
+	if err = cf.AddConstraint(mustMakeConstraint(c)); err != nil {
+		t.Fatal(err)
+	}
+	cf.AddData(map[string]interface{}{
+		"name":          "data",
+		"asset_type":    "asset_type",
+		"ancestry_path": "organization/1/folder/2/project/3",
+	})
+	result, err := cf.Audit(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.GetViolations()) == 0 {
+		t.Error("want >0 match; got zero match")
+	}
+}
+
+func alwaysViolateWithExclude(gcpWrapper bool, exclude []string) string {
 	if gcpWrapper {
 		return fmt.Sprintf(`
 apiVersion: constraints.gatekeeper.sh/v1alpha1
-kind: template
+kind: %s
 metadata:
   name: "constraint"
 spec:
@@ -1164,18 +1197,18 @@ spec:
     gcp:
       exclude: [%s]
   parameters:
-    asset_type_to_check: ""`, strings.Join(exclude, ","))
+    asset_type_to_check: ""`, alwaysViolateConstraint, strings.Join(exclude, ","))
 	} else {
 		return fmt.Sprintf(`
 apiVersion: constraints.gatekeeper.sh/v1alpha1
-kind: template
+kind: %s
 metadata:
   name: "constraint"
 spec:
   match:
     exclude: [%s]
   parameters:
-    asset_type_to_check: ""`, strings.Join(exclude, ","))
+    asset_type_to_check: ""`, alwaysViolateConstraint, strings.Join(exclude, ","))
 	}
 }
 
@@ -1322,8 +1355,31 @@ spec:
 
                 message := "it broke!"
             }
-            #ENDINLINE
 `, kind, kind))
+}
+
+func makeAlwaysViolateTemplate() *configs.ConstraintTemplate {
+	return mustMakeTemplate(fmt.Sprintf(`
+apiVersion: templates.gatekeeper.sh/v1alpha1
+kind: ConstraintTemplate
+metadata:
+  name: always-violate-template
+spec:
+  crd:
+    spec:
+      names:
+        kind: %s
+  targets:
+    - target: validation.gcp.forsetisecurity.org
+      rego: |
+            package templates.gcp.GCPAlwaysViolatesConstraintV1
+
+            deny[{
+            	"msg": message,
+            }] {                
+                message := "always violate!"
+            }
+`, alwaysViolateConstraint))
 }
 
 // mustMakeConstraint compiles a constraint or panics.
