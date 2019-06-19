@@ -27,6 +27,7 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	_struct "github.com/golang/protobuf/ptypes/struct"
 	"google.golang.org/genproto/googleapis/cloud/asset/v1"
+	iam "google.golang.org/genproto/googleapis/iam/v1"
 )
 
 const (
@@ -53,6 +54,7 @@ func TestAddData(t *testing.T) {
 	testCases := []struct {
 		description string
 		request     *validator.AddDataRequest
+		wantErr     bool
 	}{
 		{
 			description: "empty request",
@@ -71,6 +73,7 @@ func TestAddData(t *testing.T) {
 					{},
 				},
 			},
+			wantErr: true,
 		},
 		{
 			description: "nil entry in array",
@@ -79,34 +82,10 @@ func TestAddData(t *testing.T) {
 					nil,
 				},
 			},
+			wantErr: true,
 		},
 		{
-			description: "just string fields",
-			request: &validator.AddDataRequest{
-				Assets: []*validator.Asset{
-					{
-						Name:         "Some Name",
-						AssetType:    "some type",
-						AncestryPath: "some path",
-					},
-				},
-			},
-		},
-		{
-			description: "nil resource",
-			request: &validator.AddDataRequest{
-				Assets: []*validator.Asset{
-					{
-						Name:         "Some Name",
-						AssetType:    "some type",
-						AncestryPath: "some path",
-						Resource:     nil,
-					},
-				},
-			},
-		},
-		{
-			description: "empty resource struct",
+			description: "non-nil resource",
 			request: &validator.AddDataRequest{
 				Assets: []*validator.Asset{
 					{
@@ -118,6 +97,71 @@ func TestAddData(t *testing.T) {
 				},
 			},
 		},
+		{
+			description: "non-nil IAM policy",
+			request: &validator.AddDataRequest{
+				Assets: []*validator.Asset{
+					{
+						Name:         "Some Name",
+						AssetType:    "some type",
+						AncestryPath: "some path",
+						IamPolicy:    &iam.Policy{},
+					},
+				},
+			},
+		},
+		{
+			description: "nil resource & IAM policy",
+			request: &validator.AddDataRequest{
+				Assets: []*validator.Asset{
+					{
+						Name:         "Some Name",
+						AssetType:    "some type",
+						AncestryPath: "some path",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			description: "missing name",
+			request: &validator.AddDataRequest{
+				Assets: []*validator.Asset{
+					{
+						AssetType:    "some type",
+						AncestryPath: "some path",
+						IamPolicy:    &iam.Policy{},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			description: "missing type",
+			request: &validator.AddDataRequest{
+				Assets: []*validator.Asset{
+					{
+						Name:         "Some Name",
+						AncestryPath: "some path",
+						IamPolicy:    &iam.Policy{},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			description: "missing ancestry path",
+			request: &validator.AddDataRequest{
+				Assets: []*validator.Asset{
+					{
+						Name:      "Some Name",
+						AssetType: "some type",
+						IamPolicy: &iam.Policy{},
+					},
+				},
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -127,8 +171,8 @@ func TestAddData(t *testing.T) {
 				t.Fatal("unexpected error", err)
 			}
 			err = v.AddData(tc.request)
-			if err != nil {
-				t.Fatalf("got %v, want nil", err)
+			if (err == nil) == tc.wantErr {
+				t.Fatalf("got %v, want err: %t", err, tc.wantErr)
 			}
 		})
 	}
@@ -467,9 +511,9 @@ func storageAssetWithSecureLogging() *validator.Asset {
 }`)
 }
 
-func mustMakeAsset(assetJson string) *validator.Asset {
+func mustMakeAsset(assetJSON string) *validator.Asset {
 	data := &validator.Asset{}
-	if err := jsonpb.UnmarshalString(assetJson, data); err != nil {
+	if err := jsonpb.UnmarshalString(assetJSON, data); err != nil {
 		panic(err)
 	}
 	return data

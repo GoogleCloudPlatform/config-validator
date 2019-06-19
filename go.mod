@@ -11,6 +11,7 @@ require (
 	github.com/golang/protobuf v1.3.1
 	github.com/google/go-cmp v0.2.0
 	github.com/gorilla/mux v1.7.2 // indirect
+	github.com/hashicorp/go-multierror v1.0.0
 	github.com/olekukonko/tablewriter v0.0.1 // indirect
 	github.com/open-policy-agent/opa v0.11.0
 	github.com/peterh/liner v1.1.0 // indirect

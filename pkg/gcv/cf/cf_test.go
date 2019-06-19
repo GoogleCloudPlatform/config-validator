@@ -1050,8 +1050,8 @@ spec:
   parameters:
     asset_type_to_check: ""`,
 			alwaysViolateConstraint, strings.Join(target, ","), strings.Join(exclude, ","))
-	} else {
-		return fmt.Sprintf(`
+	}
+	return fmt.Sprintf(`
 apiVersion: constraints.gatekeeper.sh/v1alpha1
 kind: %s
 metadata:
@@ -1062,8 +1062,7 @@ spec:
     exclude: [%s]
   parameters:
     asset_type_to_check: ""`,
-			alwaysViolateConstraint, strings.Join(target, ","), strings.Join(exclude, ","))
-	}
+		alwaysViolateConstraint, strings.Join(target, ","), strings.Join(exclude, ","))
 }
 
 func TestDefaultMatcher(t *testing.T) {
@@ -1198,8 +1197,8 @@ spec:
       exclude: [%s]
   parameters:
     asset_type_to_check: ""`, alwaysViolateConstraint, strings.Join(exclude, ","))
-	} else {
-		return fmt.Sprintf(`
+	}
+	return fmt.Sprintf(`
 apiVersion: constraints.gatekeeper.sh/v1alpha1
 kind: %s
 metadata:
@@ -1209,7 +1208,6 @@ spec:
     exclude: [%s]
   parameters:
     asset_type_to_check: ""`, alwaysViolateConstraint, strings.Join(exclude, ","))
-	}
 }
 
 func TestCFAuditMalformedOutput(t *testing.T) {
