@@ -7,3 +7,6 @@ steps:
 - name: 'golang'
   env: ['GO111MODULE=on', 'CLOUDBUILD=on']
   args: ['go', 'test', '-v', '-cover', './...']
+- name: 'gcr.io/cloud-builders/docker'
+  id: Test build of server container
+  args: ['build', '-t', 'config-validator', '.']
