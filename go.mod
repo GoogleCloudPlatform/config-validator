@@ -9,7 +9,7 @@ require (
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/protobuf v1.3.1
-	github.com/google/go-cmp v0.2.0
+	github.com/google/go-cmp v0.3.0
 	github.com/gorilla/mux v1.7.2 // indirect
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/olekukonko/tablewriter v0.0.1 // indirect
@@ -22,8 +22,7 @@ require (
 	github.com/smallfish/simpleyaml v0.0.0-20170911015856-a32031077861
 	github.com/spf13/cobra v0.0.4 // indirect
 	github.com/yashtewari/glob-intersection v0.0.0-20180916065949-5c77d914dd0b // indirect
-	golang.org/x/net v0.0.0-20190327214358-63eda1eb0650 // indirect
 	google.golang.org/genproto v0.0.0-20190327125643-d831d65fe17d
 	google.golang.org/grpc v1.19.1
-	gopkg.in/fsnotify.v1 v1.4.7 // indirect
+	k8s.io/apimachinery v0.0.0-20190624085041-961b39a1baa0
 )

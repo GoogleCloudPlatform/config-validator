@@ -20,6 +20,7 @@ package validator;
 import "google/iam/v1/policy.proto";
 import "google/protobuf/struct.proto";
 import "google/cloud/asset/v1/assets.proto";
+import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 
 // Asset contains GCP resource metadata and additional metadata set on a resource, such as Cloud IAM policy.
 // WARNING: these field names are directly used to structure data passed to templates.
@@ -40,6 +41,12 @@ message Asset {
   google.cloud.asset.v1.Resource resource = 4;
   // IAM policy associated with the resource.
   google.iam.v1.Policy iam_policy = 5;
+}
+
+// Constraint contains the configuration for a constraint.
+message Constraint {
+  // Metadata contains the user-provided constraint metadata
+  k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 }
 
 // Violation contains the relevant information to explain how a constraint is violated.
@@ -67,6 +74,15 @@ message AuditResponse {
 message ResetRequest {}
 message ResetResponse {}
 
+message GetConstraintRequest {
+  // The name of the constraint to fetch
+  string name = 1;
+}
+
+message GetConstraintResponse {
+  Constraint constraint = 1;
+}
+
 service Validator {
   // AddData adds GCP resource metadata to be audited later.
   rpc AddData(AddDataRequest) returns (AddDataResponse) {}
@@ -74,4 +90,6 @@ service Validator {
   rpc Audit(AuditRequest) returns (AuditResponse) {}
   // Reset clears previously added data from the underlying query evaluation engine.
   rpc Reset(ResetRequest) returns (ResetResponse) {}
+  // GetConstraint returns information about a configured constraint.
+  rpc GetConstraint(GetConstraintRequest) returns (GetConstraintResponse) {}
 }
