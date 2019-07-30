@@ -10,15 +10,19 @@ require (
 	github.com/golang/protobuf v1.3.1
 	github.com/google/go-cmp v0.3.0
 	github.com/hashicorp/go-multierror v1.0.0
+	github.com/open-policy-agent/frameworks v0.0.0-20190814212154-6ca0a0f6a314
 	github.com/open-policy-agent/opa v0.11.0
 	github.com/pkg/errors v0.8.1
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a // indirect
 	github.com/smallfish/simpleyaml v0.0.0-20170911015856-a32031077861
+	github.com/spf13/cobra v0.0.5
+	github.com/spf13/pflag v1.0.3
 	github.com/yashtewari/glob-intersection v0.0.0-20180916065949-5c77d914dd0b // indirect
-	golang.org/x/net v0.0.0-20190328230028-74de082e2cca // indirect
-	golang.org/x/sys v0.0.0-20190422165155-953cdadca894 // indirect
-	golang.org/x/text v0.3.1-0.20181227161524-e6919f6577db // indirect
 	google.golang.org/genproto v0.0.0-20190327125643-d831d65fe17d
 	google.golang.org/grpc v1.19.1
-	gopkg.in/yaml.v2 v2.2.2 // indirect
+	k8s.io/apiextensions-apiserver v0.0.0-20190814221956-627d23dfd9d6 // indirect
+	k8s.io/apimachinery v0.0.0-20190814100815-533d101be9a6
+	k8s.io/cli-runtime v0.0.0-20190814105353-799c3f7793f3
+	k8s.io/kubectl v0.0.0-20190814111721-609f2a9f132d
+	sigs.k8s.io/controller-runtime v0.1.12 // indirect
 )

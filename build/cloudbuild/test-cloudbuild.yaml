@@ -26,3 +26,4 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   id: Test build of server container
   args: ['build', '-t', 'config-validator', '.']
+timeout: 1200s
