@@ -818,7 +818,8 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(sortViolations(tc.want), sortViolations(result)); diff != "" {
+			wantedConstraints := attachConstraints(tc.want, tc.constraints)
+			if diff := cmp.Diff(sortViolations(wantedConstraints), sortViolations(result)); diff != "" {
 				t.Errorf("unexpected result (-want +got) %v", diff)
 			}
 		})
@@ -1291,6 +1292,25 @@ func sortViolations(in *validator.AuditResponse) *validator.AuditResponse {
 	sort.Slice(in.Violations, func(i, j int) bool {
 		return in.Violations[i].String() < in.Violations[j].String()
 	})
+	return in
+}
+
+func attachConstraints(in *validator.AuditResponse, constraints []*configs.Constraint) *validator.AuditResponse {
+	if in == nil {
+		return in
+	}
+
+	for i, violation := range in.Violations {
+		for _, constraint := range constraints {
+			if constraint.Confg.MetadataName == violation.Constraint {
+				proto, err := constraint.AsProto()
+				if err != nil {
+					log.Fatal(err)
+				}
+				in.Violations[i].ConstraintConfig = proto
+			}
+		}
+	}
 	return in
 }
 
