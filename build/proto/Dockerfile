@@ -22,7 +22,6 @@ RUN mkdir /proto
 RUN git clone https://github.com/googleapis/googleapis /tmp/googleapis
 # Maintain expected import paths when using protoc -I/proto
 RUN mv /tmp/googleapis/google /proto/google
-RUN git clone https://github.com/kubernetes/apimachinery /proto/k8s.io/apimachinery
 
 WORKDIR /go/src/github.com/forseti-security/config-validator
 COPY ./go.mod ./go.sum ./
