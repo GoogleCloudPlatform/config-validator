@@ -42,6 +42,12 @@ message Asset {
   google.iam.v1.Policy iam_policy = 5;
 }
 
+// Constraint contains the configuration for a constraint.
+message Constraint {
+  // Metadata contains the user-provided constraint metadata
+  google.protobuf.Value metadata = 5;
+}
+
 // Violation contains the relevant information to explain how a constraint is violated.
 message Violation {
   // The name of the constraint that's violated.
@@ -53,6 +59,8 @@ message Violation {
   // Metadata is optional. It contains the constraint-specific information that can potentially be used for remediation.
   // Example: In a firewall rule constraint violation, Metadata can contain the open port number.
   google.protobuf.Value metadata = 4;
+  // The full constraint configuration.
+  Constraint constraint_config = 5;
 }
 
 message AddDataRequest {
