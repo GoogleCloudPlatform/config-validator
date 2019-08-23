@@ -19,7 +19,7 @@ test:
 	GO111MODULE=on go test ./...
 
 .PHONY: build
-build: format proto
+build: format proto tools
 
 .PHONY: release
 release: $(PLATFORMS)
@@ -35,3 +35,7 @@ clean:
 .PHONY: format
 format:
 	go fmt ./...
+
+.PHONY: tools
+tools:
+	go build ./cmd/...
