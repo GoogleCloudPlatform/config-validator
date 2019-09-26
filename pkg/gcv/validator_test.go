@@ -21,13 +21,14 @@ import (
 	"path/filepath"
 	"testing"
 
+	asset2 "github.com/forseti-security/config-validator/pkg/asset"
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
 	"github.com/golang/protobuf/jsonpb"
 	_struct "github.com/golang/protobuf/ptypes/struct"
 	"google.golang.org/genproto/googleapis/cloud/asset/v1"
-	iam "google.golang.org/genproto/googleapis/iam/v1"
+	"google.golang.org/genproto/googleapis/iam/v1"
 )
 
 const (
@@ -278,7 +279,7 @@ func TestConvertResourceToInterface(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			got, err := convertResourceViaJSONToInterface(tc.input)
+			got, err := asset2.ConvertResourceViaJSONToInterface(tc.input)
 			if err != nil {
 				t.Fatal(err)
 			}
