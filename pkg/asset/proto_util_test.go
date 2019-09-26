@@ -1,10 +1,10 @@
-package gcv
+package asset
 
 import (
 	"testing"
 
 	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/ptypes/struct"
+	structpb "github.com/golang/protobuf/ptypes/struct"
 )
 
 func TestCleanProtoValues(t *testing.T) {
@@ -140,10 +140,10 @@ func TestCleanProtoValues(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			pre, err := (&jsonpb.Marshaler{}).MarshalToString(c.value)
 			if err == nil && !c.noop {
-				t.Fatal("this test should have failed before calling cleanProtoValue()")
+				t.Fatal("this test should have failed before calling CleanProtoValue()")
 			}
 
-			cleanProtoValue(c.value)
+			CleanProtoValue(c.value)
 			post, err := (&jsonpb.Marshaler{}).MarshalToString(c.value)
 			if err != nil {
 				t.Fatal(err)
