@@ -350,9 +350,7 @@ audit[result] {
   }
 }
 `,
-			want: &validator.AuditResponse{
-				Violations: []*validator.Violation{},
-			},
+			want: &validator.AuditResponse{},
 		},
 	}
 
@@ -363,12 +361,16 @@ audit[result] {
 				t.Fatal(err)
 			}
 			cf.auditScript = tc.auditRego
-			cf.Configure(nil, nil)
+			if err := cf.Configure(nil, nil); err != nil {
+				t.Error(err)
+			}
 			result, err := cf.Audit(context.Background())
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(sortViolations(tc.want), sortViolations(result)); diff != "" {
+			sortAuditViolations(tc.want)
+			sortAuditViolations(result)
+			if diff := cmp.Diff(tc.want, result); diff != "" {
 				t.Errorf("unexpected result (-want +got) %v", diff)
 			}
 		})
@@ -388,9 +390,7 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 			templates:   []*configs.ConstraintTemplate{},
 			constraints: []*configs.Constraint{},
 			data:        []interface{}{},
-			want: &validator.AuditResponse{
-				Violations: []*validator.Violation{},
-			},
+			want:        &validator.AuditResponse{},
 		},
 		{
 			description: "no templates or constraints with data",
@@ -399,9 +399,7 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 			data: []interface{}{
 				makeTestData("nothing really", "matters"),
 			},
-			want: &validator.AuditResponse{
-				Violations: []*validator.Violation{},
-			},
+			want: &validator.AuditResponse{},
 		},
 		{
 			description: "no constraints with template/data",
@@ -412,9 +410,7 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 			data: []interface{}{
 				makeTestData("nothing really", "matters"),
 			},
-			want: &validator.AuditResponse{
-				Violations: []*validator.Violation{},
-			},
+			want: &validator.AuditResponse{},
 		},
 		{
 			description: "single template/constraint/data pass",
@@ -427,9 +423,7 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 			data: []interface{}{
 				makeTestData("my_data", "legit"),
 			},
-			want: &validator.AuditResponse{
-				Violations: []*validator.Violation{},
-			},
+			want: &validator.AuditResponse{},
 		},
 		{
 			description: "single template/constraint/data fail",
@@ -464,9 +458,7 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 				makeTestData("my_data_1", "legit"),
 				makeTestData("my_data_2", "legit"),
 			},
-			want: &validator.AuditResponse{
-				Violations: []*validator.Violation{},
-			},
+			want: &validator.AuditResponse{},
 		},
 		{
 			description: "single template/constraint multiple data mix pass/fail",
@@ -530,9 +522,7 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 				makeTestData("my_data_1", "legit"),
 				makeTestData("my_data_2", "legit"),
 			},
-			want: &validator.AuditResponse{
-				Violations: []*validator.Violation{},
-			},
+			want: &validator.AuditResponse{},
 		},
 		{
 			description: "single template/data multiple constraints, mix pass/fail",
@@ -665,9 +655,7 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 				makeTestData("my_data_1", "legit"),
 				makeTestData("my_data_2", "legit"),
 			},
-			want: &validator.AuditResponse{
-				Violations: []*validator.Violation{},
-			},
+			want: &validator.AuditResponse{},
 		},
 		{
 			description: "multiple template/constraint/data mix pass/fail",
@@ -775,6 +763,7 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
+			ctx := context.Background()
 			cf, err := New(map[string]string{})
 			if err != nil {
 				t.Fatal(err)
@@ -783,16 +772,32 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			for _, data := range tc.data {
-				cf.AddData(data)
+			result, reviewViolations := auditAndReview(t, cf, tc.data)
+
+			wantedConstraints := attachConstraints(tc.want, tc.constraints)
+			sortViolations(wantedConstraints.Violations)
+			if diff := cmp.Diff(wantedConstraints, result); diff != "" {
+				t.Errorf("unexpected result (-want +got) %v", diff)
 			}
-			result, err := cf.Audit(context.Background())
+			if diff := cmp.Diff(wantedConstraints.Violations, reviewViolations); diff != "" {
+				t.Errorf("unexpected result (-want +got) %v", diff)
+			}
+
+			// Call Reset to check that this clears inventory for Audit calls.
+			if err := cf.Reset(ctx); err != nil {
+				t.Fatal(err)
+			}
+			result, err = cf.Audit(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
-			wantedConstraints := attachConstraints(tc.want, tc.constraints)
-			if diff := cmp.Diff(sortViolations(wantedConstraints), sortViolations(result)); diff != "" {
-				t.Errorf("unexpected result (-want +got) %v", diff)
+			if len(result.Violations) != 0 {
+				t.Fatalf("expected 0 violations, got %s", result.Violations)
+			}
+			// Perform second reset to ensure that logic in reset handles this properly
+			// with rego store transactions.
+			if err := cf.Reset(ctx); err != nil {
+				t.Fatal(err)
 			}
 		})
 	}
@@ -988,21 +993,17 @@ func TestTargetAndExclude(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			cf.AddData(map[string]interface{}{
+			data := map[string]interface{}{
 				"name":          "data",
 				"asset_type":    "asset_type",
 				"ancestry_path": tc.ancestryPath,
-			})
-			result, err := cf.Audit(context.Background())
-			if err != nil {
-				t.Fatal(err)
 			}
-			// The constraint is guaranteed to violate because the asset type mismatch.
-			// Therefore if it's missing, it means that the target mechanism excluded it.
-			gotMatch := len(result.GetViolations()) > 0
-			if tc.wantMatch != gotMatch {
-				t.Errorf("want match: %t; got match: %t", tc.wantMatch, gotMatch)
+
+			var wantCount int
+			if tc.wantMatch {
+				wantCount = 1
 			}
+			auditAndReviewCountViolations(t, cf, []interface{}{data}, wantCount)
 		})
 	}
 }
@@ -1107,21 +1108,18 @@ func TestDefaultMatcher(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			cf.AddData(map[string]interface{}{
+			// The constraint is guaranteed to violate because the asset type mismatch.
+			// Therefore if it's missing, it means that the target mechanism excluded it.
+			data := map[string]interface{}{
 				"name":          "data",
 				"asset_type":    "does_not_match",
 				"ancestry_path": tc.ancestryPath,
-			})
-			result, err := cf.Audit(context.Background())
-			if err != nil {
-				t.Fatal(err)
 			}
-			// The constraint is guaranteed to violate because the asset type mismatch.
-			// Therefore if it's missing, it means that the target mechanism excluded it.
-			gotMatch := len(result.GetViolations()) > 0
-			if tc.wantMatch != gotMatch {
-				t.Errorf("want match: %t; got match: %t", tc.wantMatch, gotMatch)
+			var wantCount int
+			if tc.wantMatch {
+				wantCount = 1
 			}
+			auditAndReviewCountViolations(t, cf, []interface{}{data}, wantCount)
 		})
 	}
 }
@@ -1261,14 +1259,58 @@ NOT_audit[result] {
 	}
 }
 
-func sortViolations(in *validator.AuditResponse) *validator.AuditResponse {
-	if in == nil {
-		return in
+func auditAndReview(t *testing.T, cf *ConstraintFramework, inventory []interface{}) (*validator.AuditResponse, []*validator.Violation) {
+	ctx := context.Background()
+	t.Helper()
+
+	for _, data := range inventory {
+		cf.AddData(data)
 	}
-	sort.Slice(in.Violations, func(i, j int) bool {
-		return in.Violations[i].String() < in.Violations[j].String()
+	auditResult, err := cf.Audit(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var reviewViolations []*validator.Violation
+	for _, data := range inventory {
+		vs, err := cf.Review(ctx, data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		reviewViolations = append(reviewViolations, vs...)
+	}
+
+	sortViolations(auditResult.Violations)
+	sortViolations(reviewViolations)
+	return auditResult, reviewViolations
+}
+
+func auditAndReviewCountViolations(
+	t *testing.T, cf *ConstraintFramework, inventory []interface{}, want int) {
+	t.Helper()
+	auditResult, reviewViolations := auditAndReview(t, cf, inventory)
+
+	got := len(auditResult.Violations)
+	if got != want {
+		t.Errorf("expected %d audit violations, got %d", want, got)
+	}
+	got = len(reviewViolations)
+	if got != want {
+		t.Errorf("expected %d review violations, got %d", want, got)
+	}
+}
+
+func sortAuditViolations(in *validator.AuditResponse) {
+	if in == nil {
+		return
+	}
+	sortViolations(in.Violations)
+}
+
+func sortViolations(vs []*validator.Violation) {
+	sort.Slice(vs, func(i, j int) bool {
+		return vs[i].String() < vs[j].String()
 	})
-	return in
 }
 
 func attachConstraints(in *validator.AuditResponse, constraints []*configs.Constraint) *validator.AuditResponse {

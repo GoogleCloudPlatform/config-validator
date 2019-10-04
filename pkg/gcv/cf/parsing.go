@@ -60,7 +60,7 @@ func convertToViolations(expression *rego.ExpressionValue) ([]*validator.Violati
 	if err != nil {
 		return nil, err
 	}
-	violations := []*validator.Violation{}
+	var violations []*validator.Violation
 	for i := 0; i < len(parsedExpression); i++ {
 		violationToAdd := &validator.Violation{
 			Constraint: parsedExpression[i].Constraint,
