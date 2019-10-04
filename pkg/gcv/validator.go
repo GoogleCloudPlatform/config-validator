@@ -25,8 +25,6 @@ import (
 	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 const logRequestsVerboseLevel = 2
@@ -53,43 +51,21 @@ type Validator struct {
 	constraintFramework *cf.ConstraintFramework
 }
 
-// Option is a function for configuring Validator.
-// See https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis for background.
-type Option func(*Validator) error
-
-// PolicyPath returns an Option that sets the root directory of constraints and constraint templates.
-func PolicyPath(p string) Option {
-	return func(v *Validator) error {
-		v.policyPath = p
-		return nil
-	}
-}
-
-// PolicyLibraryDir returns an Option that sets the policy library directory with rego files.
-// This function is expected to be removed in the future when all assumed dependant rego code is inlined in template files,
-// and this validator includes the audit.rego files
-func PolicyLibraryDir(dir string) Option {
-	return func(v *Validator) error {
-		v.policyLibraryDir = dir
-		return nil
-	}
-}
-
 func loadRegoFiles(dir string) (map[string]string, error) {
 	loadedFiles := make(map[string]string)
 	files, err := configs.ListRegoFiles(dir)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.Wrapf(err, "failed to list rego files from %s", dir)
 	}
 	for _, filePath := range files {
 		glog.V(logRequestsVerboseLevel).Infof("Loading rego file: %s", filePath)
 		if _, exists := loadedFiles[filePath]; exists {
 			// This shouldn't happen
-			return nil, status.Errorf(codes.Internal, "Unexpected file collision with file %s", filePath)
+			return nil, errors.Errorf("unexpected file collision with file %s", filePath)
 		}
 		fileBytes, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, errors.Wrapf(err, "unable to read file %s", filePath).Error())
+			return nil, errors.Wrapf(err, "unable to read file %s", filePath)
 		}
 		loadedFiles[filePath] = string(fileBytes)
 	}
@@ -107,7 +83,7 @@ func loadYAMLFiles(dir string) ([]*configs.ConstraintTemplate, []*configs.Constr
 		glog.V(logRequestsVerboseLevel).Infof("Loading yaml file: %s", filePath)
 		fileContents, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			return nil, nil, status.Error(codes.InvalidArgument, errors.Wrapf(err, "unable to read file %s", filePath).Error())
+			return nil, nil, errors.Wrapf(err, "unable to read file %s", filePath)
 		}
 		categorizedData, err := configs.CategorizeYAMLFile(fileContents, filePath)
 		if err != nil {
@@ -121,7 +97,7 @@ func loadYAMLFiles(dir string) ([]*configs.ConstraintTemplate, []*configs.Constr
 			constraints = append(constraints, data)
 		default:
 			// Unexpected: CategorizeYAMLFile shouldn't return any types
-			return nil, nil, status.Errorf(codes.Internal, "CategorizeYAMLFile returned unexpected data type when converting file %s", filePath)
+			return nil, nil, errors.Errorf("CategorizeYAMLFile returned unexpected data type when converting file %s", filePath)
 		}
 	}
 	return templates, constraints, nil
@@ -130,22 +106,18 @@ func loadYAMLFiles(dir string) ([]*configs.ConstraintTemplate, []*configs.Constr
 // NewValidator returns a new Validator.
 // By default it will initialize the underlying query evaluation engine by loading supporting library, constraints, and constraint templates.
 // We may want to make this initialization behavior configurable in the future.
-func NewValidator(options ...Option) (*Validator, error) {
-	ret := &Validator{}
-	for _, option := range options {
-		if err := option(ret); err != nil {
-			return nil, err
-		}
+func NewValidator(policyPath string, policyLibraryPath string) (*Validator, error) {
+	if policyPath == "" {
+		return nil, errors.Errorf("No policy path set, provide an option to set the policy path gcv.PolicyPath")
 	}
-	if ret.policyPath == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "No policy path set, provide an option to set the policy path gcv.PolicyPath")
-	}
-	if ret.policyLibraryDir == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "No policy library set")
+	if policyLibraryPath == "" {
+		return nil, errors.Errorf("No policy library set")
 	}
 
+	ret := &Validator{}
+
 	glog.V(logRequestsVerboseLevel).Infof("loading policy library dir: %s", ret.policyLibraryDir)
-	regoLib, err := loadRegoFiles(ret.policyLibraryDir)
+	regoLib, err := loadRegoFiles(policyLibraryPath)
 	if err != nil {
 		return nil, err
 	}
@@ -155,19 +127,13 @@ func NewValidator(options ...Option) (*Validator, error) {
 		return nil, err
 	}
 	glog.V(logRequestsVerboseLevel).Infof("loading policy dir: %s", ret.policyPath)
-	templates, constraints, err := loadYAMLFiles(ret.policyPath)
+	templates, constraints, err := loadYAMLFiles(policyPath)
 	if err != nil {
 		return nil, err
 	}
-	for _, template := range templates {
-		if err := ret.constraintFramework.AddTemplate(template); err != nil {
-			return nil, err
-		}
-	}
-	for _, constraint := range constraints {
-		if err := ret.constraintFramework.AddConstraint(constraint); err != nil {
-			return nil, err
-		}
+
+	if err := ret.constraintFramework.Configure(templates, constraints); err != nil {
+		return nil, err
 	}
 
 	return ret, nil
@@ -177,16 +143,20 @@ func NewValidator(options ...Option) (*Validator, error) {
 func (v *Validator) AddData(request *validator.AddDataRequest) error {
 	for i, asset := range request.Assets {
 		if err := asset2.ValidateAsset(asset); err != nil {
-			return status.Error(codes.InvalidArgument, errors.Wrapf(err, "index %d", i).Error())
+			return errors.Wrapf(err, "index %d", i)
 		}
 		f, err := asset2.ConvertResourceViaJSONToInterface(asset)
 		if err != nil {
-			return status.Error(codes.Internal, errors.Wrapf(err, "index %d", i).Error())
+			return errors.Wrapf(err, "index %d", i)
 		}
 		v.constraintFramework.AddData(f)
 	}
 
 	return nil
+}
+
+func (v *Validator) Review(ctx context.Context, request *validator.ReviewRequest) (*validator.ReviewResponse, error) {
+	return nil, errors.Errorf("Not implemented")
 }
 
 // Reset clears previously added data from the underlying query evaluation engine.

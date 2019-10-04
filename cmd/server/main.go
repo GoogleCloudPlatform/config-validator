@@ -25,6 +25,8 @@ import (
 	"github.com/forseti-security/config-validator/pkg/gcv"
 	"github.com/golang/glog"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var (
@@ -41,27 +43,40 @@ type gcvServer struct {
 
 func (s *gcvServer) AddData(ctx context.Context, request *validator.AddDataRequest) (*validator.AddDataResponse, error) {
 	err := s.validator.AddData(request)
-	return &validator.AddDataResponse{}, err
+	if err != nil {
+		return &validator.AddDataResponse{}, status.Error(codes.Internal, err.Error())
+	}
+	return &validator.AddDataResponse{}, nil
 }
 
 func (s *gcvServer) Audit(ctx context.Context, request *validator.AuditRequest) (*validator.AuditResponse, error) {
-	response, err := s.validator.Audit(ctx)
-	return response, err
+	resp, err := s.validator.Audit(ctx)
+	if err != nil {
+		return resp, status.Error(codes.Internal, err.Error())
+	}
+	return resp, nil
 }
 
 func (s *gcvServer) Reset(ctx context.Context, request *validator.ResetRequest) (*validator.ResetResponse, error) {
 	err := s.validator.Reset()
-	return &validator.ResetResponse{}, err
+	if err != nil {
+		return &validator.ResetResponse{}, status.Error(codes.Internal, err.Error())
+	}
+	return &validator.ResetResponse{}, nil
+}
+
+func (s *gcvServer) Review(ctx context.Context, request *validator.ReviewRequest) (*validator.ReviewResponse, error) {
+	return &validator.ReviewResponse{}, status.Error(codes.Unimplemented, "Review not implemented")
 }
 
 func newServer(policyPath, policyLibraryPath string) (*gcvServer, error) {
-	s := &gcvServer{}
-	v, err := gcv.NewValidator(gcv.PolicyPath(policyPath), gcv.PolicyLibraryDir(policyLibraryPath))
+	v, err := gcv.NewValidator(policyPath, policyLibraryPath)
 	if err != nil {
 		return nil, err
 	}
-	s.validator = v
-	return s, nil
+	return &gcvServer{
+		validator: v,
+	}, nil
 }
 
 func main() {

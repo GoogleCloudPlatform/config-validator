@@ -61,16 +61,10 @@ func TestCFTemplateSetup(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			var errs []error
-			for _, template := range tc.templates {
-				err := cf.AddTemplate(template)
-				if err != nil {
-					errs = append(errs, err)
-				}
-			}
 
-			if len(errs) == 0 && tc.wantErr {
-				t.Errorf("want errors %v got errors %v", tc.wantErr, errs)
+			err = cf.Configure(tc.templates, nil)
+			if err == nil && tc.wantErr {
+				t.Errorf("want error %v got error %v", tc.wantErr, err)
 			}
 		})
 	}
@@ -98,14 +92,11 @@ func TestCFTemplateDependencyCodeCollision(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = cf.AddTemplate(template)
+	err = cf.Configure([]*configs.ConstraintTemplate{template}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	compiler, err := cf.compile()
-	if err != nil {
-		t.Fatal(err)
-	}
+	compiler := cf.regoCompiler
 	wantModuleCount := 3 // audit + dependency code + template
 	if len(compiler.Modules) != wantModuleCount {
 		t.Fatalf("unexpected number of compiled modules: got %d want %d", len(compiler.Modules), wantModuleCount)
@@ -190,22 +181,10 @@ func TestCFConstraintSetup(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			for _, template := range tc.templates {
-				err := cf.AddTemplate(template)
-				if err != nil {
-					t.Error("unexpected error adding template: ", err)
-				}
-			}
-			var errs []error
-			for _, constraint := range tc.constraints {
-				err := cf.AddConstraint(constraint)
-				if err != nil {
-					errs = append(errs, err)
-				}
-			}
 
-			if len(errs) == 0 && tc.wantErr {
-				t.Errorf("want errors %v got errors %v", tc.wantErr, errs)
+			err = cf.Configure(tc.templates, tc.constraints)
+			if err == nil && tc.wantErr {
+				t.Errorf("want errors %v got errors %v", tc.wantErr, err)
 			}
 		})
 	}
@@ -384,6 +363,7 @@ audit[result] {
 				t.Fatal(err)
 			}
 			cf.auditScript = tc.auditRego
+			cf.Configure(nil, nil)
 			result, err := cf.Audit(context.Background())
 			if err != nil {
 				t.Fatal(err)
@@ -799,17 +779,9 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			for _, template := range tc.templates {
-				err = cf.AddTemplate(template)
-				if err != nil {
-					t.Fatal(err)
-				}
-			}
-			for _, constraint := range tc.constraints {
-				err = cf.AddConstraint(constraint)
-				if err != nil {
-					t.Fatal(err)
-				}
+			err = cf.Configure(tc.templates, tc.constraints)
+			if err != nil {
+				t.Fatal(err)
 			}
 			for _, data := range tc.data {
 				cf.AddData(data)
@@ -1008,12 +980,11 @@ func TestTargetAndExclude(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = cf.AddTemplate(makeAlwaysViolateTemplate())
-			if err != nil {
-				t.Fatal(err)
-			}
 			c := alwaysViolateWithTargetAndExclude(tc.withGCPWrapper, tc.target, tc.exclude)
-			err = cf.AddConstraint(mustMakeConstraint(c))
+			err = cf.Configure(
+				[]*configs.ConstraintTemplate{makeAlwaysViolateTemplate()},
+				[]*configs.Constraint{mustMakeConstraint(c)},
+			)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1128,11 +1099,12 @@ func TestDefaultMatcher(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err = cf.AddTemplate(makeAlwaysViolateTemplate()); err != nil {
-				t.Fatal(err)
-			}
 			c := alwaysViolateWithExclude(tc.withGCPWrapper, tc.exclude)
-			if err = cf.AddConstraint(mustMakeConstraint(c)); err != nil {
+			err = cf.Configure(
+				[]*configs.ConstraintTemplate{makeAlwaysViolateTemplate()},
+				[]*configs.Constraint{mustMakeConstraint(c)},
+			)
+			if err != nil {
 				t.Fatal(err)
 			}
 			cf.AddData(map[string]interface{}{
@@ -1159,16 +1131,17 @@ func TestDefaultMatcherWithoutSpec(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = cf.AddTemplate(makeAlwaysViolateTemplate()); err != nil {
-		t.Fatal(err)
-	}
 	c := fmt.Sprintf(`
 apiVersion: constraints.gatekeeper.sh/v1alpha1
 kind: %s
 metadata:
   name: "constraint"
 `, alwaysViolateConstraint)
-	if err = cf.AddConstraint(mustMakeConstraint(c)); err != nil {
+	err = cf.Configure(
+		[]*configs.ConstraintTemplate{makeAlwaysViolateTemplate()},
+		[]*configs.Constraint{mustMakeConstraint(c)},
+	)
+	if err != nil {
 		t.Fatal(err)
 	}
 	cf.AddData(map[string]interface{}{
@@ -1278,6 +1251,9 @@ NOT_audit[result] {
 				t.Fatal(err)
 			}
 			cf.auditScript = tc.auditRego
+			if err := cf.Configure(nil, nil); err != nil {
+				t.Fatal(err)
+			}
 			if result, err := cf.Audit(context.Background()); err == nil {
 				t.Fatalf("error expected, but non thrown, instead provided result %v", result)
 			}
