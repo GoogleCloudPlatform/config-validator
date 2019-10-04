@@ -22,6 +22,7 @@ import (
 	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
+	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/storage/inmem"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -33,10 +34,9 @@ type ConstraintFramework struct {
 	userInputData []interface{}
 	// map[userDefined]regoCode
 	dependencyCode map[string]string
-	// map[kind]map[metadataName]constraint
-	constraints  map[string]map[string]*configs.Constraint
-	auditScript  string
-	regoCompiler *ast.Compiler
+	auditScript    string
+	regoCompiler   *ast.Compiler
+	regoStore      storage.Store
 }
 
 const (
@@ -50,14 +50,12 @@ const (
 //   dependencyCode: map[debugString]regoCode: The debugString key will be referenced in compiler errors. It should help identify the source of the rego code.
 func New(dependencyCode map[string]string) (*ConstraintFramework, error) {
 	cf := ConstraintFramework{}
-	cf.constraints = make(map[string]map[string]*configs.Constraint)
 	_, compileErrors := ast.CompileModules(dependencyCode)
 	if compileErrors != nil {
 		return nil, status.Error(codes.InvalidArgument, compileErrors.Error())
 	}
 	cf.dependencyCode = dependencyCode
 	cf.auditScript = AuditRego
-
 	return &cf, nil
 }
 
@@ -101,7 +99,7 @@ func (cf *ConstraintFramework) Configure(templates []*configs.ConstraintTemplate
 			constraintMap[c.Confg.Kind] = make(map[string]*configs.Constraint)
 		}
 		if _, exists := constraintMap[c.Confg.Kind][c.Confg.MetadataName]; exists {
-			return status.Errorf(codes.AlreadyExists, "Conflicting constraint metadata names with name %s from file %s", c.Confg.MetadataName, c.Confg.FilePath)
+			return errors.Errorf("Conflicting constraint metadata names with name %s from file %s", c.Confg.MetadataName, c.Confg.FilePath)
 		}
 		if _, exists := templateMap[c.Confg.Kind]; !exists {
 			return errors.Errorf("no template found for kind %s, constraint's template needs to be loaded before constraint. ", c.Confg.Kind)
@@ -113,8 +111,16 @@ func (cf *ConstraintFramework) Configure(templates []*configs.ConstraintTemplate
 	if err != nil {
 		return errors.Wrapf(err, "failed to compile all templates")
 	}
+
+	constraintsData, err := constraintAsInputData(constraintMap)
+	if err != nil {
+		return errors.Wrapf(err, "failed to generate constraints as data")
+	}
+
 	cf.regoCompiler = compiler
-	cf.constraints = constraintMap
+	cf.regoStore = inmem.NewFromObject(map[string]interface{}{
+		constraintPathPrefix: constraintsData,
+	})
 	return nil
 }
 
@@ -163,18 +169,34 @@ func constraintAsInputData(constraintMap map[string]map[string]*configs.Constrai
 	return flattened, nil
 }
 
-func (cf *ConstraintFramework) buildRegoObject() (*rego.Rego, error) {
-	constraints, err := constraintAsInputData(cf.constraints)
+func (cf *ConstraintFramework) buildRegoObject(ctx context.Context) (*rego.Rego, error) {
+	txn, err := cf.regoStore.NewTransaction(ctx, storage.WriteParams)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
+
+	path := storage.Path{inputDataPrefix}
+	_, err = cf.regoStore.Read(ctx, txn, path)
+	if err == nil {
+		if err := cf.regoStore.Write(ctx, txn, storage.ReplaceOp, path, cf.userInputData); err != nil {
+			return nil, err
+		}
+	} else if err != nil && storage.IsNotFound(err) {
+		if err := cf.regoStore.Write(ctx, txn, storage.AddOp, path, cf.userInputData); err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, err
+	}
+
+	if err := cf.regoStore.Commit(ctx, txn); err != nil {
+		return nil, err
+	}
+
 	r := rego.New(
 		rego.Query(regoLibraryRule),
 		rego.Compiler(cf.regoCompiler),
-		rego.Store(inmem.NewFromObject(map[string]interface{}{
-			inputDataPrefix:      cf.userInputData,
-			constraintPathPrefix: constraints,
-		})))
+		rego.Store(cf.regoStore))
 	return r, nil
 }
 
@@ -200,7 +222,7 @@ func auditExpressionResult(ctx context.Context, r *rego.Rego) (*rego.ExpressionV
 
 // Audit checks the GCP resource metadata that has been added via AddData to determine if any of the constraint is violated.
 func (cf *ConstraintFramework) Audit(ctx context.Context) (*validator.AuditResponse, error) {
-	r, err := cf.buildRegoObject()
+	r, err := cf.buildRegoObject(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -1251,6 +1251,9 @@ NOT_audit[result] {
 				t.Fatal(err)
 			}
 			cf.auditScript = tc.auditRego
+			if err := cf.Configure(nil, nil); err != nil {
+				t.Fatal(err)
+			}
 			if result, err := cf.Audit(context.Background()); err == nil {
 				t.Fatalf("error expected, but non thrown, instead provided result %v", result)
 			}
