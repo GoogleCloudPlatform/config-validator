@@ -75,6 +75,13 @@ message AuditResponse {
 message ResetRequest {}
 message ResetResponse {}
 
+message ReviewRequest {
+  repeated Asset assets = 1;
+}
+message ReviewResponse {
+  repeated Violation violations = 1;
+}
+
 service Validator {
   // AddData adds GCP resource metadata to be audited later.
   rpc AddData(AddDataRequest) returns (AddDataResponse) {}
@@ -82,4 +89,7 @@ service Validator {
   rpc Audit(AuditRequest) returns (AuditResponse) {}
   // Reset clears previously added data from the underlying query evaluation engine.
   rpc Reset(ResetRequest) returns (ResetResponse) {}
+  // Review checks the GCP resources and returns any constraint violations.  Note that referential checks are not supported
+  // with this mode.
+  rpc Review(ReviewRequest) returns (ReviewResponse) {}
 }
