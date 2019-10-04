@@ -43,16 +43,26 @@ type gcvServer struct {
 
 func (s *gcvServer) AddData(ctx context.Context, request *validator.AddDataRequest) (*validator.AddDataResponse, error) {
 	err := s.validator.AddData(request)
-	return &validator.AddDataResponse{}, err
+	if err != nil {
+		return &validator.AddDataResponse{}, status.Error(codes.Internal, err.Error())
+	}
+	return &validator.AddDataResponse{}, nil
 }
 
 func (s *gcvServer) Audit(ctx context.Context, request *validator.AuditRequest) (*validator.AuditResponse, error) {
-	return s.validator.Audit(ctx)
+	resp, err := s.validator.Audit(ctx)
+	if err != nil {
+		return resp, status.Error(codes.Internal, err.Error())
+	}
+	return resp, nil
 }
 
 func (s *gcvServer) Reset(ctx context.Context, request *validator.ResetRequest) (*validator.ResetResponse, error) {
 	err := s.validator.Reset()
-	return &validator.ResetResponse{}, err
+	if err != nil {
+		return &validator.ResetResponse{}, status.Error(codes.Internal, err.Error())
+	}
+	return &validator.ResetResponse{}, nil
 }
 
 func (s *gcvServer) Review(ctx context.Context, request *validator.ReviewRequest) (*validator.ReviewResponse, error) {

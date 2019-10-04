@@ -25,8 +25,6 @@ import (
 	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 const logRequestsVerboseLevel = 2
@@ -57,17 +55,17 @@ func loadRegoFiles(dir string) (map[string]string, error) {
 	loadedFiles := make(map[string]string)
 	files, err := configs.ListRegoFiles(dir)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.Wrapf(err, "failed to list rego files from %s", dir)
 	}
 	for _, filePath := range files {
 		glog.V(logRequestsVerboseLevel).Infof("Loading rego file: %s", filePath)
 		if _, exists := loadedFiles[filePath]; exists {
 			// This shouldn't happen
-			return nil, status.Errorf(codes.Internal, "Unexpected file collision with file %s", filePath)
+			return nil, errors.Errorf("unexpected file collision with file %s", filePath)
 		}
 		fileBytes, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, errors.Wrapf(err, "unable to read file %s", filePath).Error())
+			return nil, errors.Wrapf(err, "unable to read file %s", filePath)
 		}
 		loadedFiles[filePath] = string(fileBytes)
 	}
@@ -85,7 +83,7 @@ func loadYAMLFiles(dir string) ([]*configs.ConstraintTemplate, []*configs.Constr
 		glog.V(logRequestsVerboseLevel).Infof("Loading yaml file: %s", filePath)
 		fileContents, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			return nil, nil, status.Error(codes.InvalidArgument, errors.Wrapf(err, "unable to read file %s", filePath).Error())
+			return nil, nil, errors.Wrapf(err, "unable to read file %s", filePath)
 		}
 		categorizedData, err := configs.CategorizeYAMLFile(fileContents, filePath)
 		if err != nil {
@@ -99,7 +97,7 @@ func loadYAMLFiles(dir string) ([]*configs.ConstraintTemplate, []*configs.Constr
 			constraints = append(constraints, data)
 		default:
 			// Unexpected: CategorizeYAMLFile shouldn't return any types
-			return nil, nil, status.Errorf(codes.Internal, "CategorizeYAMLFile returned unexpected data type when converting file %s", filePath)
+			return nil, nil, errors.Errorf("CategorizeYAMLFile returned unexpected data type when converting file %s", filePath)
 		}
 	}
 	return templates, constraints, nil
@@ -110,10 +108,10 @@ func loadYAMLFiles(dir string) ([]*configs.ConstraintTemplate, []*configs.Constr
 // We may want to make this initialization behavior configurable in the future.
 func NewValidator(policyPath string, policyLibraryPath string) (*Validator, error) {
 	if policyPath == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "No policy path set, provide an option to set the policy path gcv.PolicyPath")
+		return nil, errors.Errorf("No policy path set, provide an option to set the policy path gcv.PolicyPath")
 	}
 	if policyLibraryPath == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "No policy library set")
+		return nil, errors.Errorf("No policy library set")
 	}
 
 	ret := &Validator{}
@@ -145,11 +143,11 @@ func NewValidator(policyPath string, policyLibraryPath string) (*Validator, erro
 func (v *Validator) AddData(request *validator.AddDataRequest) error {
 	for i, asset := range request.Assets {
 		if err := asset2.ValidateAsset(asset); err != nil {
-			return status.Error(codes.InvalidArgument, errors.Wrapf(err, "index %d", i).Error())
+			return errors.Wrapf(err, "index %d", i)
 		}
 		f, err := asset2.ConvertResourceViaJSONToInterface(asset)
 		if err != nil {
-			return status.Error(codes.Internal, errors.Wrapf(err, "index %d", i).Error())
+			return errors.Wrapf(err, "index %d", i)
 		}
 		v.constraintFramework.AddData(f)
 	}

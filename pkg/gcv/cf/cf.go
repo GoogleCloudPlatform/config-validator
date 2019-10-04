@@ -25,8 +25,6 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/storage/inmem"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // ConstraintFramework organizes constraints/templates/data and handles evaluation.
@@ -50,9 +48,9 @@ const (
 //   dependencyCode: map[debugString]regoCode: The debugString key will be referenced in compiler errors. It should help identify the source of the rego code.
 func New(dependencyCode map[string]string) (*ConstraintFramework, error) {
 	cf := ConstraintFramework{}
-	_, compileErrors := ast.CompileModules(dependencyCode)
-	if compileErrors != nil {
-		return nil, status.Error(codes.InvalidArgument, compileErrors.Error())
+	_, err := ast.CompileModules(dependencyCode)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile dependency code")
 	}
 	cf.dependencyCode = dependencyCode
 	cf.auditScript = AuditRego
@@ -207,14 +205,14 @@ func auditExpressionResult(ctx context.Context, r *rego.Rego) (*rego.ExpressionV
 	}
 	if len(rs) != 1 {
 		// Only expecting to receive a single result set
-		return nil, status.Errorf(codes.Internal, "unexpected length of rego eval results, expected 1 got %d. This could indicate an error in the audit rego code", len(rs))
+		return nil, errors.Errorf("unexpected length of rego eval results, expected 1 got %d. This could indicate an error in the audit rego code", len(rs))
 	}
 	if len(rs[0].Expressions) != 1 {
-		return nil, status.Errorf(codes.Internal, "unexpected length of rego Expression results, expected 1 (from audit call) got %d. This could indicate an error in the audit rego code", len(rs[0].Expressions))
+		return nil, errors.Errorf("unexpected length of rego Expression results, expected 1 (from audit call) got %d. This could indicate an error in the audit rego code", len(rs[0].Expressions))
 	}
 	expressionResult := rs[0].Expressions[0]
 	if expressionResult.Text != regoLibraryRule {
-		return nil, status.Errorf(codes.Internal, "Unknown expression result %s, expected %s", expressionResult.Text, regoLibraryRule)
+		return nil, errors.Errorf("Unknown expression result %s, expected %s", expressionResult.Text, regoLibraryRule)
 	}
 
 	return expressionResult, nil
@@ -238,7 +236,7 @@ func (cf *ConstraintFramework) Audit(ctx context.Context) (*validator.AuditRespo
 
 	violations, err := convertToViolations(expressionVal)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, errors.Wrapf(err, "failed to convert eval result to violations")
 	}
 	response.Violations = violations
 
