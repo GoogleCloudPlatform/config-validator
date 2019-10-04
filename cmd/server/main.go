@@ -33,8 +33,10 @@ var (
 	policyPath = flag.String("policyPath", "", "directory containing policy templates and configs")
 	// TODO(corb): Template development will eventually inline library code, but the currently template examples have dependency rego code.
 	//  This flag will be deprecated when the template tooling is complete.
-	policyLibraryPath = flag.String("policyLibraryPath", "", "directory containing policy templates and configs")
-	port              = flag.Int("port", 10000, "The server port")
+	policyLibraryPath  = flag.String("policyLibraryPath", "", "directory containing policy templates and configs")
+	port               = flag.Int("port", 10000, "The server port")
+	maxMessageRecvSize = flag.Int(
+		"maxMessageRecvSize", 128*1024*1024, "The max message receive size for the RPC service")
 )
 
 type gcvServer struct {
@@ -66,11 +68,11 @@ func (s *gcvServer) Reset(ctx context.Context, request *validator.ResetRequest) 
 }
 
 func (s *gcvServer) Review(ctx context.Context, request *validator.ReviewRequest) (*validator.ReviewResponse, error) {
-	return &validator.ReviewResponse{}, status.Error(codes.Unimplemented, "Review not implemented")
+	return s.validator.Review(ctx, request)
 }
 
-func newServer(policyPath, policyLibraryPath string) (*gcvServer, error) {
-	v, err := gcv.NewValidator(policyPath, policyLibraryPath)
+func newServer(stopChannel chan struct{}, policyPath, policyLibraryPath string) (*gcvServer, error) {
+	v, err := gcv.NewValidator(stopChannel, policyPath, policyLibraryPath)
 	if err != nil {
 		return nil, err
 	}
@@ -85,8 +87,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen on port %d: %v", *port, err)
 	}
-	grpcServer := grpc.NewServer()
-	serverImpl, err := newServer(*policyPath, *policyLibraryPath)
+
+	stopChannel := make(chan struct{})
+	defer close(stopChannel)
+	grpcServer := grpc.NewServer(
+		grpc.MaxRecvMsgSize(*maxMessageRecvSize),
+	)
+	serverImpl, err := newServer(stopChannel, *policyPath, *policyLibraryPath)
 	if err != nil {
 		log.Fatalf("Failed to load server %v", err)
 	}
