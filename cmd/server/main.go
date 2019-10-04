@@ -25,6 +25,8 @@ import (
 	"github.com/forseti-security/config-validator/pkg/gcv"
 	"github.com/golang/glog"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var (
@@ -45,13 +47,16 @@ func (s *gcvServer) AddData(ctx context.Context, request *validator.AddDataReque
 }
 
 func (s *gcvServer) Audit(ctx context.Context, request *validator.AuditRequest) (*validator.AuditResponse, error) {
-	response, err := s.validator.Audit(ctx)
-	return response, err
+	return s.validator.Audit(ctx)
 }
 
 func (s *gcvServer) Reset(ctx context.Context, request *validator.ResetRequest) (*validator.ResetResponse, error) {
 	err := s.validator.Reset()
 	return &validator.ResetResponse{}, err
+}
+
+func (s *gcvServer) Review(ctx context.Context, request *validator.ReviewRequest) (*validator.ReviewResponse, error) {
+	return &validator.ReviewResponse{}, status.Error(codes.Unimplemented, "Review not implemented")
 }
 
 func newServer(policyPath, policyLibraryPath string) (*gcvServer, error) {

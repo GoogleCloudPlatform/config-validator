@@ -163,6 +163,10 @@ func (v *Validator) AddData(request *validator.AddDataRequest) error {
 	return nil
 }
 
+func (v *Validator) Review(ctx context.Context, request *validator.ReviewRequest) (*validator.ReviewResponse, error) {
+	return nil, errors.Errorf("Not implemented")
+}
+
 // Reset clears previously added data from the underlying query evaluation engine.
 func (v *Validator) Reset() error {
 	v.constraintFramework.Reset()
