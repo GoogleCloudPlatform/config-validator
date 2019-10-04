@@ -133,15 +133,9 @@ func NewValidator(policyPath string, policyLibraryPath string) (*Validator, erro
 	if err != nil {
 		return nil, err
 	}
-	for _, template := range templates {
-		if err := ret.constraintFramework.AddTemplate(template); err != nil {
-			return nil, err
-		}
-	}
-	for _, constraint := range constraints {
-		if err := ret.constraintFramework.AddConstraint(constraint); err != nil {
-			return nil, err
-		}
+
+	if err := ret.constraintFramework.Configure(templates, constraints); err != nil {
+		return nil, err
 	}
 
 	return ret, nil

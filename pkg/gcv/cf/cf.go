@@ -23,6 +23,7 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage/inmem"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -81,41 +82,38 @@ func (cf *ConstraintFramework) validateTemplate(t *configs.ConstraintTemplate) e
 	return err
 }
 
-// AddTemplate tracks an additional constraint template. This template is only used if a constraint is provided.
-func (cf *ConstraintFramework) AddTemplate(template *configs.ConstraintTemplate) error {
-	if _, exists := cf.templates[template.GeneratedKind]; exists {
-		return status.Errorf(codes.AlreadyExists, "Conflicting constraint templates with kind %s from file %s", template.GeneratedKind, template.Confg.FilePath)
+// Configure will set the constraint templates and constraints for ConstraintFramework
+func (cf *ConstraintFramework) Configure(templates []*configs.ConstraintTemplate, constraints []*configs.Constraint) error {
+	// create compiler from templates, other rego sources
+	templateMap := make(map[string]*configs.ConstraintTemplate)
+	for _, template := range templates {
+		if _, exists := templateMap[template.GeneratedKind]; exists {
+			return errors.Errorf("conflicting constraint templates with kind %s from file %s", template.GeneratedKind, template.Confg.FilePath)
+		}
+		if err := cf.validateTemplate(template); err != nil {
+			return errors.Wrapf(err, "failed to validate template")
+		}
+		templateMap[template.GeneratedKind] = template
 	}
-	if err := cf.validateTemplate(template); err != nil {
-		return status.Error(codes.InvalidArgument, err.Error())
-	}
-	cf.templates[template.GeneratedKind] = template
-	return nil
-}
 
-// validateConstraint validates template kind exists
-// TODO(corb): will also validate constraint data confirms to template validation
-func (cf *ConstraintFramework) validateConstraint(c *configs.Constraint) error {
-	if _, exists := cf.templates[c.Confg.Kind]; !exists {
-		return fmt.Errorf("no template found for kind %s, constraint's template needs to be loaded before constraint. ", c.Confg.Kind)
+	// create store from constraints
+	constraintMap := make(map[string]map[string]*configs.Constraint)
+	for _, c := range constraints {
+		if _, ok := constraintMap[c.Confg.Kind]; !ok {
+			constraintMap[c.Confg.Kind] = make(map[string]*configs.Constraint)
+		}
+		if _, exists := constraintMap[c.Confg.Kind][c.Confg.MetadataName]; exists {
+			return status.Errorf(codes.AlreadyExists, "Conflicting constraint metadata names with name %s from file %s", c.Confg.MetadataName, c.Confg.FilePath)
+		}
+		if _, exists := templateMap[c.Confg.Kind]; !exists {
+			return fmt.Errorf("no template found for kind %s, constraint's template needs to be loaded before constraint. ", c.Confg.Kind)
+		}
+		constraintMap[c.Confg.Kind][c.Confg.MetadataName] = c
 	}
-	// TODO(corb): validate constraints data with template validation spec
-	return nil
-}
 
-// AddConstraint adds a new constraint that will be used to validate data during Audit.
-// This will validate that the constraint dependencies are already loaded and that the constraint data is valid.
-func (cf *ConstraintFramework) AddConstraint(c *configs.Constraint) error {
-	if _, ok := cf.constraints[c.Confg.Kind]; !ok {
-		cf.constraints[c.Confg.Kind] = make(map[string]*configs.Constraint)
-	}
-	if _, exists := cf.constraints[c.Confg.Kind][c.Confg.MetadataName]; exists {
-		return status.Errorf(codes.AlreadyExists, "Conflicting constraint metadata names with name %s from file %s", c.Confg.MetadataName, c.Confg.FilePath)
-	}
-	if err := cf.validateConstraint(c); err != nil {
-		return status.Error(codes.InvalidArgument, err.Error())
-	}
-	cf.constraints[c.Confg.Kind][c.Confg.MetadataName] = c
+	// set compiler / store on cf
+	cf.templates = templateMap
+	cf.constraints = constraintMap
 	return nil
 }
 
