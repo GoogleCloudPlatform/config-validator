@@ -33,11 +33,10 @@ type ConstraintFramework struct {
 	userInputData []interface{}
 	// map[userDefined]regoCode
 	dependencyCode map[string]string
-	// map[kind]template
-	templates map[string]*configs.ConstraintTemplate
 	// map[kind]map[metadataName]constraint
-	constraints map[string]map[string]*configs.Constraint
-	auditScript string
+	constraints  map[string]map[string]*configs.Constraint
+	auditScript  string
+	regoCompiler *ast.Compiler
 }
 
 const (
@@ -51,7 +50,6 @@ const (
 //   dependencyCode: map[debugString]regoCode: The debugString key will be referenced in compiler errors. It should help identify the source of the rego code.
 func New(dependencyCode map[string]string) (*ConstraintFramework, error) {
 	cf := ConstraintFramework{}
-	cf.templates = make(map[string]*configs.ConstraintTemplate)
 	cf.constraints = make(map[string]map[string]*configs.Constraint)
 	_, compileErrors := ast.CompileModules(dependencyCode)
 	if compileErrors != nil {
@@ -106,13 +104,16 @@ func (cf *ConstraintFramework) Configure(templates []*configs.ConstraintTemplate
 			return status.Errorf(codes.AlreadyExists, "Conflicting constraint metadata names with name %s from file %s", c.Confg.MetadataName, c.Confg.FilePath)
 		}
 		if _, exists := templateMap[c.Confg.Kind]; !exists {
-			return fmt.Errorf("no template found for kind %s, constraint's template needs to be loaded before constraint. ", c.Confg.Kind)
+			return errors.Errorf("no template found for kind %s, constraint's template needs to be loaded before constraint. ", c.Confg.Kind)
 		}
 		constraintMap[c.Confg.Kind][c.Confg.MetadataName] = c
 	}
 
-	// set compiler / store on cf
-	cf.templates = templateMap
+	compiler, err := staticCompile(cf.auditScript, cf.dependencyCode, templateMap)
+	if err != nil {
+		return errors.Wrapf(err, "failed to compile all templates")
+	}
+	cf.regoCompiler = compiler
 	cf.constraints = constraintMap
 	return nil
 }
@@ -131,10 +132,6 @@ func staticCompile(auditScript string, dependencyCode map[string]string, templat
 		regoCode[fmt.Sprintf("templates.%s", key)] = template.Rego
 	}
 	return ast.CompileModules(regoCode)
-}
-
-func (cf *ConstraintFramework) compile() (*ast.Compiler, error) {
-	return staticCompile(cf.auditScript, cf.dependencyCode, cf.templates)
 }
 
 // Reset the user provided data, preserving the constraint and template information.
@@ -167,17 +164,13 @@ func constraintAsInputData(constraintMap map[string]map[string]*configs.Constrai
 }
 
 func (cf *ConstraintFramework) buildRegoObject() (*rego.Rego, error) {
-	compiler, err := cf.compile()
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
 	constraints, err := constraintAsInputData(cf.constraints)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	r := rego.New(
 		rego.Query(regoLibraryRule),
-		rego.Compiler(compiler),
+		rego.Compiler(cf.regoCompiler),
 		rego.Store(inmem.NewFromObject(map[string]interface{}{
 			inputDataPrefix:      cf.userInputData,
 			constraintPathPrefix: constraints,

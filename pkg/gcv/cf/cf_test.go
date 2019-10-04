@@ -96,10 +96,7 @@ func TestCFTemplateDependencyCodeCollision(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	compiler, err := cf.compile()
-	if err != nil {
-		t.Fatal(err)
-	}
+	compiler := cf.regoCompiler
 	wantModuleCount := 3 // audit + dependency code + template
 	if len(compiler.Modules) != wantModuleCount {
 		t.Fatalf("unexpected number of compiled modules: got %d want %d", len(compiler.Modules), wantModuleCount)
@@ -366,6 +363,7 @@ audit[result] {
 				t.Fatal(err)
 			}
 			cf.auditScript = tc.auditRego
+			cf.Configure(nil, nil)
 			result, err := cf.Audit(context.Background())
 			if err != nil {
 				t.Fatal(err)
