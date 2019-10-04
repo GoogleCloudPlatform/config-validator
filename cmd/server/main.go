@@ -55,13 +55,13 @@ func (s *gcvServer) Reset(ctx context.Context, request *validator.ResetRequest) 
 }
 
 func newServer(policyPath, policyLibraryPath string) (*gcvServer, error) {
-	s := &gcvServer{}
-	v, err := gcv.NewValidator(gcv.PolicyPath(policyPath), gcv.PolicyLibraryDir(policyLibraryPath))
+	v, err := gcv.NewValidator(policyPath, policyLibraryPath)
 	if err != nil {
 		return nil, err
 	}
-	s.validator = v
-	return s, nil
+	return &gcvServer{
+		validator: v,
+	}, nil
 }
 
 func main() {

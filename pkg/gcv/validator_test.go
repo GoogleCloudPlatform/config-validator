@@ -38,9 +38,13 @@ const (
 )
 
 func TestCreateValidatorWithNoOptions(t *testing.T) {
-	_, err := NewValidator()
+	_, err := NewValidator("", "/foo")
 	if err == nil {
 		t.Fatal("expected an error since no policy path is provided")
+	}
+	_, err = NewValidator("/foo", "")
+	if err == nil {
+		t.Fatal("expected an error since no policy library path is provided")
 	}
 }
 
@@ -298,8 +302,8 @@ func TestCreateNoDir(t *testing.T) {
 	}
 
 	if _, err = NewValidator(
-		PolicyPath(filepath.Join(emptyFolder, "someDirThatDoesntExist")),
-		PolicyLibraryDir(filepath.Join(emptyFolder, "someDirThatDoesntExist")),
+		filepath.Join(emptyFolder, "someDirThatDoesntExist"),
+		filepath.Join(emptyFolder, "someDirThatDoesntExist"),
 	); err == nil {
 		t.Fatal("expected a file system error but got no error")
 	}
@@ -320,10 +324,7 @@ func TestCreateNoReadAccess(t *testing.T) {
 		t.Fatal("creating temp dir sub dir:", err)
 	}
 
-	if _, err = NewValidator(
-		PolicyPath(tmpDir),
-		PolicyLibraryDir(tmpDir),
-	); err == nil {
+	if _, err = NewValidator(tmpDir, tmpDir); err == nil {
 		t.Fatal("expected a file system error but got no error")
 	}
 }
@@ -340,10 +341,7 @@ func TestCreateEmptyDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err = NewValidator(
-		PolicyPath(policyDir),
-		PolicyLibraryDir(policyLibDir),
-	); err != nil {
+	if _, err = NewValidator(policyDir, policyLibDir); err != nil {
 		t.Fatal("empty dir not expected to provide error: ", err)
 	}
 }
@@ -354,26 +352,11 @@ func cleanup(t *testing.T, dir string) {
 	}
 }
 
-// groupOptions will Groups options in order into a single option.
-func groupOptions(options ...Option) Option {
-	return func(v *Validator) error {
-		for _, option := range options {
-			if err := option(v); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-}
-
 // testOptions provides a set of default options that allows the successful creation
 // of a validator.
-func testOptions() Option {
+func testOptions() (string, string) {
 	// Add default options to this list
-	return groupOptions(
-		PolicyPath(localPolicyDir),
-		PolicyLibraryDir(localPolicyDepDir),
-	)
+	return localPolicyDir, localPolicyDepDir
 }
 
 func storageAssetNoLogging() *validator.Asset {

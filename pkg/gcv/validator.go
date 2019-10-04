@@ -53,28 +53,6 @@ type Validator struct {
 	constraintFramework *cf.ConstraintFramework
 }
 
-// Option is a function for configuring Validator.
-// See https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis for background.
-type Option func(*Validator) error
-
-// PolicyPath returns an Option that sets the root directory of constraints and constraint templates.
-func PolicyPath(p string) Option {
-	return func(v *Validator) error {
-		v.policyPath = p
-		return nil
-	}
-}
-
-// PolicyLibraryDir returns an Option that sets the policy library directory with rego files.
-// This function is expected to be removed in the future when all assumed dependant rego code is inlined in template files,
-// and this validator includes the audit.rego files
-func PolicyLibraryDir(dir string) Option {
-	return func(v *Validator) error {
-		v.policyLibraryDir = dir
-		return nil
-	}
-}
-
 func loadRegoFiles(dir string) (map[string]string, error) {
 	loadedFiles := make(map[string]string)
 	files, err := configs.ListRegoFiles(dir)
@@ -130,22 +108,18 @@ func loadYAMLFiles(dir string) ([]*configs.ConstraintTemplate, []*configs.Constr
 // NewValidator returns a new Validator.
 // By default it will initialize the underlying query evaluation engine by loading supporting library, constraints, and constraint templates.
 // We may want to make this initialization behavior configurable in the future.
-func NewValidator(options ...Option) (*Validator, error) {
-	ret := &Validator{}
-	for _, option := range options {
-		if err := option(ret); err != nil {
-			return nil, err
-		}
-	}
-	if ret.policyPath == "" {
+func NewValidator(policyPath string, policyLibraryPath string) (*Validator, error) {
+	if policyPath == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "No policy path set, provide an option to set the policy path gcv.PolicyPath")
 	}
-	if ret.policyLibraryDir == "" {
+	if policyLibraryPath == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "No policy library set")
 	}
 
+	ret := &Validator{}
+
 	glog.V(logRequestsVerboseLevel).Infof("loading policy library dir: %s", ret.policyLibraryDir)
-	regoLib, err := loadRegoFiles(ret.policyLibraryDir)
+	regoLib, err := loadRegoFiles(policyLibraryPath)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +129,7 @@ func NewValidator(options ...Option) (*Validator, error) {
 		return nil, err
 	}
 	glog.V(logRequestsVerboseLevel).Infof("loading policy dir: %s", ret.policyPath)
-	templates, constraints, err := loadYAMLFiles(ret.policyPath)
+	templates, constraints, err := loadYAMLFiles(policyPath)
 	if err != nil {
 		return nil, err
 	}
