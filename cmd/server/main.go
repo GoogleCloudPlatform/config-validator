@@ -58,7 +58,7 @@ func (s *gcvServer) Audit(ctx context.Context, request *validator.AuditRequest) 
 }
 
 func (s *gcvServer) Reset(ctx context.Context, request *validator.ResetRequest) (*validator.ResetResponse, error) {
-	err := s.validator.Reset()
+	err := s.validator.Reset(ctx)
 	if err != nil {
 		return &validator.ResetResponse{}, status.Error(codes.Internal, err.Error())
 	}

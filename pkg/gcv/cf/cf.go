@@ -38,10 +38,18 @@ type ConstraintFramework struct {
 }
 
 const (
-	inputDataPrefix      = "inventory"
+	// inputDataPrefix is the field in rego land "data" that will hold inventory
+	inputDataPrefix = "inventory"
+	// constraintPathPrefix is the field in rego land "data" that will hold constraints
 	constraintPathPrefix = "constraints"
-	regoLibraryRule      = "data.validator.gcp.lib.audit"
+	// regoAuditRule is the rule that will be evaluated when calling audit
+	regoAuditRule = "data.validator.gcp.lib.audit"
+	// regoReviewRule is the rule that will be evaluated when calling review
+	regoReviewRule = "data.validator.gcp.lib.handle_asset"
 )
+
+// inputDataPath is the path in the rego storage.Store that will hold input data
+var inputDataPath = storage.Path{inputDataPrefix}
 
 // New creates a new ConstraintFramework
 // args:
@@ -118,6 +126,7 @@ func (cf *ConstraintFramework) Configure(templates []*configs.ConstraintTemplate
 	cf.regoCompiler = compiler
 	cf.regoStore = inmem.NewFromObject(map[string]interface{}{
 		constraintPathPrefix: constraintsData,
+		inputDataPrefix:      []interface{}{},
 	})
 	return nil
 }
@@ -139,10 +148,24 @@ func staticCompile(auditScript string, dependencyCode map[string]string, templat
 }
 
 // Reset the user provided data, preserving the constraint and template information.
-func (cf *ConstraintFramework) Reset() {
+func (cf *ConstraintFramework) Reset(ctx context.Context) error {
 	// Clear input data
 	// This is provided as a param in audit
 	cf.userInputData = []interface{}{}
+	return cf.setStoreInventory(ctx)
+}
+
+// Review returns violations that are found after evaluating constraints on
+// resource.  The "resource" arg is the return value of json.Unmarshal after
+// decoding a JSON resource.
+func (cf *ConstraintFramework) Review(ctx context.Context, resource interface{}) ([]*validator.Violation, error) {
+	violations, err := cf.expressionResult(ctx, regoReviewRule, rego.Input(map[string]interface{}{
+		"asset": resource,
+	}))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to evaluate review")
+	}
+	return violations, nil
 }
 
 // constraintAsInputData prepares the constraint data for providing to rego.
@@ -167,39 +190,33 @@ func constraintAsInputData(constraintMap map[string]map[string]*configs.Constrai
 	return flattened, nil
 }
 
-func (cf *ConstraintFramework) buildRegoObject(ctx context.Context) (*rego.Rego, error) {
+func (cf *ConstraintFramework) setStoreInventory(ctx context.Context) error {
 	txn, err := cf.regoStore.NewTransaction(ctx, storage.WriteParams)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	path := storage.Path{inputDataPrefix}
-	_, err = cf.regoStore.Read(ctx, txn, path)
-	if err == nil {
-		if err := cf.regoStore.Write(ctx, txn, storage.ReplaceOp, path, cf.userInputData); err != nil {
-			return nil, err
-		}
-	} else if err != nil && storage.IsNotFound(err) {
-		if err := cf.regoStore.Write(ctx, txn, storage.AddOp, path, cf.userInputData); err != nil {
-			return nil, err
-		}
-	} else {
-		return nil, err
+	if err := cf.regoStore.Write(ctx, txn, storage.ReplaceOp, inputDataPath, cf.userInputData); err != nil {
+		return err
 	}
 
 	if err := cf.regoStore.Commit(ctx, txn); err != nil {
-		return nil, err
+		return err
 	}
 
-	r := rego.New(
-		rego.Query(regoLibraryRule),
-		rego.Compiler(cf.regoCompiler),
-		rego.Store(cf.regoStore))
-	return r, nil
+	return nil
 }
 
-func auditExpressionResult(ctx context.Context, r *rego.Rego) (*rego.ExpressionValue, error) {
-	rs, err := r.Eval(ctx)
+func (cf *ConstraintFramework) expressionResult(ctx context.Context, evalRule string, regoOpts ...func(r *rego.Rego)) ([]*validator.Violation, error) {
+	regoOpts = append(
+		regoOpts,
+		rego.Compiler(cf.regoCompiler),
+		rego.Store(cf.regoStore),
+		rego.Query(evalRule),
+	)
+	regoImpl := rego.New(regoOpts...)
+
+	rs, err := regoImpl.Eval(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -211,34 +228,28 @@ func auditExpressionResult(ctx context.Context, r *rego.Rego) (*rego.ExpressionV
 		return nil, errors.Errorf("unexpected length of rego Expression results, expected 1 (from audit call) got %d. This could indicate an error in the audit rego code", len(rs[0].Expressions))
 	}
 	expressionResult := rs[0].Expressions[0]
-	if expressionResult.Text != regoLibraryRule {
-		return nil, errors.Errorf("Unknown expression result %s, expected %s", expressionResult.Text, regoLibraryRule)
+	if expressionResult.Text != evalRule {
+		return nil, errors.Errorf("Unknown expression result %s, expected %s", expressionResult.Text, evalRule)
 	}
 
-	return expressionResult, nil
+	violations, err := convertToViolations(expressionResult)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to convert eval result to violations")
+	}
+
+	return violations, nil
 }
 
 // Audit checks the GCP resource metadata that has been added via AddData to determine if any of the constraint is violated.
 func (cf *ConstraintFramework) Audit(ctx context.Context) (*validator.AuditResponse, error) {
-	r, err := cf.buildRegoObject(ctx)
+	if err := cf.setStoreInventory(ctx); err != nil {
+		return nil, err
+	}
+
+	violations, err := cf.expressionResult(ctx, regoAuditRule)
 	if err != nil {
 		return nil, err
 	}
 
-	expressionVal, err := auditExpressionResult(ctx, r)
-	if err != nil {
-		return nil, err
-	}
-
-	response := &validator.AuditResponse{
-		Violations: []*validator.Violation{},
-	}
-
-	violations, err := convertToViolations(expressionVal)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to convert eval result to violations")
-	}
-	response.Violations = violations
-
-	return response, nil
+	return &validator.AuditResponse{Violations: violations}, nil
 }
