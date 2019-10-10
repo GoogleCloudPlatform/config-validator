@@ -17,17 +17,32 @@ package gcv
 
 import (
 	"context"
+	"flag"
 	"io/ioutil"
+	"runtime"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
 	asset2 "github.com/forseti-security/config-validator/pkg/asset"
 	"github.com/forseti-security/config-validator/pkg/gcv/cf"
 	"github.com/forseti-security/config-validator/pkg/gcv/configs"
+	"github.com/forseti-security/config-validator/pkg/multierror"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 )
 
 const logRequestsVerboseLevel = 2
+
+var flags struct {
+	workerCount int
+}
+
+func init() {
+	flag.IntVar(
+		&flags.workerCount,
+		"workerCount",
+		runtime.NumCPU(),
+		"Number of workers that Validator will spawn to handle validate calls, this defaults to core count on the host")
+}
 
 // Validator checks GCP resource metadata for constraint violation.
 //
@@ -49,6 +64,7 @@ type Validator struct {
 	// Right now expected to be set to point to "//policies/validator/lib" folder
 	policyLibraryDir    string
 	constraintFramework *cf.ConstraintFramework
+	work                chan func()
 }
 
 func loadRegoFiles(dir string) (map[string]string, error) {
@@ -106,7 +122,7 @@ func loadYAMLFiles(dir string) ([]*configs.ConstraintTemplate, []*configs.Constr
 // NewValidator returns a new Validator.
 // By default it will initialize the underlying query evaluation engine by loading supporting library, constraints, and constraint templates.
 // We may want to make this initialization behavior configurable in the future.
-func NewValidator(policyPath string, policyLibraryPath string) (*Validator, error) {
+func NewValidator(stopChannel <-chan struct{}, policyPath string, policyLibraryPath string) (*Validator, error) {
 	if policyPath == "" {
 		return nil, errors.Errorf("No policy path set, provide an option to set the policy path gcv.PolicyPath")
 	}
@@ -114,7 +130,9 @@ func NewValidator(policyPath string, policyLibraryPath string) (*Validator, erro
 		return nil, errors.Errorf("No policy library set")
 	}
 
-	ret := &Validator{}
+	ret := &Validator{
+		work: make(chan func()),
+	}
 
 	glog.V(logRequestsVerboseLevel).Infof("loading policy library dir: %s", ret.policyLibraryDir)
 	regoLib, err := loadRegoFiles(policyLibraryPath)
@@ -136,7 +154,27 @@ func NewValidator(policyPath string, policyLibraryPath string) (*Validator, erro
 		return nil, err
 	}
 
+	go func() {
+		<-stopChannel
+		glog.Infof("validator stopchannel closed, closing work channel")
+		close(ret.work)
+	}()
+
+	workerCount := flags.workerCount
+	glog.Infof("starting %d workers", workerCount)
+	for i := 0; i < workerCount; i++ {
+		go ret.reviewWorker(i)
+	}
+
 	return ret, nil
+}
+
+func (v *Validator) reviewWorker(idx int) {
+	glog.Infof("worker %d starting", idx)
+	for f := range v.work {
+		f()
+	}
+	glog.Infof("worker %d terminated", idx)
 }
 
 // AddData adds GCP resource metadata to be audited later.
@@ -155,8 +193,59 @@ func (v *Validator) AddData(request *validator.AddDataRequest) error {
 	return nil
 }
 
+type assetResult struct {
+	violations []*validator.Violation
+	err        error
+}
+
+func (v *Validator) handleReview(ctx context.Context, idx int, asset *validator.Asset, resultChan chan<- *assetResult) func() {
+	return func() {
+		resultChan <- func() *assetResult {
+			if err := asset2.ValidateAsset(asset); err != nil {
+				return &assetResult{err: errors.Wrapf(err, "index %d", idx)}
+			}
+
+			assetInterface, err := asset2.ConvertResourceViaJSONToInterface(asset)
+			if err != nil {
+				return &assetResult{err: errors.Wrapf(err, "index %d", idx)}
+			}
+
+			violations, err := v.constraintFramework.Review(ctx, assetInterface)
+			if err != nil {
+				return &assetResult{err: errors.Wrapf(err, "index %d", idx)}
+			}
+
+			return &assetResult{violations: violations}
+		}()
+	}
+}
+
+// Review evaluates each asset in the review request in parallel and returns any
+// violations found.
 func (v *Validator) Review(ctx context.Context, request *validator.ReviewRequest) (*validator.ReviewResponse, error) {
-	return nil, errors.Errorf("Not implemented")
+	assetCount := len(request.Assets)
+	resultChan := make(chan *assetResult, flags.workerCount*2)
+	defer close(resultChan)
+
+	for idx, asset := range request.Assets {
+		v.work <- v.handleReview(ctx, idx, asset, resultChan)
+	}
+
+	response := &validator.ReviewResponse{}
+	var errs multierror.Errors
+	for i := 0; i < assetCount; i++ {
+		result := <-resultChan
+		if result.err != nil {
+			errs.Add(result.err)
+			continue
+		}
+		response.Violations = append(response.Violations, result.violations...)
+	}
+
+	if !errs.Empty() {
+		return response, errs.ToError()
+	}
+	return response, nil
 }
 
 // Reset clears previously added data from the underlying query evaluation engine.

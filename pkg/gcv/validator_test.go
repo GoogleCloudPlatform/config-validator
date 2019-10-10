@@ -19,14 +19,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
-
-	asset2 "github.com/forseti-security/config-validator/pkg/asset"
-	"github.com/google/go-cmp/cmp"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
 	"github.com/golang/protobuf/jsonpb"
-	_struct "github.com/golang/protobuf/ptypes/struct"
 	"google.golang.org/genproto/googleapis/cloud/asset/v1"
 	"google.golang.org/genproto/googleapis/iam/v1"
 )
@@ -38,18 +35,22 @@ const (
 )
 
 func TestCreateValidatorWithNoOptions(t *testing.T) {
-	_, err := NewValidator("", "/foo")
+	stopChannel := make(chan struct{})
+	defer close(stopChannel)
+	_, err := NewValidator(stopChannel, "", "/foo")
 	if err == nil {
 		t.Fatal("expected an error since no policy path is provided")
 	}
-	_, err = NewValidator("/foo", "")
+	_, err = NewValidator(stopChannel, "/foo", "")
 	if err == nil {
 		t.Fatal("expected an error since no policy library path is provided")
 	}
 }
 
 func TestDefaultTestDataCreatesValidator(t *testing.T) {
-	_, err := NewValidator(testOptions())
+	stopChannel := make(chan struct{})
+	defer close(stopChannel)
+	_, err := NewValidator(testOptions(stopChannel))
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
@@ -171,7 +172,9 @@ func TestAddData(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			v, err := NewValidator(testOptions())
+			stopChannel := make(chan struct{})
+			defer close(stopChannel)
+			v, err := NewValidator(testOptions(stopChannel))
 			if err != nil {
 				t.Fatal("unexpected error", err)
 			}
@@ -185,7 +188,9 @@ func TestAddData(t *testing.T) {
 }
 
 func TestAudit(t *testing.T) {
-	v, err := NewValidator(testOptions())
+	stopChannel := make(chan struct{})
+	defer close(stopChannel)
+	v, err := NewValidator(testOptions(stopChannel))
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
@@ -205,9 +210,10 @@ func TestAudit(t *testing.T) {
 		t.Fatal("unexpected error", err)
 	}
 
-	if len(result.Violations) == 0 {
-		t.Fatal("unexpected violations received none")
+	if len(result.Violations) != 1 {
+		t.Fatalf("unexpected violation count, wanted 1, got %d", len(result.Violations))
 	}
+
 	expectedResourceName := storageAssetNoLogging().Name
 	foundExpectedViolation := false
 	for _, violation := range result.Violations {
@@ -221,75 +227,121 @@ func TestAudit(t *testing.T) {
 	}
 }
 
-func TestConvertResourceToInterface(t *testing.T) {
-	testCases := []struct {
-		description string
-		input       *validator.Asset
-		want        interface{}
-	}{
+type reviewTestcase struct {
+	name        string
+	workerCount int
+	calls       []reviewCall
+}
+
+type reviewCall struct {
+	assets             []*validator.Asset // assets to use if not using the default asset set
+	scaleFactor        int                // number of copies of asset list to put in one call to Review.
+	wantViolationCount int                // the total violation count
+}
+
+var defaultReviewTestAssets = []*validator.Asset{
+	storageAssetNoLogging(),
+	storageAssetWithLogging(),
+	storageAssetWithSecureLogging(),
+}
+
+func TestReview(t *testing.T) {
+	// we will run 3x this amount of assets through audit, then reset at end
+	// of test.
+	var testCases = []reviewTestcase{
 		{
-			description: "nil input",
-			input:       nil,
-			want:        nil,
-		},
-		{
-			description: "asset proto preserves underscores",
-			input: &validator.Asset{
-				Name:      "some name",
-				AssetType: "some type",
-			},
-			want: map[string]interface{}{
-				"name":       "some name",
-				"asset_type": "some type",
-			},
-		},
-		{
-			description: "resource proto preserves underscores",
-			input: &validator.Asset{
-				Name: "some asset name",
-				Resource: &asset.Resource{
-					DiscoveryName: "some really cool name",
-				},
-			},
-			want: map[string]interface{}{
-				"name": "some asset name",
-				"resource": map[string]interface{}{
-					"discovery_name": "some really cool name",
+			name:        "no assets",
+			workerCount: 1,
+			calls: []reviewCall{
+				{
+					assets: []*validator.Asset{},
 				},
 			},
 		},
 		{
-			description: "resource proto's data preserves underscores",
-			input: &validator.Asset{
-				Name: "some asset name",
-				Resource: &asset.Resource{
-					Data: &_struct.Struct{
-						Fields: map[string]*_struct.Value{
-							"a_field_with_underscores": {Kind: &_struct.Value_BoolValue{BoolValue: true}},
-						},
-					},
+			name:        "single call",
+			workerCount: 1,
+			calls: []reviewCall{
+				{
+					assets:             []*validator.Asset{storageAssetNoLogging()},
+					wantViolationCount: 1,
 				},
 			},
-			want: map[string]interface{}{
-				"name": "some asset name",
-				"resource": map[string]interface{}{
-					"data": map[string]interface{}{
-						"a_field_with_underscores": true,
-					},
+		},
+		{
+			name:        "single call three assets",
+			workerCount: 1,
+			calls: []reviewCall{
+				{
+					assets:             defaultReviewTestAssets,
+					wantViolationCount: 1,
 				},
 			},
 		},
 	}
 
+	var testCase *reviewTestcase
+	testCase = &reviewTestcase{
+		name:        "128 goroutines x32 calls x16 scale",
+		workerCount: 128,
+	}
+	for i := 0; i < 32; i++ {
+		testCase.calls = append(
+			testCase.calls,
+			reviewCall{
+				assets:             defaultReviewTestAssets,
+				scaleFactor:        16,
+				wantViolationCount: 1,
+			},
+		)
+	}
+	testCases = append(testCases, *testCase)
+
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
-			got, err := asset2.ConvertResourceViaJSONToInterface(tc.input)
+		t.Run(tc.name, func(t *testing.T) {
+			oldWorkerCount := flags.workerCount
+			defer func() {
+				flags.workerCount = oldWorkerCount
+			}()
+			// we run 128 goroutine workers to make this exercise the concurrency
+			flags.workerCount = tc.workerCount
+
+			stopChannel := make(chan struct{})
+			defer close(stopChannel)
+
+			v, err := NewValidator(testOptions(stopChannel))
 			if err != nil {
-				t.Fatal(err)
+				t.Fatal("unexpected error", err)
 			}
-			if diff := cmp.Diff(tc.want, got); diff != "" {
-				t.Errorf("%s (-want, +got) %v", tc.description, diff)
+
+			var groupDone sync.WaitGroup
+			for callIdx, call := range tc.calls {
+				groupDone.Add(1)
+				go func(cIdx int, call reviewCall) {
+					defer groupDone.Done()
+					if call.scaleFactor == 0 {
+						call.scaleFactor = 1
+					}
+
+					var assets []*validator.Asset
+					for i := 0; i < call.scaleFactor; i++ {
+						assets = append(assets, call.assets...)
+					}
+
+					result, err := v.Review(context.Background(), &validator.ReviewRequest{
+						Assets: assets,
+					})
+					if err != nil {
+						t.Fatalf("review error in call %d: %s", cIdx, err)
+					}
+
+					wantViolationCount := call.wantViolationCount * call.scaleFactor
+					if len(result.Violations) != wantViolationCount {
+						t.Fatalf("wanted %d violations, got %d", wantViolationCount, len(result.Violations))
+					}
+				}(callIdx, call)
 			}
+			groupDone.Wait()
 		})
 	}
 }
@@ -301,7 +353,10 @@ func TestCreateNoDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	stopChannel := make(chan struct{})
+	defer close(stopChannel)
 	if _, err = NewValidator(
+		stopChannel,
 		filepath.Join(emptyFolder, "someDirThatDoesntExist"),
 		filepath.Join(emptyFolder, "someDirThatDoesntExist"),
 	); err == nil {
@@ -324,7 +379,9 @@ func TestCreateNoReadAccess(t *testing.T) {
 		t.Fatal("creating temp dir sub dir:", err)
 	}
 
-	if _, err = NewValidator(tmpDir, tmpDir); err == nil {
+	stopChannel := make(chan struct{})
+	defer close(stopChannel)
+	if _, err = NewValidator(stopChannel, tmpDir, tmpDir); err == nil {
 		t.Fatal("expected a file system error but got no error")
 	}
 }
@@ -341,7 +398,9 @@ func TestCreateEmptyDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err = NewValidator(policyDir, policyLibDir); err != nil {
+	stopChannel := make(chan struct{})
+	defer close(stopChannel)
+	if _, err = NewValidator(stopChannel, policyDir, policyLibDir); err != nil {
 		t.Fatal("empty dir not expected to provide error: ", err)
 	}
 }
@@ -354,9 +413,9 @@ func cleanup(t *testing.T, dir string) {
 
 // testOptions provides a set of default options that allows the successful creation
 // of a validator.
-func testOptions() (string, string) {
+func testOptions(stopChannel <-chan struct{}) (<-chan struct{}, string, string) {
 	// Add default options to this list
-	return localPolicyDir, localPolicyDepDir
+	return stopChannel, localPolicyDir, localPolicyDepDir
 }
 
 func storageAssetNoLogging() *validator.Asset {
