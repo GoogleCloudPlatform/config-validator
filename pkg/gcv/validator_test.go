@@ -296,6 +296,18 @@ func TestReview(t *testing.T) {
 		)
 	}
 	testCases = append(testCases, *testCase)
+	testCase = &reviewTestcase{
+		name:        "single call large scale deadlock test",
+		workerCount: 4,
+		calls: []reviewCall{
+			{
+				assets:             defaultReviewTestAssets,
+				scaleFactor:        4 * 16,
+				wantViolationCount: 1,
+			},
+		},
+	}
+	testCases = append(testCases, *testCase)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -303,7 +315,6 @@ func TestReview(t *testing.T) {
 			defer func() {
 				flags.workerCount = oldWorkerCount
 			}()
-			// we run 128 goroutine workers to make this exercise the concurrency
 			flags.workerCount = tc.workerCount
 
 			stopChannel := make(chan struct{})

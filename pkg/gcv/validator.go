@@ -131,7 +131,7 @@ func NewValidator(stopChannel <-chan struct{}, policyPath string, policyLibraryP
 	}
 
 	ret := &Validator{
-		work: make(chan func()),
+		work: make(chan func(), flags.workerCount*2),
 	}
 
 	glog.V(logRequestsVerboseLevel).Infof("loading policy library dir: %s", ret.policyLibraryDir)
@@ -227,9 +227,11 @@ func (v *Validator) Review(ctx context.Context, request *validator.ReviewRequest
 	resultChan := make(chan *assetResult, flags.workerCount*2)
 	defer close(resultChan)
 
-	for idx, asset := range request.Assets {
-		v.work <- v.handleReview(ctx, idx, asset, resultChan)
-	}
+	go func() {
+		for idx, asset := range request.Assets {
+			v.work <- v.handleReview(ctx, idx, asset, resultChan)
+		}
+	}()
 
 	response := &validator.ReviewResponse{}
 	var errs multierror.Errors
