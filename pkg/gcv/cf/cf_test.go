@@ -246,7 +246,7 @@ audit[result] {
 						Constraint: "example_constraint_metadata_name_name",
 						Resource:   "some_asset_name",
 						Message:    "tmp example issue",
-						Metadata:   mustConvertToProtoVal(struct{}{}),
+						Metadata:   mustConvertToProtoVal(map[string]interface{}{}),
 					},
 				},
 			},
