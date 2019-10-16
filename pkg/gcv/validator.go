@@ -220,6 +220,11 @@ func (v *Validator) handleReview(ctx context.Context, idx int, asset *validator.
 	}
 }
 
+// ReviewJSON evaluates a single asset without any threading in the background.
+func (v *Validator) ReviewJSON(ctx context.Context, asset interface{}) ([]*validator.Violation, error) {
+	return v.constraintFramework.Review(ctx, asset)
+}
+
 // Review evaluates each asset in the review request in parallel and returns any
 // violations found.
 func (v *Validator) Review(ctx context.Context, request *validator.ReviewRequest) (*validator.ReviewResponse, error) {
