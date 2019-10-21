@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"io/ioutil"
 	"runtime"
 	"strings"
 
@@ -81,34 +80,22 @@ type Validator struct {
 	cfClient         *cfclient.Client
 }
 
-func loadRegoFiles(dir string) ([]string, error) {
-	var libs []string
-	files, err := configs.ListRegoFiles(dir)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to list rego files from %s", dir)
-	}
-	for _, filePath := range files {
-		glog.V(logRequestsVerboseLevel).Infof("Loading rego file: %s", filePath)
-		fileBytes, err := ioutil.ReadFile(filePath)
-		if err != nil {
-			return nil, errors.Wrapf(err, "unable to read file %s", filePath)
-		}
-		libs = append(libs, string(fileBytes))
-	}
-	return libs, nil
-}
-
-// NewValidator returns a new Validator.
+// NewValidatorConfig returns a new ValidatorConfig.
 // By default it will initialize the underlying query evaluation engine by loading supporting library, constraints, and constraint templates.
 // We may want to make this initialization behavior configurable in the future.
-func NewValidator(stopChannel <-chan struct{}, policyPaths []string, policyLibraryPath string) (*Validator, error) {
+func NewValidatorConfig(policyPaths []string, policyLibraryPath string) (*configs.Configuration, error) {
 	if len(policyPaths) == 0 {
 		return nil, errors.Errorf("No policy path set, provide an option to set the policy path gcv.PolicyPath")
 	}
 	if policyLibraryPath == "" {
 		return nil, errors.Errorf("No policy library set")
 	}
+	glog.V(logRequestsVerboseLevel).Infof("loading policy dir: %v lib dir: %s", policyPaths, policyLibraryPath)
+	return configs.NewConfiguration(policyPaths, policyLibraryPath)
+}
 
+// NewValidatorFromConfig creates the validator from a config.
+func NewValidatorFromConfig(stopChannel <-chan struct{}, config *configs.Configuration) (*Validator, error) {
 	driver := local.New(local.Tracing(false))
 	backend, err := cfclient.NewBackend(cfclient.Driver(driver))
 	if err != nil {
@@ -119,34 +106,22 @@ func NewValidator(stopChannel <-chan struct{}, policyPaths []string, policyLibra
 		return nil, errors.Wrap(err, "unable to set up Constraint Framework client")
 	}
 
-	glog.V(logRequestsVerboseLevel).Infof("loading policy library dir: %s", policyLibraryPath)
-	regoLib, err := loadRegoFiles(policyLibraryPath)
-	if err != nil {
-		return nil, err
+	ctx := context.Background()
+	for _, template := range config.Templates {
+		if _, err := client.AddTemplate(ctx, template); err != nil {
+			return nil, errors.Wrapf(err, "failed to add template %v", template)
+		}
+	}
+
+	for _, constraint := range config.Constraints {
+		if _, err := client.AddConstraint(ctx, constraint); err != nil {
+			return nil, errors.Wrapf(err, "failed to add constraint %s", constraint)
+		}
 	}
 
 	ret := &Validator{
 		work:     make(chan func(), flags.workerCount*2),
 		cfClient: client,
-	}
-
-	glog.V(logRequestsVerboseLevel).Infof("loading policy dir: %v", ret.policyPaths)
-	configuration, err := configs.NewConfiguration(policyPaths, regoLib)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx := context.Background()
-	for _, template := range configuration.Templates {
-		if _, err := ret.cfClient.AddTemplate(ctx, template); err != nil {
-			return nil, errors.Wrapf(err, "failed to add template %v", template)
-		}
-	}
-
-	for _, constraint := range configuration.Constraints {
-		if _, err := ret.cfClient.AddConstraint(ctx, constraint); err != nil {
-			return nil, errors.Wrapf(err, "failed to add constraint %s", constraint)
-		}
 	}
 
 	go func() {
@@ -162,6 +137,17 @@ func NewValidator(stopChannel <-chan struct{}, policyPaths []string, policyLibra
 	}
 
 	return ret, nil
+}
+
+// NewValidator returns a new Validator.
+// By default it will initialize the underlying query evaluation engine by loading supporting library, constraints, and constraint templates.
+// We may want to make this initialization behavior configurable in the future.
+func NewValidator(stopChannel <-chan struct{}, policyPaths []string, policyLibraryPath string) (*Validator, error) {
+	config, err := NewValidatorConfig(policyPaths, policyLibraryPath)
+	if err != nil {
+		return nil, err
+	}
+	return NewValidatorFromConfig(stopChannel, config)
 }
 
 func (v *Validator) reviewWorker(idx int) {
