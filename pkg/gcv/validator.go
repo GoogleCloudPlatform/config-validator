@@ -17,9 +17,11 @@ package gcv
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"runtime"
+	"strings"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
 	asset2 "github.com/forseti-security/config-validator/pkg/asset"
@@ -220,8 +222,60 @@ func (v *Validator) handleReview(ctx context.Context, idx int, asset *validator.
 	}
 }
 
+func ancestryPath(ancestors []string) string {
+	cnt := len(ancestors)
+	revAncestors := make([]string, len(ancestors))
+	for idx := 0; idx < cnt; idx++ {
+		revAncestors[cnt-idx-1] = ancestors[idx]
+	}
+	return strings.Join(revAncestors, "/")
+}
+
+const (
+	ancestryPathKey = "ancestry_path"
+	ancestorsKey    = "ancestors"
+)
+
+func (v *Validator) fixAncestry(input map[string]interface{}) error {
+	if _, found := input[ancestryPathKey]; found {
+		return nil
+	}
+
+	ancestorsIface, found := input[ancestorsKey]
+	if !found {
+		return errors.Errorf("no ancestors field: %s", input)
+	}
+	ancestors, ok := ancestorsIface.([]interface{})
+	if !ok {
+		return errors.Errorf("ancestors field not array type: %s", input)
+	}
+	cnt := len(ancestors)
+	revAncestors := make([]string, len(ancestors))
+	for idx, v := range ancestors {
+		val, ok := v.(string)
+		if !ok {
+			return errors.Errorf("ancestors field idx %d is not string %s, %s", idx, v, input)
+		}
+		revAncestors[cnt-1-idx] = val
+	}
+	input[ancestryPathKey] = ancestryPath(revAncestors)
+	return nil
+}
+
+// ReviewJSON reviews the content of a JSON string
+func (v *Validator) ReviewJSON(ctx context.Context, data string) ([]*validator.Violation, error) {
+	asset := map[string]interface{}{}
+	if err := json.Unmarshal([]byte(data), &asset); err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal json")
+	}
+	return v.ReviewUnmarshalledJSON(ctx, asset)
+}
+
 // ReviewJSON evaluates a single asset without any threading in the background.
-func (v *Validator) ReviewJSON(ctx context.Context, asset interface{}) ([]*validator.Violation, error) {
+func (v *Validator) ReviewUnmarshalledJSON(ctx context.Context, asset map[string]interface{}) ([]*validator.Violation, error) {
+	if err := v.fixAncestry(asset); err != nil {
+		return nil, err
+	}
 	return v.constraintFramework.Review(ctx, asset)
 }
 
