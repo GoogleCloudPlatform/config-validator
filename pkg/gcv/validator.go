@@ -32,7 +32,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-const logRequestsVerboseLevel = 2
+const (
+	logRequestsVerboseLevel = 2
+	// The default ancestry path we will use if none is given
+	defaultAncestryPath = "organizations/0"
+	// The JSON object key for ancestry path
+	ancestryPathKey = "ancestry_path"
+	// The JSON object key for ancestors list
+	ancestorsKey = "ancestors"
+)
 
 var flags struct {
 	workerCount int
@@ -206,6 +214,9 @@ func (v *Validator) handleReview(ctx context.Context, idx int, asset *validator.
 			if err := asset2.ValidateAsset(asset); err != nil {
 				return &assetResult{err: errors.Wrapf(err, "index %d", idx)}
 			}
+			if asset.AncestryPath == "" {
+				asset.AncestryPath = ancestryPath(asset.Ancestors, asset)
+			}
 
 			assetInterface, err := asset2.ConvertResourceViaJSONToInterface(asset)
 			if err != nil {
@@ -222,19 +233,18 @@ func (v *Validator) handleReview(ctx context.Context, idx int, asset *validator.
 	}
 }
 
-func ancestryPath(ancestors []string) string {
+func ancestryPath(ancestors []string, asset interface{}) string {
 	cnt := len(ancestors)
+	if cnt == 0 {
+		glog.Infof("asset missing ancestry information: %v", asset)
+		return defaultAncestryPath
+	}
 	revAncestors := make([]string, len(ancestors))
 	for idx := 0; idx < cnt; idx++ {
 		revAncestors[cnt-idx-1] = ancestors[idx]
 	}
 	return strings.Join(revAncestors, "/")
 }
-
-const (
-	ancestryPathKey = "ancestry_path"
-	ancestorsKey    = "ancestors"
-)
 
 func (v *Validator) fixAncestry(input map[string]interface{}) error {
 	if _, found := input[ancestryPathKey]; found {
@@ -243,22 +253,23 @@ func (v *Validator) fixAncestry(input map[string]interface{}) error {
 
 	ancestorsIface, found := input[ancestorsKey]
 	if !found {
-		return errors.Errorf("no ancestors field: %s", input)
+		input[ancestryPathKey] = defaultAncestryPath
+		glog.Infof("asset missing ancestry information: %v", input)
+		return nil
 	}
-	ancestors, ok := ancestorsIface.([]interface{})
+	ancestorsIfaceSlice, ok := ancestorsIface.([]interface{})
 	if !ok {
 		return errors.Errorf("ancestors field not array type: %s", input)
 	}
-	cnt := len(ancestors)
-	revAncestors := make([]string, len(ancestors))
-	for idx, v := range ancestors {
+	ancestors := make([]string, len(ancestorsIfaceSlice))
+	for idx, v := range ancestorsIfaceSlice {
 		val, ok := v.(string)
 		if !ok {
 			return errors.Errorf("ancestors field idx %d is not string %s, %s", idx, v, input)
 		}
-		revAncestors[cnt-1-idx] = val
+		ancestors[idx] = val
 	}
-	input[ancestryPathKey] = ancestryPath(revAncestors)
+	input[ancestryPathKey] = ancestryPath(ancestors, input)
 	return nil
 }
 
