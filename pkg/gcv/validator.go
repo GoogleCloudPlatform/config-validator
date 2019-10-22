@@ -34,8 +34,6 @@ import (
 
 const (
 	logRequestsVerboseLevel = 2
-	// The default ancestry path we will use if none is given
-	defaultAncestryPath = "organizations/0"
 	// The JSON object key for ancestry path
 	ancestryPathKey = "ancestry_path"
 	// The JSON object key for ancestors list
@@ -214,8 +212,8 @@ func (v *Validator) handleReview(ctx context.Context, idx int, asset *validator.
 			if err := asset2.ValidateAsset(asset); err != nil {
 				return &assetResult{err: errors.Wrapf(err, "index %d", idx)}
 			}
-			if asset.AncestryPath == "" {
-				asset.AncestryPath = ancestryPath(asset.Ancestors, asset)
+			if asset.AncestryPath == "" && len(asset.Ancestors) != 0 {
+				asset.AncestryPath = ancestryPath(asset.Ancestors)
 			}
 
 			assetInterface, err := asset2.ConvertResourceViaJSONToInterface(asset)
@@ -233,12 +231,9 @@ func (v *Validator) handleReview(ctx context.Context, idx int, asset *validator.
 	}
 }
 
-func ancestryPath(ancestors []string, asset interface{}) string {
+// ancestryPath returns the ancestry path from a given ancestors list
+func ancestryPath(ancestors []string) string {
 	cnt := len(ancestors)
-	if cnt == 0 {
-		glog.Infof("asset missing ancestry information: %v", asset)
-		return defaultAncestryPath
-	}
 	revAncestors := make([]string, len(ancestors))
 	for idx := 0; idx < cnt; idx++ {
 		revAncestors[cnt-idx-1] = ancestors[idx]
@@ -246,31 +241,36 @@ func ancestryPath(ancestors []string, asset interface{}) string {
 	return strings.Join(revAncestors, "/")
 }
 
-func (v *Validator) fixAncestry(input map[string]interface{}) error {
+// fixAncestry will try to use the ancestors array to create the ancestorPath
+// value if it is not present.
+func (v *Validator) fixAncestry(input map[string]interface{}) {
 	if _, found := input[ancestryPathKey]; found {
-		return nil
+		return
 	}
 
 	ancestorsIface, found := input[ancestorsKey]
 	if !found {
-		input[ancestryPathKey] = defaultAncestryPath
 		glog.Infof("asset missing ancestry information: %v", input)
-		return nil
+		return
 	}
 	ancestorsIfaceSlice, ok := ancestorsIface.([]interface{})
 	if !ok {
-		return errors.Errorf("ancestors field not array type: %s", input)
+		glog.Infof("ancestors field not array type: %s", input)
+		return
+	}
+	if len(ancestorsIfaceSlice) == 0 {
+		return
 	}
 	ancestors := make([]string, len(ancestorsIfaceSlice))
 	for idx, v := range ancestorsIfaceSlice {
 		val, ok := v.(string)
 		if !ok {
-			return errors.Errorf("ancestors field idx %d is not string %s, %s", idx, v, input)
+			glog.Infof("ancestors field idx %d is not string %s, %s", idx, v, input)
+			return
 		}
 		ancestors[idx] = val
 	}
-	input[ancestryPathKey] = ancestryPath(ancestors, input)
-	return nil
+	input[ancestryPathKey] = ancestryPath(ancestors)
 }
 
 // ReviewJSON reviews the content of a JSON string
@@ -284,9 +284,7 @@ func (v *Validator) ReviewJSON(ctx context.Context, data string) ([]*validator.V
 
 // ReviewJSON evaluates a single asset without any threading in the background.
 func (v *Validator) ReviewUnmarshalledJSON(ctx context.Context, asset map[string]interface{}) ([]*validator.Violation, error) {
-	if err := v.fixAncestry(asset); err != nil {
-		return nil, err
-	}
+	v.fixAncestry(asset)
 	return v.constraintFramework.Review(ctx, asset)
 }
 
