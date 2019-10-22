@@ -243,34 +243,33 @@ func ancestryPath(ancestors []string) string {
 
 // fixAncestry will try to use the ancestors array to create the ancestorPath
 // value if it is not present.
-func (v *Validator) fixAncestry(input map[string]interface{}) {
+func (v *Validator) fixAncestry(input map[string]interface{}) error {
 	if _, found := input[ancestryPathKey]; found {
-		return
+		return nil
 	}
 
 	ancestorsIface, found := input[ancestorsKey]
 	if !found {
 		glog.Infof("asset missing ancestry information: %v", input)
-		return
+		return nil
 	}
 	ancestorsIfaceSlice, ok := ancestorsIface.([]interface{})
 	if !ok {
-		glog.Infof("ancestors field not array type: %s", input)
-		return
+		return errors.Errorf("ancestors field not array type: %s", input)
 	}
 	if len(ancestorsIfaceSlice) == 0 {
-		return
+		return nil
 	}
 	ancestors := make([]string, len(ancestorsIfaceSlice))
 	for idx, v := range ancestorsIfaceSlice {
 		val, ok := v.(string)
 		if !ok {
-			glog.Infof("ancestors field idx %d is not string %s, %s", idx, v, input)
-			return
+			return errors.Errorf("ancestors field idx %d is not string %s, %s", idx, v, input)
 		}
 		ancestors[idx] = val
 	}
 	input[ancestryPathKey] = ancestryPath(ancestors)
+	return nil
 }
 
 // ReviewJSON reviews the content of a JSON string
@@ -284,7 +283,9 @@ func (v *Validator) ReviewJSON(ctx context.Context, data string) ([]*validator.V
 
 // ReviewJSON evaluates a single asset without any threading in the background.
 func (v *Validator) ReviewUnmarshalledJSON(ctx context.Context, asset map[string]interface{}) ([]*validator.Violation, error) {
-	v.fixAncestry(asset)
+	if err := v.fixAncestry(asset); err != nil {
+		return nil, err
+	}
 	return v.constraintFramework.Review(ctx, asset)
 }
 
