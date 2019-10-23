@@ -40,6 +40,8 @@ message Asset {
   google.cloud.asset.v1.Resource resource = 4;
   // IAM policy associated with the resource.
   google.iam.v1.Policy iam_policy = 5;
+  // Ancestor list as returned by CAI (added sometime around Oct 2019)
+  repeated string ancestors = 6;
 }
 
 // Constraint contains the configuration for a constraint.

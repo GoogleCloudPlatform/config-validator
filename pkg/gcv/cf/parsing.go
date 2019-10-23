@@ -109,6 +109,9 @@ func convertToProtoVal(from interface{}) (val *pb.Value, err error) {
 }
 
 func convertToProtoValInternal(from interface{}) *pb.Value {
+	if from == nil {
+		return nil
+	}
 	switch val := from.(type) {
 	case map[string]interface{}:
 		fields := map[string]*pb.Value{}
