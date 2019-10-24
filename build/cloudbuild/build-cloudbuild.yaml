@@ -35,8 +35,15 @@ steps:
   args: ['run', '-v', '/workspace:/go/src/github.com/forseti-security/config-validator', 'gcv-proto-builder', 'protoc', '-I/proto', '-I./api', '--go_out=plugins=grpc:./pkg/api/validator', './api/validator.proto']
 
 - name: 'gcr.io/cloud-builders/docker'
-  id: Build config validator container
+  id: Build config validator container latest
   args: ['build', '-t', 'gcr.io/$PROJECT_ID/config-validator:latest', '.']
 
-Images: ['gcr.io/$PROJECT_ID/config-validator:latest', 'gcr.io/$PROJECT_ID/config-validator:$SHORT_SHA']
+- name: 'gcr.io/cloud-builders/docker'
+  id: Build config validator container with short SHA
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/config-validator:$SHORT_SHA', '.']
+
+images:
+- 'gcr.io/$PROJECT_ID/config-validator:latest'
+- 'gcr.io/$PROJECT_ID/config-validator:$SHORT_SHA'
+
 timeout: 1200s
