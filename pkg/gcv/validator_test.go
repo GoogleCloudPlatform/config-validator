@@ -37,11 +37,11 @@ const (
 func TestCreateValidatorWithNoOptions(t *testing.T) {
 	stopChannel := make(chan struct{})
 	defer close(stopChannel)
-	_, err := NewValidator(stopChannel, "", "/foo")
+	_, err := NewValidator(stopChannel, nil, "/foo")
 	if err == nil {
 		t.Fatal("expected an error since no policy path is provided")
 	}
-	_, err = NewValidator(stopChannel, "/foo", "")
+	_, err = NewValidator(stopChannel, []string{"/foo"}, "")
 	if err == nil {
 		t.Fatal("expected an error since no policy library path is provided")
 	}
@@ -368,7 +368,7 @@ func TestCreateNoDir(t *testing.T) {
 	defer close(stopChannel)
 	if _, err = NewValidator(
 		stopChannel,
-		filepath.Join(emptyFolder, "someDirThatDoesntExist"),
+		[]string{filepath.Join(emptyFolder, "someDirThatDoesntExist")},
 		filepath.Join(emptyFolder, "someDirThatDoesntExist"),
 	); err == nil {
 		t.Fatal("expected a file system error but got no error")
@@ -392,7 +392,7 @@ func TestCreateNoReadAccess(t *testing.T) {
 
 	stopChannel := make(chan struct{})
 	defer close(stopChannel)
-	if _, err = NewValidator(stopChannel, tmpDir, tmpDir); err == nil {
+	if _, err = NewValidator(stopChannel, []string{tmpDir}, tmpDir); err == nil {
 		t.Fatal("expected a file system error but got no error")
 	}
 }
@@ -411,7 +411,7 @@ func TestCreateEmptyDir(t *testing.T) {
 
 	stopChannel := make(chan struct{})
 	defer close(stopChannel)
-	if _, err = NewValidator(stopChannel, policyDir, policyLibDir); err != nil {
+	if _, err = NewValidator(stopChannel, []string{policyDir}, policyLibDir); err != nil {
 		t.Fatal("empty dir not expected to provide error: ", err)
 	}
 }
@@ -424,9 +424,9 @@ func cleanup(t *testing.T, dir string) {
 
 // testOptions provides a set of default options that allows the successful creation
 // of a validator.
-func testOptions(stopChannel <-chan struct{}) (<-chan struct{}, string, string) {
+func testOptions(stopChannel <-chan struct{}) (<-chan struct{}, []string, string) {
 	// Add default options to this list
-	return stopChannel, localPolicyDir, localPolicyDepDir
+	return stopChannel, []string{localPolicyDir}, localPolicyDepDir
 }
 
 func storageAssetNoLogging() *validator.Asset {

@@ -65,8 +65,9 @@ func init() {
 // Any data added in AddData stays in the underlying rule evaluation engine's memory.
 // To avoid out of memory errors, callers can invoke Reset to delete existing data.
 type Validator struct {
-	// policyPath points to a directory where the constraints and constraint templates are stored as yaml files.
-	policyPath string
+	// policyPaths points to a list of directories where the constraints and
+	// constraint templates are stored as yaml files.
+	policyPaths []string
 	// policy dependencies directory points to rego files that provide supporting code for templates.
 	// These rego dependencies should be packaged with the GCV deployment.
 	// Right now expected to be set to point to "//policies/validator/lib" folder
@@ -96,12 +97,16 @@ func loadRegoFiles(dir string) (map[string]string, error) {
 	return loadedFiles, nil
 }
 
-func loadYAMLFiles(dir string) ([]*configs.ConstraintTemplate, []*configs.Constraint, error) {
+func loadYAMLFiles(dirs []string) ([]*configs.ConstraintTemplate, []*configs.Constraint, error) {
 	var templates []*configs.ConstraintTemplate
 	var constraints []*configs.Constraint
-	files, err := configs.ListYAMLFiles(dir)
-	if err != nil {
-		return nil, nil, err
+	var files []string
+	for _, dir := range dirs {
+		f, err := configs.ListYAMLFiles(dir)
+		if err != nil {
+			return nil, nil, err
+		}
+		files = append(files, f...)
 	}
 	for _, filePath := range files {
 		glog.V(logRequestsVerboseLevel).Infof("Loading yaml file: %s", filePath)
@@ -130,8 +135,8 @@ func loadYAMLFiles(dir string) ([]*configs.ConstraintTemplate, []*configs.Constr
 // NewValidator returns a new Validator.
 // By default it will initialize the underlying query evaluation engine by loading supporting library, constraints, and constraint templates.
 // We may want to make this initialization behavior configurable in the future.
-func NewValidator(stopChannel <-chan struct{}, policyPath string, policyLibraryPath string) (*Validator, error) {
-	if policyPath == "" {
+func NewValidator(stopChannel <-chan struct{}, policyPaths []string, policyLibraryPath string) (*Validator, error) {
+	if len(policyPaths) == 0 {
 		return nil, errors.Errorf("No policy path set, provide an option to set the policy path gcv.PolicyPath")
 	}
 	if policyLibraryPath == "" {
@@ -152,8 +157,8 @@ func NewValidator(stopChannel <-chan struct{}, policyPath string, policyLibraryP
 	if err != nil {
 		return nil, err
 	}
-	glog.V(logRequestsVerboseLevel).Infof("loading policy dir: %s", ret.policyPath)
-	templates, constraints, err := loadYAMLFiles(policyPath)
+	glog.V(logRequestsVerboseLevel).Infof("loading policy dir: %v", ret.policyPaths)
+	templates, constraints, err := loadYAMLFiles(policyPaths)
 	if err != nil {
 		return nil, err
 	}
