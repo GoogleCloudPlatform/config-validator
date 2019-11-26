@@ -3,10 +3,12 @@ package asset
 import (
 	"testing"
 
-	"github.com/forseti-security/config-validator/pkg/api/validator"
+	"github.com/golang/protobuf/proto"
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/genproto/googleapis/cloud/asset/v1"
+
+	"github.com/forseti-security/config-validator/pkg/api/validator"
 )
 
 func TestConvertResourceToInterface(t *testing.T) {
@@ -75,7 +77,7 @@ func TestConvertResourceToInterface(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(tc.want, got); diff != "" {
+			if diff := cmp.Diff(tc.want, got, cmp.Comparer(proto.Equal)); diff != "" {
 				t.Errorf("%s (-want, +got) %v", tc.description, diff)
 			}
 		})
