@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
 	"github.com/forseti-security/config-validator/pkg/gcv"
@@ -30,7 +31,7 @@ import (
 )
 
 var (
-	policyPath = flag.String("policyPath", "", "directory containing policy templates and configs")
+	policyPath = flag.String("policyPath", "", "directories, separated by comma, containing policy templates and configs")
 	// TODO(corb): Template development will eventually inline library code, but the currently template examples have dependency rego code.
 	//  This flag will be deprecated when the template tooling is complete.
 	policyLibraryPath  = flag.String("policyLibraryPath", "", "directory containing policy templates and configs")
@@ -71,8 +72,8 @@ func (s *gcvServer) Review(ctx context.Context, request *validator.ReviewRequest
 	return s.validator.Review(ctx, request)
 }
 
-func newServer(stopChannel chan struct{}, policyPath, policyLibraryPath string) (*gcvServer, error) {
-	v, err := gcv.NewValidator(stopChannel, policyPath, policyLibraryPath)
+func newServer(stopChannel chan struct{}, policyPaths []string, policyLibraryPath string) (*gcvServer, error) {
+	v, err := gcv.NewValidator(stopChannel, policyPaths, policyLibraryPath)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +94,8 @@ func main() {
 	grpcServer := grpc.NewServer(
 		grpc.MaxRecvMsgSize(*maxMessageRecvSize),
 	)
-	serverImpl, err := newServer(stopChannel, *policyPath, *policyLibraryPath)
+	policyPaths := strings.Split(*policyPath, ",")
+	serverImpl, err := newServer(stopChannel, policyPaths, *policyLibraryPath)
 	if err != nil {
 		log.Fatalf("Failed to load server %v", err)
 	}
