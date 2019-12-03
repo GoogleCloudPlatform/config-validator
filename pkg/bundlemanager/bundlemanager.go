@@ -29,8 +29,19 @@ var constraintTemplateGvk = schema.GroupVersionKind{
 	Kind:    "ConstraintTemplate",
 }
 
+var constraintTemplateGv = schema.GroupVersion{
+	Group:   "templates.gatekeeper.sh",
+	Version: "v1alpha1",
+}
+
+var constraintGv = schema.GroupVersion{
+	Group:   "constraints.gatekeeper.sh",
+	Version: "v1alpha1",
+}
+
 type Bundle struct {
-	CTs []Object
+	CTs         []Object
+	Constraints []Object
 }
 
 type CTInfo struct {
@@ -75,11 +86,15 @@ func (b *BundleManager) Load(path string) error {
 		for k, v := range info.Object.(metav1.Object).GetAnnotations() {
 			glog.V(2).Infof("  %s=%s", k, v)
 		}
-		if info.Object.GetObjectKind().GroupVersionKind() != constraintTemplateGvk {
-			glog.V(2).Infof("skipping %s", info.Name)
-			continue
+
+		gv := info.Object.GetObjectKind().GroupVersionKind().GroupVersion()
+		switch gv {
+		case constraintTemplateGv, constraintGv:
+			glog.V(1).Infof("Adding %s (group version)", info.Name)
+			b.add(info.Object.(Object))
+		default:
+			glog.V(1).Infof("skipping %s (API version: %s)", info.Name, gv)
 		}
-		b.add(info.Object.(Object))
 	}
 	return nil
 }
