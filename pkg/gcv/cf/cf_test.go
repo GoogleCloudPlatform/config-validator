@@ -22,10 +22,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/forseti-security/config-validator/pkg/api/validator"
-	"github.com/forseti-security/config-validator/pkg/gcv/configs"
+	"github.com/golang/protobuf/proto"
 	pb "github.com/golang/protobuf/ptypes/struct"
 	"github.com/google/go-cmp/cmp"
+
+	"github.com/forseti-security/config-validator/pkg/api/validator"
+	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 )
 
 const alwaysViolateConstraint = "GCPAlwaysViolatesConstraintV1"
@@ -370,7 +372,7 @@ audit[result] {
 			}
 			sortAuditViolations(tc.want)
 			sortAuditViolations(result)
-			if diff := cmp.Diff(tc.want, result); diff != "" {
+			if diff := cmp.Diff(tc.want, result, cmp.Comparer(proto.Equal)); diff != "" {
 				t.Errorf("unexpected result (-want +got) %v", diff)
 			}
 		})
@@ -776,10 +778,10 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 
 			wantedConstraints := attachConstraints(tc.want, tc.constraints)
 			sortViolations(wantedConstraints.Violations)
-			if diff := cmp.Diff(wantedConstraints, result); diff != "" {
+			if diff := cmp.Diff(wantedConstraints, result, cmp.Comparer(proto.Equal)); diff != "" {
 				t.Errorf("unexpected result (-want +got) %v", diff)
 			}
-			if diff := cmp.Diff(wantedConstraints.Violations, reviewViolations); diff != "" {
+			if diff := cmp.Diff(wantedConstraints.Violations, reviewViolations, cmp.Comparer(proto.Equal)); diff != "" {
 				t.Errorf("unexpected result (-want +got) %v", diff)
 			}
 
