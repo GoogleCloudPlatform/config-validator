@@ -24,8 +24,6 @@ import (
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
 	"github.com/golang/protobuf/jsonpb"
-	"google.golang.org/genproto/googleapis/cloud/asset/v1"
-	"google.golang.org/genproto/googleapis/iam/v1"
 )
 
 const (
@@ -53,177 +51,6 @@ func TestDefaultTestDataCreatesValidator(t *testing.T) {
 	_, err := NewValidator(testOptions(stopChannel))
 	if err != nil {
 		t.Fatal("unexpected error", err)
-	}
-}
-
-func TestAddData(t *testing.T) {
-	testCases := []struct {
-		description string
-		request     *validator.AddDataRequest
-		wantErr     bool
-	}{
-		{
-			description: "empty request",
-			request:     &validator.AddDataRequest{},
-		},
-		{
-			description: "empty array",
-			request: &validator.AddDataRequest{
-				Assets: []*validator.Asset{},
-			},
-		},
-		{
-			description: "empty entry in array",
-			request: &validator.AddDataRequest{
-				Assets: []*validator.Asset{
-					{},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			description: "nil entry in array",
-			request: &validator.AddDataRequest{
-				Assets: []*validator.Asset{
-					nil,
-				},
-			},
-			wantErr: true,
-		},
-		{
-			description: "non-nil resource",
-			request: &validator.AddDataRequest{
-				Assets: []*validator.Asset{
-					{
-						Name:         "Some Name",
-						AssetType:    "some type",
-						AncestryPath: "some path",
-						Resource:     &asset.Resource{},
-					},
-				},
-			},
-		},
-		{
-			description: "non-nil IAM policy",
-			request: &validator.AddDataRequest{
-				Assets: []*validator.Asset{
-					{
-						Name:         "Some Name",
-						AssetType:    "some type",
-						AncestryPath: "some path",
-						IamPolicy:    &iam.Policy{},
-					},
-				},
-			},
-		},
-		{
-			description: "nil resource & IAM policy",
-			request: &validator.AddDataRequest{
-				Assets: []*validator.Asset{
-					{
-						Name:         "Some Name",
-						AssetType:    "some type",
-						AncestryPath: "some path",
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			description: "missing name",
-			request: &validator.AddDataRequest{
-				Assets: []*validator.Asset{
-					{
-						AssetType:    "some type",
-						AncestryPath: "some path",
-						IamPolicy:    &iam.Policy{},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			description: "missing type",
-			request: &validator.AddDataRequest{
-				Assets: []*validator.Asset{
-					{
-						Name:         "Some Name",
-						AncestryPath: "some path",
-						IamPolicy:    &iam.Policy{},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			description: "missing ancestry path",
-			request: &validator.AddDataRequest{
-				Assets: []*validator.Asset{
-					{
-						Name:      "Some Name",
-						AssetType: "some type",
-						IamPolicy: &iam.Policy{},
-					},
-				},
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
-			stopChannel := make(chan struct{})
-			defer close(stopChannel)
-			v, err := NewValidator(testOptions(stopChannel))
-			if err != nil {
-				t.Fatal("unexpected error", err)
-			}
-			err = v.AddData(tc.request)
-			if (err == nil) == tc.wantErr {
-				t.Fatalf("got %v, want err: %t", err, tc.wantErr)
-			}
-		})
-	}
-
-}
-
-func TestAudit(t *testing.T) {
-	stopChannel := make(chan struct{})
-	defer close(stopChannel)
-	v, err := NewValidator(testOptions(stopChannel))
-	if err != nil {
-		t.Fatal("unexpected error", err)
-	}
-	err = v.AddData(&validator.AddDataRequest{
-		Assets: []*validator.Asset{
-			storageAssetNoLogging(),
-			storageAssetWithLogging(),
-			storageAssetWithSecureLogging(),
-		},
-	})
-	if err != nil {
-		t.Fatal("unexpected error", err)
-	}
-
-	result, err := v.Audit(context.Background())
-	if err != nil {
-		t.Fatal("unexpected error", err)
-	}
-
-	if len(result.Violations) != 1 {
-		t.Fatalf("unexpected violation count, wanted 1, got %d", len(result.Violations))
-	}
-
-	expectedResourceName := storageAssetNoLogging().Name
-	foundExpectedViolation := false
-	for _, violation := range result.Violations {
-		if violation.Resource == expectedResourceName {
-			foundExpectedViolation = true
-			break
-		}
-	}
-	if !foundExpectedViolation {
-		t.Fatalf("unexpected result resource %s not found", expectedResourceName)
 	}
 }
 
@@ -264,7 +91,7 @@ func TestReview(t *testing.T) {
 			calls: []reviewCall{
 				{
 					assets:             []*validator.Asset{storageAssetNoLogging()},
-					wantViolationCount: 1,
+					wantViolationCount: 2,
 				},
 			},
 		},
@@ -274,7 +101,7 @@ func TestReview(t *testing.T) {
 			calls: []reviewCall{
 				{
 					assets:             defaultReviewTestAssets,
-					wantViolationCount: 1,
+					wantViolationCount: 2,
 				},
 			},
 		},
@@ -291,7 +118,7 @@ func TestReview(t *testing.T) {
 			reviewCall{
 				assets:             defaultReviewTestAssets,
 				scaleFactor:        16,
-				wantViolationCount: 1,
+				wantViolationCount: 2,
 			},
 		)
 	}
@@ -303,7 +130,7 @@ func TestReview(t *testing.T) {
 			{
 				assets:             defaultReviewTestAssets,
 				scaleFactor:        4 * 16,
-				wantViolationCount: 1,
+				wantViolationCount: 2,
 			},
 		},
 	}
