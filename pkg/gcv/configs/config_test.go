@@ -148,7 +148,8 @@ func TestListFilesEmptyDir(t *testing.T) {
 			defer cleanup(t, tmpDir)
 			scannedFiles, err := tc.listFunction(tmpDir)
 
-			if diff := cmp.Diff([]string{}, scannedFiles); diff != "" {
+			var want []string
+			if diff := cmp.Diff(want, scannedFiles); diff != "" {
 				t.Errorf("unexpected file scan (-want +got) %v", diff)
 			}
 		})
