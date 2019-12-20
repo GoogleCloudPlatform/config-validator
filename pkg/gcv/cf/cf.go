@@ -20,6 +20,7 @@ import (
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
 	"github.com/forseti-security/config-validator/pkg/gcv/configs"
+	"github.com/golang/glog"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage"
@@ -86,6 +87,8 @@ func (cf *ConstraintFramework) validateTemplate(t *configs.ConstraintTemplate) e
 
 // Configure will set the constraint templates and constraints for ConstraintFramework
 func (cf *ConstraintFramework) Configure(templates []*configs.ConstraintTemplate, constraints []*configs.Constraint) error {
+	glog.Infof("configuring cf with %d templates and %d constraints", len(templates), len(constraints))
+
 	// create compiler from templates, other rego sources
 	templateMap := make(map[string]*configs.ConstraintTemplate)
 	for _, template := range templates {
