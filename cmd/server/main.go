@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strings"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
@@ -31,10 +32,10 @@ import (
 )
 
 var (
-	policyPath = flag.String("policyPath", "", "directories, separated by comma, containing policy templates and configs")
+	policyPath = flag.String("policyPath", os.Getenv("POLICY_PATH"), "directories, separated by comma, containing policy templates and configs")
 	// TODO(corb): Template development will eventually inline library code, but the currently template examples have dependency rego code.
 	//  This flag will be deprecated when the template tooling is complete.
-	policyLibraryPath  = flag.String("policyLibraryPath", "", "directory containing policy templates and configs")
+	policyLibraryPath  = flag.String("policyLibraryPath", os.Getenv("POLICY_LIBRARY_PATH"), "directory containing policy templates and configs")
 	port               = flag.Int("port", 10000, "The server port")
 	maxMessageRecvSize = flag.Int(
 		"maxMessageRecvSize", 128*1024*1024, "The max message receive size for the RPC service")
