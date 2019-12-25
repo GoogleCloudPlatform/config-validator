@@ -13,15 +13,24 @@
 # limitations under the License.
 
 # First build the config-validator binary
-FROM golang:1.11 as build
+FROM golang:1.12 as build
 
 WORKDIR /go/src/app
 COPY . .
 
-RUN make release
+RUN make linux
 
 # Now copy it into our static image.
-FROM gcr.io/distroless/static:nonroot
+FROM gcr.io/distroless/static:nonroot as runtime
 
 COPY --chown=nonroot:nonroot --from=build /go/src/app/bin/config-validator-linux-amd64 /app
 ENTRYPOINT ["/app"]
+
+# For serverless (e.g. knative)
+FROM runtime as serverless
+
+ENV LOG_LEVEL "1"
+ENV PORT "10000"
+
+ENTRYPOINT ["/app", "-policyPath", "${POLICY_PATH}", "-policyLibraryPath", "${POLICY_LIBRARY_PATH}", "-alsologtostderr", "-v", "${LOG_LEVEL}", "-port", "${PORT}"]
+
