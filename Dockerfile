@@ -13,12 +13,12 @@
 # limitations under the License.
 
 # First build the config-validator binary
-FROM golang:1.11 as build
+FROM golang:1.12 as build
 
 WORKDIR /go/src/app
 COPY . .
 
-RUN make release
+RUN make linux
 
 # Now copy it into our static image.
 FROM gcr.io/distroless/static:nonroot
