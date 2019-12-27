@@ -247,7 +247,7 @@ func listFiles(dir string) ([]string, error) {
 	return files, nil
 }
 
-// listFiles returns a list of files under a dir. Errors will be grpc errors.
+// listFilesLocal returns a list of files under a dir. Errors will be grpc errors.
 func listFilesLocal(dir string) ([]string, error) {
 	var files []string
 
@@ -309,7 +309,7 @@ func ListYAMLFilesD(dirs []string) ([]string, error) {
 	return arrayFilterSuffix(files, ".yaml"), nil
 }
 
-//Files returns a list of rego files under a dir. Errors will be grpc errors.
+//ListRegoFiles returns a list of rego files under a dir. Errors will be grpc errors.
 func ListRegoFiles(dir string) ([]string, error) {
 	files, err := listFiles(dir)
 	if err != nil {
@@ -544,6 +544,7 @@ func loadRegoFiles(dir string) ([]string, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to list rego files from %s", dir)
 	}
+
 	for _, filePath := range files {
 		glog.V(2).Infof("Loading rego file: %s", filePath)
 
