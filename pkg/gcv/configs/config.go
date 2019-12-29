@@ -16,13 +16,8 @@
 package configs
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
@@ -43,10 +38,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/kubectl/pkg/scheme"
-
-	"google.golang.org/api/iterator"
-
-	"cloud.google.com/go/storage"
 )
 
 const (
@@ -55,16 +46,6 @@ const (
 
 func init() {
 	utilruntime.Must(cfapis.AddToScheme(scheme.Scheme))
-}
-
-func configGCSClient() (client *storage.Client) {
-	ctx := context.Background()
-
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return client
 }
 
 type yamlFile struct {
@@ -84,7 +65,6 @@ const (
 var (
 	// templateGK is the GroupKind for ConstraintTemplate types.
 	templateGK = schema.GroupKind{Group: cfv1alpha1.SchemeGroupVersion.Group, Kind: "ConstraintTemplate"}
-	client     = configGCSClient()
 )
 
 // UnclassifiedConfig stores loosely parsed information not specific to constraints or templates.
@@ -225,72 +205,6 @@ func arrayFilterSuffix(arr []string, suffix string) []string {
 	return filteredList
 }
 
-// listFiles returns a list of files under a dir either locally or in GCS. Errors will be grpc errors.
-func listFiles(dir string) ([]string, error) {
-	var files []string
-	var err error
-
-	if strings.HasPrefix(dir, "gs://") {
-		files, err = listFilesGCS(dir)
-	} else {
-		files, err = listFilesLocal(dir)
-	}
-	if err != nil {
-		return nil, err
-	}
-	fmt.Printf("Number of files: %d", len(files))
-	for _, file := range files {
-		glog.V(logRequestsVerboseLevel).Infof("File in list: %s", file)
-
-	}
-
-	return files, nil
-}
-
-// listFilesLocal returns a list of files under a dir. Errors will be grpc errors.
-func listFilesLocal(dir string) ([]string, error) {
-	var files []string
-
-	visit := func(path string, f os.FileInfo, err error) error {
-		if err != nil {
-			return errors.Wrapf(err, "error visiting path %s", path)
-		}
-		if !f.IsDir() {
-			files = append(files, path)
-		}
-		return nil
-	}
-
-	err := filepath.Walk(dir, visit)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	return files, nil
-}
-
-// listFilesGCS returns a list of files under a dir in a GCS bucket. Errors will be grpc errors.
-func listFilesGCS(bucketPath string) ([]string, error) {
-	ctx := context.Background()
-	var files []string
-	bucket, prefix := parseBucketPath(bucketPath)
-
-	it := client.Bucket(bucket).Objects(ctx, &storage.Query{
-		Prefix: prefix,
-	})
-	for {
-		attrs, err := it.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		fileName := "gs://" + bucket + "/" + attrs.Name
-		files = append(files, fileName)
-	}
-	return files, nil
-}
-
 // ListYAMLFiles returns a list of YAML files under a dir. Errors will be grpc errors.
 func ListYAMLFiles(dir string) ([]string, error) {
 	return ListYAMLFilesD([]string{dir})
@@ -300,10 +214,16 @@ func ListYAMLFiles(dir string) ([]string, error) {
 func ListYAMLFilesD(dirs []string) ([]string, error) {
 	var files []string
 	for _, dir := range dirs {
-		dirFiles, err := listFiles(dir)
+		configDir, err := newDir(dir)
 		if err != nil {
 			return nil, err
 		}
+
+		dirFiles, err := configDir.listFiles()
+		if err != nil {
+			return nil, err
+		}
+		glog.V(2).Infof("Found %d YAML files in dir %s", len(dirFiles), dir)
 		files = append(files, dirFiles...)
 	}
 	return arrayFilterSuffix(files, ".yaml"), nil
@@ -311,10 +231,17 @@ func ListYAMLFilesD(dirs []string) ([]string, error) {
 
 //ListRegoFiles returns a list of rego files under a dir. Errors will be grpc errors.
 func ListRegoFiles(dir string) ([]string, error) {
-	files, err := listFiles(dir)
+	configDir, err := newDir(dir)
 	if err != nil {
 		return nil, err
 	}
+
+	files, err := configDir.listFiles()
+	if err != nil {
+		return nil, err
+	}
+	glog.V(2).Infof("Found %d rego files in dir %s", len(files), dir)
+
 	return arrayFilterSuffix(files, ".rego"), nil
 }
 
@@ -392,15 +319,17 @@ func loadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
 
 	var yamlDocs []*unstructured.Unstructured
 	for _, file := range files {
-		if strings.HasPrefix(file, "gs://") {
-			contents, err = loadFileGCS(file)
-		} else {
-			contents, err = loadFileLocal(file)
-		}
-
+		glog.V(2).Infof("Loading yaml file: %s", file)
+		configFile, err := newFile(file)
 		if err != nil {
 			return nil, err
 		}
+
+		contents, err = configFile.read()
+		if err != nil {
+			return nil, err
+		}
+
 		documents := strings.Split(string(contents), "\n---")
 		for _, rawDoc := range documents {
 			document := strings.TrimLeft(rawDoc, "\n ")
@@ -548,12 +477,14 @@ func loadRegoFiles(dir string) ([]string, error) {
 	for _, filePath := range files {
 		glog.V(2).Infof("Loading rego file: %s", filePath)
 
-		if strings.HasPrefix(filePath, "gs://") {
-			glog.V(2).Infof("Loading rego file from GCS: %s", filePath)
-			content, err = loadFileGCS(filePath)
-		} else {
-			glog.V(2).Infof("Loading rego file from local: %s", filePath)
-			content, err = loadFileLocal(filePath)
+		configFile, err := newFile(filePath)
+		if err != nil {
+			return nil, err
+		}
+
+		content, err = configFile.read()
+		if err != nil {
+			return nil, err
 		}
 
 		if err != nil {
@@ -562,45 +493,6 @@ func loadRegoFiles(dir string) ([]string, error) {
 		libs = append(libs, string(content))
 	}
 	return libs, nil
-}
-
-func loadFileLocal(filePath string) ([]byte, error) {
-	fileBytes, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, errors.Wrapf(err, "unable to read file %s", filePath)
-	}
-	return fileBytes, nil
-}
-
-func loadFileGCS(bucketPath string) ([]byte, error) {
-	ctx := context.Background()
-
-	bucket, object := parseBucketPath(bucketPath)
-	rc, err := client.Bucket(bucket).Object(object).NewReader(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer rc.Close()
-
-	data, err := ioutil.ReadAll(rc)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
-	// [END download_file]
-}
-
-func parseBucketPath(bucketPath string) (string, string) {
-	bucketPath = strings.ReplaceAll(bucketPath, "gs://", "")
-
-	delim := "/"
-
-	pathPieces := strings.Split(bucketPath, delim)
-
-	bucket := pathPieces[0]
-	path := strings.Join(pathPieces[1:], delim)
-
-	return bucket, path
 }
 
 // NewConfiguration returns the configuration from the list of provided directories.
