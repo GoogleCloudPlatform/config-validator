@@ -3,6 +3,7 @@ module github.com/forseti-security/config-validator
 go 1.12
 
 require (
+	cloud.google.com/go v0.38.0
 	github.com/OneOfOne/xxhash v1.2.5 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/ghodss/yaml v1.0.0
@@ -24,6 +25,7 @@ require (
 	go.uber.org/atomic v0.0.0-20181018215023-8dc6146f7569 // indirect
 	go.uber.org/multierr v0.0.0-20180122172545-ddea229ff1df // indirect
 	go.uber.org/zap v0.0.0-20180814183419-67bc79d13d15 // indirect
+	google.golang.org/api v0.4.0
 	google.golang.org/genproto v0.0.0-20190502173448-54afdca5d873
 	google.golang.org/grpc v1.23.0
 	k8s.io/apiextensions-apiserver v0.0.0-20181126155829-0cd23ebeb688
