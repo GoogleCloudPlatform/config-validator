@@ -46,6 +46,7 @@ func configGCSClient() (client *storage.Client) {
 	return client
 }
 
+// file encapsulates a YAML or Rego file to be read
 type file interface {
 	read() ([]byte, error)
 	String() string
@@ -60,6 +61,7 @@ type gcsFile struct {
 	path   string
 }
 
+// dir encapsulates a directory of YAML or Rego file to be read
 type dir interface {
 	listFiles() ([]string, error)
 }

@@ -309,7 +309,6 @@ func convertToProtoVal(from interface{}) (*pb.Value, error) {
 }
 
 func loadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
-	var contents []byte
 	var err error
 
 	files, err := ListYAMLFilesD(dirs)
@@ -325,7 +324,7 @@ func loadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
 			return nil, err
 		}
 
-		contents, err = configFile.read()
+		contents, err := configFile.read()
 		if err != nil {
 			return nil, err
 		}
