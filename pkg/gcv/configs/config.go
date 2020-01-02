@@ -18,9 +18,6 @@ package configs
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
@@ -41,6 +38,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/kubectl/pkg/scheme"
+)
+
+const (
+	logRequestsVerboseLevel = 2
 )
 
 func init() {
@@ -204,27 +205,6 @@ func arrayFilterSuffix(arr []string, suffix string) []string {
 	return filteredList
 }
 
-// listFiles returns a list of files under a dir. Errors will be grpc errors.
-func listFiles(dir string) ([]string, error) {
-	var files []string
-
-	visit := func(path string, f os.FileInfo, err error) error {
-		if err != nil {
-			return errors.Wrapf(err, "error visiting path %s", path)
-		}
-		if !f.IsDir() {
-			files = append(files, path)
-		}
-		return nil
-	}
-
-	err := filepath.Walk(dir, visit)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	return files, nil
-}
-
 // ListYAMLFiles returns a list of YAML files under a dir. Errors will be grpc errors.
 func ListYAMLFiles(dir string) ([]string, error) {
 	return ListYAMLFilesD([]string{dir})
@@ -234,21 +214,34 @@ func ListYAMLFiles(dir string) ([]string, error) {
 func ListYAMLFilesD(dirs []string) ([]string, error) {
 	var files []string
 	for _, dir := range dirs {
-		dirFiles, err := listFiles(dir)
+		configDir, err := newDir(dir)
 		if err != nil {
 			return nil, err
 		}
+
+		dirFiles, err := configDir.listFiles()
+		if err != nil {
+			return nil, err
+		}
+		glog.V(2).Infof("Found %d YAML files in dir %s", len(dirFiles), dir)
 		files = append(files, dirFiles...)
 	}
 	return arrayFilterSuffix(files, ".yaml"), nil
 }
 
-// ListRegoFiles returns a list of rego files under a dir. Errors will be grpc errors.
+//ListRegoFiles returns a list of rego files under a dir. Errors will be grpc errors.
 func ListRegoFiles(dir string) ([]string, error) {
-	files, err := listFiles(dir)
+	configDir, err := newDir(dir)
 	if err != nil {
 		return nil, err
 	}
+
+	files, err := configDir.listFiles()
+	if err != nil {
+		return nil, err
+	}
+	glog.V(2).Infof("Found %d rego files in dir %s", len(files), dir)
+
 	return arrayFilterSuffix(files, ".rego"), nil
 }
 
@@ -316,6 +309,8 @@ func convertToProtoVal(from interface{}) (*pb.Value, error) {
 }
 
 func loadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
+	var err error
+
 	files, err := ListYAMLFilesD(dirs)
 	if err != nil {
 		return nil, err
@@ -323,10 +318,17 @@ func loadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
 
 	var yamlDocs []*unstructured.Unstructured
 	for _, file := range files {
-		contents, err := ioutil.ReadFile(file)
+		glog.V(2).Infof("Loading yaml file: %s", file)
+		configFile, err := newFile(file)
 		if err != nil {
 			return nil, err
 		}
+
+		contents, err := configFile.read()
+		if err != nil {
+			return nil, err
+		}
+
 		documents := strings.Split(string(contents), "\n---")
 		for _, rawDoc := range documents {
 			document := strings.TrimLeft(rawDoc, "\n ")
@@ -467,17 +469,30 @@ type Configuration struct {
 
 func loadRegoFiles(dir string) ([]string, error) {
 	var libs []string
+	var content []byte
 	files, err := ListRegoFiles(dir)
+
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to list rego files from %s", dir)
 	}
+
 	for _, filePath := range files {
 		glog.V(2).Infof("Loading rego file: %s", filePath)
-		fileBytes, err := ioutil.ReadFile(filePath)
+
+		configFile, err := newFile(filePath)
+		if err != nil {
+			return nil, err
+		}
+
+		content, err = configFile.read()
+		if err != nil {
+			return nil, err
+		}
+
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to read file %s", filePath)
 		}
-		libs = append(libs, string(fileBytes))
+		libs = append(libs, string(content))
 	}
 	return libs, nil
 }

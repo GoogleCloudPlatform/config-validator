@@ -40,25 +40,6 @@ func TestListYAMLFiles(t *testing.T) {
 		fileState    []fileToScan
 	}{
 		{
-			description:  "listFiles",
-			listFunction: listFiles,
-			fileState: []fileToScan{
-				{path: "rootFile", expected: true},
-				{path: "root.file", expected: true},
-				{path: "root.yaml", expected: true},
-				{path: "root.rego", expected: true},
-				{path: "ROOT.POTATO", expected: true},
-				{path: "/dir/nested.file", expected: true},
-				{path: "/dir/nested.yaml", expected: true},
-				{path: "/dir/nested.rego", expected: true},
-				{path: "/dir/nested_test.rego", expected: true},
-				{path: "/a/really/multi/nested.file", expected: true},
-				{path: "/a/really/multi/nested.yaml", expected: true},
-				{path: "/a/really/multi/nested.rego", expected: true},
-				{path: "/a/really/multi/nested_test.rego", expected: true},
-			},
-		},
-		{
 			description:  "ListYAMLFiles",
 			listFunction: ListYAMLFiles,
 			fileState: []fileToScan{
@@ -135,7 +116,6 @@ func TestListFilesEmptyDir(t *testing.T) {
 		description  string
 		listFunction func(string) ([]string, error)
 	}{
-		{description: "listFiles", listFunction: listFiles},
 		{description: "ListYAMLFiles", listFunction: ListYAMLFiles},
 		{description: "ListRegoFiles", listFunction: ListRegoFiles},
 	}
@@ -165,7 +145,6 @@ func TestListFilesInvalidDirPerms(t *testing.T) {
 		description  string
 		listFunction func(string) ([]string, error)
 	}{
-		{description: "listFiles", listFunction: listFiles},
 		{description: "ListYAMLFiles", listFunction: ListYAMLFiles},
 		{description: "ListRegoFiles", listFunction: ListRegoFiles},
 	}

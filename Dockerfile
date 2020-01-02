@@ -21,7 +21,7 @@ COPY . .
 RUN make linux
 
 # Now copy it into our static image.
-FROM gcr.io/distroless/static:nonroot
+FROM gcr.io/distroless/static:nonroot as runtime
 
 COPY --chown=nonroot:nonroot --from=build /go/src/app/bin/config-validator-linux-amd64 /app
-ENTRYPOINT ["/app"]
+ENTRYPOINT ["/app", "-alsologtostderr"]
