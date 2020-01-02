@@ -351,6 +351,9 @@ func loadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
 			yamlDocs = append(yamlDocs, &u)
 		}
 	}
+	if len(yamlDocs) == 0 {
+		return nil, fmt.Errorf("zero configurations found in the provided directories: %v", dirs)
+	}
 	return yamlDocs, nil
 }
 

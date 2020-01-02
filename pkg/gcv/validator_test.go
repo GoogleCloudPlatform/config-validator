@@ -238,8 +238,8 @@ func TestCreateEmptyDir(t *testing.T) {
 
 	stopChannel := make(chan struct{})
 	defer close(stopChannel)
-	if _, err = NewValidator(stopChannel, []string{policyDir}, policyLibDir); err != nil {
-		t.Fatal("empty dir not expected to provide error: ", err)
+	if _, err = NewValidator(stopChannel, []string{policyDir}, policyLibDir); err == nil {
+		t.Fatal("directory without a configuration should generate error")
 	}
 }
 
