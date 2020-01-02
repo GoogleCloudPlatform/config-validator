@@ -18,6 +18,7 @@ package configs
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
@@ -33,6 +34,8 @@ import (
 	"github.com/smallfish/simpleyaml"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -46,6 +49,8 @@ const (
 
 func init() {
 	utilruntime.Must(cfapis.AddToScheme(scheme.Scheme))
+	utilruntime.Must(apiextensions.AddToScheme(scheme.Scheme))
+	utilruntime.Must(apiextensionsv1beta1.AddToScheme(scheme.Scheme))
 }
 
 type yamlFile struct {
@@ -494,6 +499,7 @@ func loadRegoFiles(dir string) ([]string, error) {
 		}
 		libs = append(libs, string(content))
 	}
+	sort.Strings(libs)
 	return libs, nil
 }
 
@@ -512,7 +518,7 @@ func NewConfiguration(dirs []string, libDir string) (*Configuration, error) {
 	var templates []*cftemplates.ConstraintTemplate
 	var constraints []*unstructured.Unstructured
 	converter := runtime.ObjectConvertor(scheme.Scheme)
-	for _, u := range unstructuredObjects {
+	for idx, u := range unstructuredObjects {
 		switch {
 		case u.GroupVersionKind().GroupKind() == templateGK:
 			if err := convertLegacyConstraintTemplate(u, regoLib); err != nil {
@@ -527,7 +533,7 @@ func NewConfiguration(dirs []string, libDir string) (*Configuration, error) {
 
 			var ct cftemplates.ConstraintTemplate
 			if err := converter.Convert(obj, &ct, nil); err != nil {
-				return nil, errors.Wrapf(err, "failed to convert to constraint template internal struct")
+				return nil, errors.Wrapf(err, "[%d] failed to convert to constraint template internal struct", idx)
 			}
 
 			templates = append(templates, &ct)
