@@ -18,6 +18,7 @@ package configs
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -460,8 +461,53 @@ func convertLegacyConstraintTemplate(u *unstructured.Unstructured, regoLib []str
 	return nil
 }
 
+var terminatingStarRegex = regexp.MustCompilePOSIX(`/\*$`)
+var starRegex = regexp.MustCompilePOSIX(`/\*/`)
+
+func fixLegacyMatcher(ancestry string) string {
+	normalized := NormalizeAncestry(ancestry)
+	return starRegex.ReplaceAllString(
+		terminatingStarRegex.ReplaceAllString(normalized, "/**"),
+		"/**/",
+	)
+}
+
+func NormalizeAncestry(val string) string {
+	for _, r := range []struct {
+		old string
+		new string
+	}{
+		{"organization/", "organizations/"},
+		{"folder/", "folders/"},
+		{"project/", "projects/"},
+	} {
+		val = strings.ReplaceAll(val, r.old, r.new)
+	}
+	return val
+}
+
+func convertLegacyCRM(obj map[string]interface{}, field ...string) error {
+	strs, found, err := unstructured.NestedStringSlice(obj, field...)
+	if err != nil {
+		return errors.Wrapf(err, "invalid field type for %s", field)
+	}
+	if !found {
+		return nil
+	}
+	for idx, val := range strs {
+		strs[idx] = fixLegacyMatcher(val)
+	}
+	return unstructured.SetNestedStringSlice(obj, strs, field...)
+}
+
 func convertLegacyConstraint(u *unstructured.Unstructured) error {
 	u.SetName(strings.Replace(u.GetName(), "_", "-", -1))
+	if err := convertLegacyCRM(u.Object, "spec", "match", "target"); err != nil {
+		return err
+	}
+	if err := convertLegacyCRM(u.Object, "spec", "match", "exclude"); err != nil {
+		return err
+	}
 	return nil
 }
 
