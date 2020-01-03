@@ -573,7 +573,7 @@ func NewConfiguration(dirs []string, libDir string) (*Configuration, error) {
 			groupVersioner := runtime.GroupVersioner(schema.GroupVersions(scheme.Scheme.PrioritizedVersionsAllGroups()))
 			obj, err := converter.ConvertToVersion(u, groupVersioner)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to convert CT to versioned")
+				return nil, errors.Wrapf(err, "[%d] failed to convert CT to versioned name=%s file=%s", idx, u.GetName(), u.GetAnnotations()[yamlPath])
 			}
 
 			var ct cftemplates.ConstraintTemplate
