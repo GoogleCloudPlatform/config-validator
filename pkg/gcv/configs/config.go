@@ -469,7 +469,6 @@ func convertLegacyConstraint(u *unstructured.Unstructured) error {
 type Configuration struct {
 	Templates   []*cftemplates.ConstraintTemplate
 	Constraints []*unstructured.Unstructured
-	Libs        []string
 }
 
 func loadRegoFiles(dir string) ([]string, error) {
