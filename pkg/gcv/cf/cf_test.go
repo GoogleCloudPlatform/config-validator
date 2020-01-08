@@ -22,12 +22,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/forseti-security/config-validator/pkg/gcv/oldconfigs"
 	"github.com/golang/protobuf/proto"
 	pb "github.com/golang/protobuf/ptypes/struct"
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
-	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 )
 
 const alwaysViolateConstraint = "GCPAlwaysViolatesConstraintV1"
@@ -35,24 +35,24 @@ const alwaysViolateConstraint = "GCPAlwaysViolatesConstraintV1"
 func TestCFTemplateSetup(t *testing.T) {
 	testCasts := []struct {
 		description string
-		templates   []*configs.ConstraintTemplate
+		templates   []*oldconfigs.ConstraintTemplate
 		wantErr     bool
 	}{
 		{
 			description: "no templates",
-			templates:   []*configs.ConstraintTemplate{},
+			templates:   []*oldconfigs.ConstraintTemplate{},
 		},
 		{
 			description: "colliding types",
 			wantErr:     true,
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template_1"),
 				makeTestTemplate("template_1"),
 			},
 		},
 		{
 			description: "dummy helper method WAI",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template_1"),
 			},
 		},
@@ -94,7 +94,7 @@ func TestCFTemplateDependencyCodeCollision(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = cf.Configure([]*configs.ConstraintTemplate{template}, nil)
+	err = cf.Configure([]*oldconfigs.ConstraintTemplate{template}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,49 +108,49 @@ func TestCFTemplateDependencyCodeCollision(t *testing.T) {
 func TestCFConstraintSetup(t *testing.T) {
 	testCasts := []struct {
 		description string
-		templates   []*configs.ConstraintTemplate
-		constraints []*configs.Constraint
+		templates   []*oldconfigs.ConstraintTemplate
+		constraints []*oldconfigs.Constraint
 		wantErr     bool
 	}{
 		{
 			description: "no templates or constraints",
-			templates:   []*configs.ConstraintTemplate{},
-			constraints: []*configs.Constraint{},
+			templates:   []*oldconfigs.ConstraintTemplate{},
+			constraints: []*oldconfigs.Constraint{},
 		},
 		{
 			description: "no constraints",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("random_kind"),
 			},
-			constraints: []*configs.Constraint{},
+			constraints: []*oldconfigs.Constraint{},
 		},
 		{
 			description: "constraint kind doesn't match templates",
 			wantErr:     true,
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("the_template_kind"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("unmatched_kind", "some_random_name", "N/A"),
 			},
 		},
 		{
 			description: "valid colliding constraint kinds, unique metadata names",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("the_best_kind"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("the_best_kind", "constraint_1", "N/A"),
 				makeTestConstraint("the_best_kind", "constraint_2", "N/A"),
 			},
 		},
 		{
 			description: "valid colliding constraint metadata names with unique kinds",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template_1"),
 				makeTestTemplate("template_2"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template_1", "colliding_name", "N/A"),
 				makeTestConstraint("template_2", "colliding_name", "N/A"),
 			},
@@ -158,21 +158,21 @@ func TestCFConstraintSetup(t *testing.T) {
 		{
 			description: "metadata name collision",
 			wantErr:     true,
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template_1"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template_1", "colliding_name", "N/A"),
 				makeTestConstraint("template_1", "colliding_name", "N/A"),
 			},
 		},
 		{
 			description: "template without constraint",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template_1"),
 				makeTestTemplate("UNMATCHED_template"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template_1", "colliding_name", "N/A"),
 			},
 		},
@@ -382,22 +382,22 @@ audit[result] {
 func TestCFAuditParsingWithRealAudit(t *testing.T) {
 	testCases := []struct {
 		description string
-		templates   []*configs.ConstraintTemplate
-		constraints []*configs.Constraint
+		templates   []*oldconfigs.ConstraintTemplate
+		constraints []*oldconfigs.Constraint
 		data        []interface{}
 		want        *validator.AuditResponse
 	}{
 		{
 			description: "everything empty",
-			templates:   []*configs.ConstraintTemplate{},
-			constraints: []*configs.Constraint{},
+			templates:   []*oldconfigs.ConstraintTemplate{},
+			constraints: []*oldconfigs.Constraint{},
 			data:        []interface{}{},
 			want:        &validator.AuditResponse{},
 		},
 		{
 			description: "no templates or constraints with data",
-			templates:   []*configs.ConstraintTemplate{},
-			constraints: []*configs.Constraint{},
+			templates:   []*oldconfigs.ConstraintTemplate{},
+			constraints: []*oldconfigs.Constraint{},
 			data: []interface{}{
 				makeTestData("nothing really", "matters"),
 			},
@@ -405,10 +405,10 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 		},
 		{
 			description: "no constraints with template/data",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("ignored"),
 			},
-			constraints: []*configs.Constraint{}, // no constraints, so nothing evaluated
+			constraints: []*oldconfigs.Constraint{}, // no constraints, so nothing evaluated
 			data: []interface{}{
 				makeTestData("nothing really", "matters"),
 			},
@@ -416,10 +416,10 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 		},
 		{
 			description: "single template/constraint/data pass",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template", "constraint", "legit"),
 			},
 			data: []interface{}{
@@ -429,10 +429,10 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 		},
 		{
 			description: "single template/constraint/data fail",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template", "constraint", "legit"),
 			},
 			data: []interface{}{
@@ -450,10 +450,10 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 		},
 		{
 			description: "single template/constraint multiple data pass",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template", "constraint", "legit"),
 			},
 			data: []interface{}{
@@ -464,10 +464,10 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 		},
 		{
 			description: "single template/constraint multiple data mix pass/fail",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template", "constraint", "legit"),
 			},
 			data: []interface{}{
@@ -486,10 +486,10 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 		},
 		{
 			description: "single template/constraint multiple data fail",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template", "constraint", "legit"),
 			},
 			data: []interface{}{
@@ -513,10 +513,10 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 		},
 		{
 			description: "single template multiple constraint/data pass",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template", "constraint", "legit"),
 				makeTestConstraint("template", "constraint_2", "legit"),
 			},
@@ -528,10 +528,10 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 		},
 		{
 			description: "single template/data multiple constraints, mix pass/fail",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template", "constraint_pass", "legit"),
 				makeTestConstraint("template", "constraint_fail", "dont_match"),
 			},
@@ -550,10 +550,10 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 		},
 		{
 			description: "single template/data multiple constraints, all fail",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template", "constraint_fail_1", "fail_2_match"),
 				makeTestConstraint("template", "constraint_fail_2", "fail_3_match"),
 			},
@@ -577,10 +577,10 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 		},
 		{
 			description: "single template multiple constraints/data, mix pass/fail",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template", "constraint_1", "pass_1"),
 				makeTestConstraint("template", "constraint_2", "pass_2"),
 			},
@@ -605,10 +605,10 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 		},
 		{
 			description: "single template multiple constraints/data, all fail",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template", "constraint_1", "pass_1"),
 				makeTestConstraint("template", "constraint_2", "pass_2"),
 			},
@@ -643,11 +643,11 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 		},
 		{
 			description: "multiple template/constraint/data pass",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template_1"),
 				makeTestTemplate("template_2"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template_1", "constraint", "legit"),
 				makeTestConstraint("template_1", "constraint_2", "legit"),
 				makeTestConstraint("template_2", "constraint", "legit"),
@@ -661,11 +661,11 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 		},
 		{
 			description: "multiple template/constraint/data mix pass/fail",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template_1"),
 				makeTestTemplate("template_2"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template_1", "constraint_a1", "legit"),
 				makeTestConstraint("template_1", "constraint_a2", "legit"),
 				makeTestConstraint("template_2", "constraint_b1", "failure"),
@@ -702,11 +702,11 @@ func TestCFAuditParsingWithRealAudit(t *testing.T) {
 		},
 		{
 			description: "multiple template/constraint/data all fail",
-			templates: []*configs.ConstraintTemplate{
+			templates: []*oldconfigs.ConstraintTemplate{
 				makeTestTemplate("template_1"),
 				makeTestTemplate("template_2"),
 			},
-			constraints: []*configs.Constraint{
+			constraints: []*oldconfigs.Constraint{
 				makeTestConstraint("template_1", "constraint_a1", "failure"),
 				makeTestConstraint("template_1", "constraint_a2", "failure"),
 				makeTestConstraint("template_2", "constraint_b1", "failure"),
@@ -989,8 +989,8 @@ func TestTargetAndExclude(t *testing.T) {
 			}
 			c := alwaysViolateWithTargetAndExclude(tc.withGCPWrapper, tc.target, tc.exclude)
 			err = cf.Configure(
-				[]*configs.ConstraintTemplate{makeAlwaysViolateTemplate()},
-				[]*configs.Constraint{mustMakeConstraint(c)},
+				[]*oldconfigs.ConstraintTemplate{makeAlwaysViolateTemplate()},
+				[]*oldconfigs.Constraint{mustMakeConstraint(c)},
 			)
 			if err != nil {
 				t.Fatal(err)
@@ -1104,8 +1104,8 @@ func TestDefaultMatcher(t *testing.T) {
 			}
 			c := alwaysViolateWithExclude(tc.withGCPWrapper, tc.exclude)
 			err = cf.Configure(
-				[]*configs.ConstraintTemplate{makeAlwaysViolateTemplate()},
-				[]*configs.Constraint{mustMakeConstraint(c)},
+				[]*oldconfigs.ConstraintTemplate{makeAlwaysViolateTemplate()},
+				[]*oldconfigs.Constraint{mustMakeConstraint(c)},
 			)
 			if err != nil {
 				t.Fatal(err)
@@ -1138,8 +1138,8 @@ metadata:
   name: "constraint"
 `, alwaysViolateConstraint)
 	err = cf.Configure(
-		[]*configs.ConstraintTemplate{makeAlwaysViolateTemplate()},
-		[]*configs.Constraint{mustMakeConstraint(c)},
+		[]*oldconfigs.ConstraintTemplate{makeAlwaysViolateTemplate()},
+		[]*oldconfigs.Constraint{mustMakeConstraint(c)},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -1315,7 +1315,7 @@ func sortViolations(vs []*validator.Violation) {
 	})
 }
 
-func attachConstraints(in *validator.AuditResponse, constraints []*configs.Constraint) *validator.AuditResponse {
+func attachConstraints(in *validator.AuditResponse, constraints []*oldconfigs.Constraint) *validator.AuditResponse {
 	if in == nil {
 		return in
 	}
@@ -1354,7 +1354,7 @@ func makeTestData(name string, assetType string) interface{} {
 	}
 }
 
-func makeTestConstraint(kind, metadataName, assetType string) *configs.Constraint {
+func makeTestConstraint(kind, metadataName, assetType string) *oldconfigs.Constraint {
 	return mustMakeConstraint(fmt.Sprintf(`
 apiVersion: constraints.gatekeeper.sh/v1alpha1
 kind: %s
@@ -1368,7 +1368,7 @@ spec:
 `, kind, metadataName, assetType))
 }
 
-func makeTestTemplate(kind string) *configs.ConstraintTemplate {
+func makeTestTemplate(kind string) *oldconfigs.ConstraintTemplate {
 	return mustMakeTemplate(fmt.Sprintf(`
 apiVersion: templates.gatekeeper.sh/v1alpha1
 kind: ConstraintTemplate
@@ -1396,7 +1396,7 @@ spec:
 `, kind, kind))
 }
 
-func makeAlwaysViolateTemplate() *configs.ConstraintTemplate {
+func makeAlwaysViolateTemplate() *oldconfigs.ConstraintTemplate {
 	return mustMakeTemplate(fmt.Sprintf(`
 apiVersion: templates.gatekeeper.sh/v1alpha1
 kind: ConstraintTemplate
@@ -1421,19 +1421,19 @@ spec:
 }
 
 // mustMakeConstraint compiles a constraint or panics.
-func mustMakeConstraint(data string) *configs.Constraint {
-	constraint, err := configs.CategorizeYAMLFile([]byte(data), "generated_by_tests")
+func mustMakeConstraint(data string) *oldconfigs.Constraint {
+	constraint, err := oldconfigs.CategorizeYAMLFile([]byte(data), "generated_by_tests")
 	if err != nil {
 		log.Fatal(err)
 	}
-	return constraint.(*configs.Constraint)
+	return constraint.(*oldconfigs.Constraint)
 }
 
 // mustMakeTemplate compiles a template or panics.
-func mustMakeTemplate(data string) *configs.ConstraintTemplate {
-	constraint, err := configs.CategorizeYAMLFile([]byte(data), "generated_by_tests")
+func mustMakeTemplate(data string) *oldconfigs.ConstraintTemplate {
+	constraint, err := oldconfigs.CategorizeYAMLFile([]byte(data), "generated_by_tests")
 	if err != nil {
 		log.Fatal(err)
 	}
-	return constraint.(*configs.ConstraintTemplate)
+	return constraint.(*oldconfigs.ConstraintTemplate)
 }

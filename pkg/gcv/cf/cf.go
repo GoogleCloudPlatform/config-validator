@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
-	"github.com/forseti-security/config-validator/pkg/gcv/configs"
+	"github.com/forseti-security/config-validator/pkg/gcv/oldconfigs"
 	"github.com/golang/glog"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
@@ -72,25 +72,25 @@ func (cf *ConstraintFramework) AddData(objJSON interface{}) {
 }
 
 // templatePkgPath constructs a package prefix based off the generated type.
-func templatePkgPath(t *configs.ConstraintTemplate) string {
+func templatePkgPath(t *oldconfigs.ConstraintTemplate) string {
 	return fmt.Sprintf("templates.gcp%s", t.GeneratedKind)
 }
 
 // validateTemplate verifies template compiles
-func (cf *ConstraintFramework) validateTemplate(t *configs.ConstraintTemplate) error {
+func (cf *ConstraintFramework) validateTemplate(t *oldconfigs.ConstraintTemplate) error {
 	// validate rego code can be compiled
-	_, err := staticCompile(cf.auditScript, cf.dependencyCode, map[string]*configs.ConstraintTemplate{
+	_, err := staticCompile(cf.auditScript, cf.dependencyCode, map[string]*oldconfigs.ConstraintTemplate{
 		templatePkgPath(t): t,
 	})
 	return err
 }
 
 // Configure will set the constraint templates and constraints for ConstraintFramework
-func (cf *ConstraintFramework) Configure(templates []*configs.ConstraintTemplate, constraints []*configs.Constraint) error {
+func (cf *ConstraintFramework) Configure(templates []*oldconfigs.ConstraintTemplate, constraints []*oldconfigs.Constraint) error {
 	glog.Infof("configuring cf with %d templates and %d constraints", len(templates), len(constraints))
 
 	// create compiler from templates, other rego sources
-	templateMap := make(map[string]*configs.ConstraintTemplate)
+	templateMap := make(map[string]*oldconfigs.ConstraintTemplate)
 	for _, template := range templates {
 		if _, exists := templateMap[template.GeneratedKind]; exists {
 			return errors.Errorf("conflicting constraint templates with kind %s from file %s", template.GeneratedKind, template.Confg.FilePath)
@@ -102,10 +102,10 @@ func (cf *ConstraintFramework) Configure(templates []*configs.ConstraintTemplate
 	}
 
 	// create store from constraints
-	constraintMap := make(map[string]map[string]*configs.Constraint)
+	constraintMap := make(map[string]map[string]*oldconfigs.Constraint)
 	for _, c := range constraints {
 		if _, ok := constraintMap[c.Confg.Kind]; !ok {
-			constraintMap[c.Confg.Kind] = make(map[string]*configs.Constraint)
+			constraintMap[c.Confg.Kind] = make(map[string]*oldconfigs.Constraint)
 		}
 		if _, exists := constraintMap[c.Confg.Kind][c.Confg.MetadataName]; exists {
 			return errors.Errorf("Conflicting constraint metadata names with name %s from file %s", c.Confg.MetadataName, c.Confg.FilePath)
@@ -134,7 +134,7 @@ func (cf *ConstraintFramework) Configure(templates []*configs.ConstraintTemplate
 	return nil
 }
 
-func staticCompile(auditScript string, dependencyCode map[string]string, templates map[string]*configs.ConstraintTemplate) (*ast.Compiler, error) {
+func staticCompile(auditScript string, dependencyCode map[string]string, templates map[string]*oldconfigs.ConstraintTemplate) (*ast.Compiler, error) {
 	// Use different key prefixes to ensure no collisions when joining these maps
 	regoCode := make(map[string]string)
 
@@ -176,7 +176,7 @@ func (cf *ConstraintFramework) Review(ctx context.Context, resource interface{})
 // Our audit script expects these constraints to be in a flat array.
 // Input: map[kind][metadataName]constraint
 // Returns: []golangNestedObject
-func constraintAsInputData(constraintMap map[string]map[string]*configs.Constraint) ([]interface{}, error) {
+func constraintAsInputData(constraintMap map[string]map[string]*oldconfigs.Constraint) ([]interface{}, error) {
 	// mimic the same type as the input, but have a string to store the raw constraint data
 	flattened := []interface{}{}
 
