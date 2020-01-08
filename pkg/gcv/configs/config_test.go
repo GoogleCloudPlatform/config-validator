@@ -471,3 +471,43 @@ func cleanup(t *testing.T, dir string) {
 		t.Log(err)
 	}
 }
+
+func TestFixLegacyMatcher(t *testing.T) {
+	var testCases = []struct {
+		input string
+		want  string
+	}{
+		{
+			"organization/*",
+			"organizations/**",
+		},
+		{
+			"folder/*",
+			"folders/**",
+		},
+		{
+			"project/*",
+			"projects/**",
+		},
+		{
+			"organization/*/folder/*",
+			"organizations/**/folders/**",
+		},
+		{
+			"organization/*/project/*",
+			"organizations/**/projects/**",
+		},
+		{
+			"organization/*/folder/*/project/*",
+			"organizations/**/folders/**/projects/**",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.input, func(t *testing.T) {
+			got := fixLegacyMatcher(tc.input)
+			if got != tc.want {
+				t.Errorf("input %s wanted %s, got %s", tc.input, tc.want, got)
+			}
+		})
+	}
+}

@@ -34,6 +34,7 @@ import (
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers/local"
 	cftypes "github.com/open-policy-agent/frameworks/constraint/pkg/types"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
@@ -174,6 +175,9 @@ func (v *Validator) handleReview(ctx context.Context, idx int, asset *validator.
 			if err := asset2.ValidateAsset(asset); err != nil {
 				return &assetResult{err: errors.Wrapf(err, "index %d", idx)}
 			}
+			if asset.AncestryPath != "" {
+				asset.AncestryPath = configs.NormalizeAncestry(asset.AncestryPath)
+			}
 			if asset.AncestryPath == "" && len(asset.Ancestors) != 0 {
 				asset.AncestryPath = ancestryPath(asset.Ancestors)
 			}
@@ -211,29 +215,22 @@ func ancestryPath(ancestors []string) string {
 // fixAncestry will try to use the ancestors array to create the ancestorPath
 // value if it is not present.
 func (v *Validator) fixAncestry(input map[string]interface{}) error {
-	if _, found := input[ancestryPathKey]; found {
+	ancestry, found, err := unstructured.NestedString(input, ancestryPathKey)
+	if found && err != nil {
+		input[ancestryPathKey] = configs.NormalizeAncestry(ancestry)
 		return nil
 	}
 
-	ancestorsIface, found := input[ancestorsKey]
+	ancestors, found, err := unstructured.NestedStringSlice(input, ancestorsKey)
 	if !found {
 		glog.Infof("asset missing ancestry information: %v", input)
 		return nil
 	}
-	ancestorsIfaceSlice, ok := ancestorsIface.([]interface{})
-	if !ok {
-		return errors.Errorf("ancestors field not array type: %s", input)
+	if err != nil {
+		return errors.Wrapf(err, "failed to access ancestors list")
 	}
-	if len(ancestorsIfaceSlice) == 0 {
+	if len(ancestors) == 0 {
 		return nil
-	}
-	ancestors := make([]string, len(ancestorsIfaceSlice))
-	for idx, v := range ancestorsIfaceSlice {
-		val, ok := v.(string)
-		if !ok {
-			return errors.Errorf("ancestors field idx %d is not string %s, %s", idx, v, input)
-		}
-		ancestors[idx] = val
 	}
 	input[ancestryPathKey] = ancestryPath(ancestors)
 	return nil
