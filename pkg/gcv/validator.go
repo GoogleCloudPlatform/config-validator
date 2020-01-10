@@ -127,12 +127,12 @@ func NewValidatorFromConfig(stopChannel <-chan struct{}, config *configs.Configu
 
 	go func() {
 		<-stopChannel
-		glog.Infof("validator stopchannel closed, closing work channel")
+		glog.Infof("validator shutdown requested via stopChannel close")
 		close(ret.work)
 	}()
 
 	workerCount := flags.workerCount
-	glog.Infof("starting %d workers", workerCount)
+	glog.Infof("validator starting %d workers", workerCount)
 	for i := 0; i < workerCount; i++ {
 		go ret.reviewWorker(i)
 	}
@@ -152,11 +152,11 @@ func NewValidator(stopChannel <-chan struct{}, policyPaths []string, policyLibra
 }
 
 func (v *Validator) reviewWorker(idx int) {
-	glog.Infof("worker %d starting", idx)
+	glog.V(1).Infof("worker %d starting", idx)
 	for f := range v.work {
 		f()
 	}
-	glog.Infof("worker %d terminated", idx)
+	glog.V(1).Infof("worker %d terminated", idx)
 }
 
 // AddData adds GCP resource metadata to be audited later.
