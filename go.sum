@@ -264,7 +264,6 @@ github.com/onsi/gomega v0.0.0-20170829124025-dcabb60a477c/go.mod h1:C1qb7wdrVGGV
 github.com/onsi/gomega v1.3.0/go.mod h1:C1qb7wdrVGGVU+Z6iS04AVkA3Q65CEZX59MT0QO5uiA=
 github.com/onsi/gomega v1.5.0 h1:izbySO9zDPmjJ8rDjLvkA2zJHIo+HkYXHnf7eN7SSyo=
 github.com/onsi/gomega v1.5.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
-github.com/open-policy-agent/frameworks v0.0.0-20200106214430-991b84509bcf h1:L3j3U+lI+2+NAG5JiFtgHlM+GH1m2G5Kyg+F/y54Dg8=
 github.com/open-policy-agent/frameworks/constraint v0.0.0-20200106214430-991b84509bcf h1:s4fGh7SWwWhJZcVUTc5HXaq861Xmlt1+63sNvl6Wstk=
 github.com/open-policy-agent/frameworks/constraint v0.0.0-20200106214430-991b84509bcf/go.mod h1:YgEzIv0aenXrzcj7a4A9nv2YBD4q5M+gufEICCpdJ/8=
 github.com/open-policy-agent/opa v0.15.0 h1:dZKtNOSscMYy6+ni6nW1TWU2Tr8CC9eqQzf3hyZRKa4=

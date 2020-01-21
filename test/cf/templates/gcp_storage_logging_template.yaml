@@ -21,9 +21,6 @@ spec:
     spec:
       names:
         kind: GCPStorageLoggingConstraint
-        listKind: GCPStorageLoggingConstraintList
-        plural: GCPStorageLoggingConstraints
-        singular: GCPStorageLoggingConstraint
       validation:
         openAPIV3Schema:
           properties: {}

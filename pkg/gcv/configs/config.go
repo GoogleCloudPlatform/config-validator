@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/forseti-security/config-validator/pkg/multierror"
 	"github.com/golang/glog"
 	cfapis "github.com/open-policy-agent/frameworks/constraint/pkg/apis"
 	cfv1alpha1 "github.com/open-policy-agent/frameworks/constraint/pkg/apis/templates/v1alpha1"
@@ -50,7 +51,7 @@ const (
 
 var (
 	// templateGK is the GroupKind for ConstraintTemplate types.
-	templateGK = schema.GroupKind{Group: cfv1alpha1.SchemeGroupVersion.Group, Kind: "ConstraintTemplate"}
+	TemplateGK = schema.GroupKind{Group: cfv1alpha1.SchemeGroupVersion.Group, Kind: "ConstraintTemplate"}
 )
 
 func arrayFilterSuffix(arr []string, suffix string) []string {
@@ -103,6 +104,8 @@ func ListRegoFiles(dir string) ([]string, error) {
 	return arrayFilterSuffix(files, ".rego"), nil
 }
 
+// loadUnstructured loads .yaml files from the provided directories as k8s
+// unstructured.Unstructured types.
 func loadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
 	var err error
 
@@ -162,6 +165,8 @@ func injectRegoAdapter(rego string) string {
 	return rego + "\n" + regoAdapter
 }
 
+// convertLegacyConstraintTemplate handles converting a legacy forseti v1alpha1 ConstraintTemplate
+// to a constraint framework v1alpha1 ConstraintTemplate.
 func convertLegacyConstraintTemplate(u *unstructured.Unstructured, regoLib []string) error {
 	targetMap, found, err := unstructured.NestedMap(u.Object, "spec", "targets")
 	if err != nil && !found {
@@ -304,6 +309,7 @@ func convertLegacyConstraint(u *unstructured.Unstructured) error {
 type Configuration struct {
 	Templates   []*cftemplates.ConstraintTemplate
 	Constraints []*unstructured.Unstructured
+	regoLib     []string
 }
 
 func loadRegoFiles(dir string) ([]string, error) {
@@ -337,6 +343,52 @@ func loadRegoFiles(dir string) ([]string, error) {
 	return libs, nil
 }
 
+func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
+	switch {
+	case u.GroupVersionKind().GroupKind() == TemplateGK:
+		switch u.GroupVersionKind().Version {
+		case "v1alpha1":
+			openAPIResult := configValidatorV1Alpha1SchemaValidator.Validate(u.Object)
+			if openAPIResult.HasErrorsOrWarnings() {
+				return errors.Wrapf(openAPIResult.AsError(), "v1alpha1 validation failure")
+			}
+
+			if err := convertLegacyConstraintTemplate(u, c.regoLib); err != nil {
+				return errors.Wrapf(err, "failed to convert legacy forseti ConstraintTemplate "+
+					"to ConstraintFramework format, this is likely due to an issue in the spec.crd.spec.validation field")
+			}
+		case "v1beta1":
+			openAPIResult := configValidatorV1Beta1SchemaValidator.Validate(u.Object)
+			if openAPIResult.HasErrorsOrWarnings() {
+				return errors.Wrapf(openAPIResult.AsError(), "v1alpha1 validation failure")
+			}
+		default:
+			return errors.Errorf("unrecognized ConstraintTemplate version %s", u.GroupVersionKind().Version)
+		}
+
+		groupVersioner := runtime.GroupVersioner(schema.GroupVersions(scheme.Scheme.PrioritizedVersionsAllGroups()))
+		obj, err := scheme.Scheme.ConvertToVersion(u, groupVersioner)
+		if err != nil {
+			return errors.Wrapf(err, "failed to convert unstructured ConstraintTemplate to versioned")
+		}
+
+		var ct cftemplates.ConstraintTemplate
+		if err := scheme.Scheme.Convert(obj, &ct, nil); err != nil {
+			return errors.Wrapf(err, "failed to convert to versioned constraint template internal struct")
+		}
+
+		c.Templates = append(c.Templates, &ct)
+	case u.GroupVersionKind().Group == constraintGroup:
+		if err := convertLegacyConstraint(u); err != nil {
+			return errors.Wrapf(err, "failed to convert constraint")
+		}
+		c.Constraints = append(c.Constraints, u)
+	default:
+		return errors.Errorf("unexpected data type %s", u.GroupVersionKind())
+	}
+	return nil
+}
+
 // NewConfiguration returns the configuration from the list of provided directories.
 func NewConfiguration(dirs []string, libDir string) (*Configuration, error) {
 	unstructuredObjects, err := loadUnstructured(dirs)
@@ -349,36 +401,17 @@ func NewConfiguration(dirs []string, libDir string) (*Configuration, error) {
 		return nil, err
 	}
 
-	var templates []*cftemplates.ConstraintTemplate
-	var constraints []*unstructured.Unstructured
-	converter := runtime.ObjectConvertor(scheme.Scheme)
-	for idx, u := range unstructuredObjects {
-		switch {
-		case u.GroupVersionKind().GroupKind() == templateGK:
-			if err := convertLegacyConstraintTemplate(u, regoLib); err != nil {
-				return nil, errors.Wrapf(err, "failed to handle legacy CT")
-			}
-
-			groupVersioner := runtime.GroupVersioner(schema.GroupVersions(scheme.Scheme.PrioritizedVersionsAllGroups()))
-			obj, err := converter.ConvertToVersion(u, groupVersioner)
-			if err != nil {
-				return nil, errors.Wrapf(err, "[%d] failed to convert CT to versioned name=%s file=%s", idx, u.GetName(), u.GetAnnotations()[yamlPath])
-			}
-
-			var ct cftemplates.ConstraintTemplate
-			if err := converter.Convert(obj, &ct, nil); err != nil {
-				return nil, errors.Wrapf(err, "[%d] failed to convert to constraint template internal struct", idx)
-			}
-
-			templates = append(templates, &ct)
-		case u.GroupVersionKind().Group == constraintGroup:
-			if err := convertLegacyConstraint(u); err != nil {
-				return nil, errors.Wrapf(err, "failed to convert constraint")
-			}
-			constraints = append(constraints, u)
-		default:
-			return nil, errors.Errorf("unexpected data type %s in file %s", u.GroupVersionKind(), u.GetAnnotations()[yamlPath])
+	var errs multierror.Errors
+	configuration := &Configuration{regoLib: regoLib}
+	for _, u := range unstructuredObjects {
+		if err := configuration.loadUnstructured(u); err != nil {
+			yamlPath := u.GetAnnotations()[yamlPath]
+			name := u.GetName()
+			errs.Add(errors.Wrapf(err, "failed to load resource %s %s", yamlPath, name))
 		}
 	}
-	return &Configuration{Templates: templates, Constraints: constraints}, nil
+	if !errs.Empty() {
+		return nil, errs.ToError()
+	}
+	return configuration, nil
 }
