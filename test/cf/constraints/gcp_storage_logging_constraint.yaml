@@ -15,7 +15,7 @@
 apiVersion: constraints.gatekeeper.sh/v1alpha1
 kind: GCPStorageLoggingConstraint
 metadata:
-  name: require_storage_logging
+  name: require_storage_logging_XX
   annotations:
     # Example of tying a constraint to a CIS benchmark
     benchmark: CIS11_5.03
