@@ -295,7 +295,10 @@ func convertLegacyCRM(obj map[string]interface{}, field ...string) error {
 }
 
 func convertLegacyConstraint(u *unstructured.Unstructured) error {
-	u.SetName(strings.Replace(u.GetName(), "_", "-", -1))
+	name := u.GetName()
+	name = strings.ToLower(name)
+	name = strings.Replace(name, "_", "-", -1)
+	u.SetName(name)
 	if err := convertLegacyCRM(u.Object, "spec", "match", "target"); err != nil {
 		return err
 	}
