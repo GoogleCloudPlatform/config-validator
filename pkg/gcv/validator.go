@@ -108,16 +108,23 @@ func NewValidatorFromConfig(stopChannel <-chan struct{}, config *configs.Configu
 	}
 
 	ctx := context.Background()
+	var errs multierror.Errors
 	for _, template := range config.Templates {
 		if _, err := client.AddTemplate(ctx, template); err != nil {
-			return nil, errors.Wrapf(err, "failed to add template %v", template)
+			errs.Add(errors.Wrapf(err, "failed to add template %v", template))
 		}
+	}
+	if !errs.Empty() {
+		return nil, errs.ToError()
 	}
 
 	for _, constraint := range config.Constraints {
 		if _, err := client.AddConstraint(ctx, constraint); err != nil {
-			return nil, errors.Wrapf(err, "failed to add constraint %s", constraint)
+			errs.Add(errors.Wrapf(err, "failed to add constraint %s", constraint))
 		}
+	}
+	if !errs.Empty() {
+		return nil, errs.ToError()
 	}
 
 	ret := &Validator{
