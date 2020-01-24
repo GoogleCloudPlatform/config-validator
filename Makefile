@@ -39,3 +39,13 @@ format:
 .PHONY: tools
 tools:
 	go build ./cmd/...
+
+POLICY_TOOLS := $(foreach p,$(PLATFORMS),policy-tool-$(p))
+.PHONY: $(POLICY_TOOLS)
+$(POLICY_TOOLS):
+	GO111MODULE=on GOOS=$(subst policy-tool-,,$@) GOARCH=amd64 CGO_ENABLED=0 \
+		go build -o "${BUILD_DIR}/$@-amd64" cmd/policy-tool/policy-tool.go
+
+policy-tool-docker:
+	docker build -t gcr.io/config-validator/policy-tool -f ./build/policy-tool/Dockerfile .
+
