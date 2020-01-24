@@ -1,6 +1,9 @@
 package lint
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/forseti-security/config-validator/pkg/gcv"
 	"github.com/spf13/cobra"
 )
@@ -29,5 +32,10 @@ func init() {
 
 func lintCmd(cmd *cobra.Command, args []string) error {
 	_, err := gcv.NewValidator(make(chan struct{}), flags.policies, flags.libs)
-	return err
+	if err != nil {
+		fmt.Printf("linter errors:\n%s\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("No lint errors found.\n")
+	return nil
 }
