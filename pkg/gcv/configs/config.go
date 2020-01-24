@@ -385,6 +385,7 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 		if err := convertLegacyConstraint(u); err != nil {
 			return errors.Wrapf(err, "failed to convert constraint")
 		}
+
 		c.Constraints = append(c.Constraints, u)
 	default:
 		return errors.Errorf("unexpected data type %s", u.GroupVersionKind())
