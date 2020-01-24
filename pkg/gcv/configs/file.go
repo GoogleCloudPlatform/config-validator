@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"cloud.google.com/go/storage"
 	"github.com/golang/glog"
@@ -33,17 +34,20 @@ import (
 )
 
 var (
-	client = configGCSClient()
+	globals struct {
+		once   sync.Once
+		client *storage.Client
+	}
 )
 
-func configGCSClient() (client *storage.Client) {
+func configGCSClient() {
 	ctx := context.Background()
 
-	client, err := storage.NewClient(ctx)
+	var err error
+	globals.client, err = storage.NewClient(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return client
 }
 
 // file encapsulates a YAML or Rego file to be read
@@ -81,6 +85,7 @@ func newFile(name string) (file, error) {
 	}
 
 	if fileURL.Scheme == "gs" {
+		globals.once.Do(configGCSClient)
 		configFile := new(gcsFile)
 		configFile.bucket = fileURL.Host
 		configFile.path = strings.Replace(fileURL.Path, "/", "", 1)
@@ -110,7 +115,7 @@ func (f *gcsFile) read() ([]byte, error) {
 	ctx := context.Background()
 	glog.V(2).Infof("Loading file in GCS at path %s", f.path)
 
-	rc, err := client.Bucket(f.bucket).Object(f.path).NewReader(ctx)
+	rc, err := globals.client.Bucket(f.bucket).Object(f.path).NewReader(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +184,7 @@ func (d *gcsDir) listFiles() ([]string, error) {
 	bucket := dirURL.Host
 	prefix := strings.Replace(dirURL.Path, "/", "", 1)
 
-	it := client.Bucket(bucket).Objects(ctx, &storage.Query{
+	it := globals.client.Bucket(bucket).Objects(ctx, &storage.Query{
 		Prefix: prefix,
 	})
 	glog.V(2).Infof("Listing files in GCS at host %s and path %s", bucket, prefix)
