@@ -31,7 +31,9 @@ import (
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	cfclient "github.com/open-policy-agent/frameworks/constraint/pkg/client"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers/local"
+	cftemplates "github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
 	cftypes "github.com/open-policy-agent/frameworks/constraint/pkg/types"
+	k8starget "github.com/open-policy-agent/gatekeeper/pkg/target"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -77,7 +79,8 @@ type Validator struct {
 	// Right now expected to be set to point to "//policies/validator/lib" folder
 	policyLibraryDir string
 	work             chan func()
-	cfClient         *cfclient.Client
+	gcpCFClient      *cfclient.Client
+	k8sCFClient      *cfclient.Client
 }
 
 // NewValidatorConfig returns a new ValidatorConfig.
@@ -94,22 +97,25 @@ func NewValidatorConfig(policyPaths []string, policyLibraryPath string) (*config
 	return configs.NewConfiguration(policyPaths, policyLibraryPath)
 }
 
-// NewValidatorFromConfig creates the validator from a config.
-func NewValidatorFromConfig(stopChannel <-chan struct{}, config *configs.Configuration) (*Validator, error) {
+func newCFClient(
+	targetHandler cfclient.TargetHandler,
+	templates []*cftemplates.ConstraintTemplate,
+	constraints []*unstructured.Unstructured) (
+	*cfclient.Client, error) {
 	driver := local.New(local.Tracing(false))
 	backend, err := cfclient.NewBackend(cfclient.Driver(driver))
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to set up Constraint Framework backend")
 	}
-	client, err := backend.NewClient(cfclient.Targets(gcptarget.New()))
+	cfClient, err := backend.NewClient(cfclient.Targets(targetHandler))
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to set up Constraint Framework client")
 	}
 
 	ctx := context.Background()
 	var errs multierror.Errors
-	for _, template := range config.GCPTemplates {
-		if _, err := client.AddTemplate(ctx, template); err != nil {
+	for _, template := range templates {
+		if _, err := cfClient.AddTemplate(ctx, template); err != nil {
 			errs.Add(errors.Wrapf(err, "failed to add template %v", template))
 		}
 	}
@@ -117,18 +123,33 @@ func NewValidatorFromConfig(stopChannel <-chan struct{}, config *configs.Configu
 		return nil, errs.ToError()
 	}
 
-	for _, constraint := range config.GCPConstraints {
-		if _, err := client.AddConstraint(ctx, constraint); err != nil {
+	for _, constraint := range constraints {
+		if _, err := cfClient.AddConstraint(ctx, constraint); err != nil {
 			errs.Add(errors.Wrapf(err, "failed to add constraint %s", constraint))
 		}
 	}
 	if !errs.Empty() {
 		return nil, errs.ToError()
 	}
+	return cfClient, nil
+}
+
+// NewValidatorFromConfig creates the validator from a config.
+func NewValidatorFromConfig(stopChannel <-chan struct{}, config *configs.Configuration) (*Validator, error) {
+	gcpCFClient, err := newCFClient(gcptarget.New(), config.GCPTemplates, config.GCPConstraints)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to set up GCP Constraint Framework client")
+	}
+
+	k8sCFClient, err := newCFClient(&k8starget.K8sValidationTarget{}, config.K8STemplates, config.K8SConstraints)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to set up K8S Constraint Framework client")
+	}
 
 	ret := &Validator{
-		work:     make(chan func(), flags.workerCount*2),
-		cfClient: client,
+		work:        make(chan func(), flags.workerCount*2),
+		gcpCFClient: gcpCFClient,
+		k8sCFClient: k8sCFClient,
 	}
 
 	go func() {
@@ -290,7 +311,7 @@ func (v *Validator) ReviewUnmarshalledJSON(ctx context.Context, asset map[string
 	if err := v.fixAncestry(asset); err != nil {
 		return nil, err
 	}
-	responses, err := v.cfClient.Review(ctx, asset)
+	responses, err := v.gcpCFClient.Review(ctx, asset)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Constraint Framework review call failed")
 	}
