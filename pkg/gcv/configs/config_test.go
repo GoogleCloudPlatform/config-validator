@@ -206,8 +206,37 @@ func TestFixLegacyMatcher(t *testing.T) {
 		t.Run(tc.input, func(t *testing.T) {
 			got := fixLegacyMatcher(tc.input)
 			if got != tc.want {
-				t.Errorf("input %s wanted %s, got %s", tc.input, tc.want, got)
+				t.Errorf("input %s got %s, want %s", tc.input, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestNewConfiguration(t *testing.T) {
+	config, err := NewConfiguration([]string{"../../../test/cf"}, "../../../test/cf/library")
+	if err != nil {
+		t.Fatalf("unexpected error %s", err)
+	}
+
+	var got, want int
+	got = len(config.GCPTemplates)
+	want = 3
+	if want != got {
+		t.Errorf("len(GCPTemplates) got %d, want %d", got, want)
+	}
+	got = len(config.GCPConstraints)
+	want = 2
+	if want != got {
+		t.Errorf("len(GCPConstraints) got %d, want %d", got, want)
+	}
+	got = len(config.K8STemplates)
+	want = 1
+	if want != got {
+		t.Errorf("len(K8STemplates) got %d, want %d", got, want)
+	}
+	got = len(config.K8SConstraints)
+	want = 1
+	if want != got {
+		t.Errorf("len(K8SConstraints) got %d, want %d", got, want)
 	}
 }
