@@ -260,14 +260,16 @@ func (v *Validator) ReviewJSON(ctx context.Context, data string) ([]*validator.V
 	return v.ReviewUnmarshalledJSON(ctx, asset)
 }
 
-func (v *Validator) convertResponses(responses *cftypes.Responses) ([]*validator.Violation, error) {
-	response, found := responses.ByTarget[gcptarget.Name]
+func (v *Validator) convertResponses(
+	target string, resource map[string]interface{}, responses *cftypes.Responses) ([]*validator.Violation, error) {
+	response, found := responses.ByTarget[target]
 	if !found {
-		return nil, errors.Errorf("No response for target %s", gcptarget.Name)
+		return nil, errors.Errorf("No response for target %s", target)
 	}
+
 	var violations []*validator.Violation
 	for _, result := range response.Results {
-		violation, err := v.convertResult(result)
+		violation, err := v.convertResult(resource, result)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to convert result")
 		}
@@ -276,7 +278,7 @@ func (v *Validator) convertResponses(responses *cftypes.Responses) ([]*validator
 	return violations, nil
 }
 
-func (v *Validator) convertResult(result *cftypes.Result) (*validator.Violation, error) {
+func (v *Validator) convertResult(resource map[string]interface{}, result *cftypes.Result) (*validator.Violation, error) {
 	metadataJson, err := json.Marshal(result.Metadata)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -286,11 +288,8 @@ func (v *Validator) convertResult(result *cftypes.Result) (*validator.Violation,
 	if err := jsonpb.UnmarshalString(string(metadataJson), metadata); err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal json %s into structpb", string(metadataJson))
 	}
-	res, ok := result.Resource.(map[string]interface{})
-	if !ok {
-		return nil, errors.Errorf("failed to cast resource to map[string]interface{}")
-	}
-	resNameIface, found := res["name"]
+
+	resNameIface, found := resource["name"]
 	if !found {
 		return nil, errors.Errorf("result missing name field")
 	}
@@ -311,11 +310,33 @@ func (v *Validator) ReviewUnmarshalledJSON(ctx context.Context, asset map[string
 	if err := v.fixAncestry(asset); err != nil {
 		return nil, err
 	}
+
+	if asset2.IsK8S(asset) {
+		return v.reviewK8SResource(ctx, asset)
+	}
+	return v.reviewGCPResource(ctx, asset)
+}
+
+// reviewK8SResource will unwrap k8s resources then pass them to the cf client with the gatekeeper target.
+func (v *Validator) reviewK8SResource(ctx context.Context, asset map[string]interface{}) ([]*validator.Violation, error) {
+	k8sResource, err := asset2.UnwrapCAIResource(asset)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to convert asset to admission request")
+	}
+	responses, err := v.k8sCFClient.Review(ctx, k8sResource)
+	if err != nil {
+		return nil, errors.Wrapf(err, "K8S target Constraint Framework review call failed")
+	}
+	return v.convertResponses(configs.K8STargetName, asset, responses)
+}
+
+// reviewGCPResource will unwrap k8s resources then pass them to the cf client with the gatekeeper target.
+func (v *Validator) reviewGCPResource(ctx context.Context, asset map[string]interface{}) ([]*validator.Violation, error) {
 	responses, err := v.gcpCFClient.Review(ctx, asset)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Constraint Framework review call failed")
+		return nil, errors.Wrapf(err, "GCP target Constraint Framework review call failed")
 	}
-	return v.convertResponses(responses)
+	return v.convertResponses(gcptarget.Name, asset, responses)
 }
 
 // Review evaluates each asset in the review request in parallel and returns any
