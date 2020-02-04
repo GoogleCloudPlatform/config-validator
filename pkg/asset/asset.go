@@ -3,6 +3,9 @@ package asset
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
+
+	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
 	"github.com/golang/glog"
@@ -51,4 +54,30 @@ func ConvertResourceViaJSONToInterface(asset *validator.Asset) (interface{}, err
 		return nil, errors.Wrapf(err, "marshalling from json with asset %s: %v", asset.Name, asset)
 	}
 	return f, nil
+}
+
+// SanitizeAncestryPath will populate the AncestryPath field from the ancestors list, or fix the pre-populated one
+// if no ancestry list is provided.
+func SanitizeAncestryPath(asset *validator.Asset) error {
+	if len(asset.Ancestors) != 0 {
+		asset.AncestryPath = AncestryPath(asset.Ancestors)
+		return nil
+	}
+
+	if asset.AncestryPath != "" {
+		asset.AncestryPath = configs.NormalizeAncestry(asset.AncestryPath)
+		return nil
+	}
+
+	return errors.Errorf("no ancestry information for asset %s", asset.String())
+}
+
+// AncestryPath returns the ancestry path from a given ancestors list
+func AncestryPath(ancestors []string) string {
+	cnt := len(ancestors)
+	revAncestors := make([]string, len(ancestors))
+	for idx := 0; idx < cnt; idx++ {
+		revAncestors[cnt-idx-1] = ancestors[idx]
+	}
+	return strings.Join(revAncestors, "/")
 }

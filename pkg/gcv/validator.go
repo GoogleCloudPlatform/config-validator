@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"flag"
 	"runtime"
-	"strings"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
 	asset2 "github.com/forseti-security/config-validator/pkg/asset"
@@ -176,47 +175,35 @@ type assetResult struct {
 	err        error
 }
 
+// ReviewAsset reviews a single asset.
+func (v *Validator) ReviewAsset(ctx context.Context, asset *validator.Asset) ([]*validator.Violation, error) {
+	if err := asset2.ValidateAsset(asset); err != nil {
+		return nil, err
+	}
+
+	if err := asset2.SanitizeAncestryPath(asset); err != nil {
+		return nil, err
+	}
+
+	assetInterface, err := asset2.ConvertResourceViaJSONToInterface(asset)
+	if err != nil {
+		return nil, err
+	}
+
+	assetMapInterface := assetInterface.(map[string]interface{})
+	return v.ReviewUnmarshalledJSON(ctx, assetMapInterface)
+}
+
 func (v *Validator) handleReview(ctx context.Context, idx int, asset *validator.Asset, resultChan chan<- *assetResult) func() {
 	return func() {
 		resultChan <- func() *assetResult {
-			if err := asset2.ValidateAsset(asset); err != nil {
-				return &assetResult{err: errors.Wrapf(err, "index %d", idx)}
-			}
-			if asset.AncestryPath != "" {
-				asset.AncestryPath = configs.NormalizeAncestry(asset.AncestryPath)
-			}
-			if asset.AncestryPath == "" && len(asset.Ancestors) != 0 {
-				asset.AncestryPath = ancestryPath(asset.Ancestors)
-			}
-
-			assetInterface, err := asset2.ConvertResourceViaJSONToInterface(asset)
+			violations, err := v.ReviewAsset(ctx, asset)
 			if err != nil {
 				return &assetResult{err: errors.Wrapf(err, "index %d", idx)}
 			}
-
-			responses, err := v.cfClient.Review(ctx, assetInterface)
-			if err != nil {
-				return &assetResult{err: errors.Wrapf(err, "index %d", idx)}
-			}
-
-			violations, err := v.convertResponses(responses)
-			if err != nil {
-				return &assetResult{err: errors.Wrapf(err, "failed to convert responses %v", responses)}
-			}
-
 			return &assetResult{violations: violations}
 		}()
 	}
-}
-
-// ancestryPath returns the ancestry path from a given ancestors list
-func ancestryPath(ancestors []string) string {
-	cnt := len(ancestors)
-	revAncestors := make([]string, len(ancestors))
-	for idx := 0; idx < cnt; idx++ {
-		revAncestors[cnt-idx-1] = ancestors[idx]
-	}
-	return strings.Join(revAncestors, "/")
 }
 
 // fixAncestry will try to use the ancestors array to create the ancestorPath
@@ -239,7 +226,7 @@ func (v *Validator) fixAncestry(input map[string]interface{}) error {
 	if len(ancestors) == 0 {
 		return nil
 	}
-	input[ancestryPathKey] = ancestryPath(ancestors)
+	input[ancestryPathKey] = asset2.AncestryPath(ancestors)
 	return nil
 }
 
