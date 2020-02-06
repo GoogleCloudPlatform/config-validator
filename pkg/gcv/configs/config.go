@@ -49,6 +49,11 @@ const (
 	yamlPath        = expectedTarget + "/yamlpath"
 )
 
+const (
+	gcpConstraint = "gcp"
+	k8sConstraint = "k8s"
+)
+
 var (
 	// templateGK is the GroupKind for ConstraintTemplate types.
 	TemplateGK = schema.GroupKind{Group: cfv1alpha1.SchemeGroupVersion.Group, Kind: "ConstraintTemplate"}
@@ -310,9 +315,15 @@ func convertLegacyConstraint(u *unstructured.Unstructured) error {
 
 // Configuration represents the configuration files fed into FCV.
 type Configuration struct {
-	Templates   []*cftemplates.ConstraintTemplate
-	Constraints []*unstructured.Unstructured
-	regoLib     []string
+	GCPTemplates   []*cftemplates.ConstraintTemplate // Constraint Templates for GCP
+	GCPConstraints []*unstructured.Unstructured      // Constraints for GCP
+	K8STemplates   []*cftemplates.ConstraintTemplate // Constraint Templates for GKE
+	K8SConstraints []*unstructured.Unstructured      // Constraints for GKE
+
+	// regoLib contains the set of rego libraries, it is only used during construction of Configuration
+	regoLib []string
+	// allConstraints contains all input constraints, it is only used during construction of Configuration
+	allConstraints []*unstructured.Unstructured
 }
 
 func loadRegoFiles(dir string) ([]string, error) {
@@ -380,15 +391,54 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 			return errors.Wrapf(err, "failed to convert to versioned constraint template internal struct")
 		}
 
-		c.Templates = append(c.Templates, &ct)
-	case u.GroupVersionKind().Group == constraintGroup:
-		if err := convertLegacyConstraint(u); err != nil {
-			return errors.Wrapf(err, "failed to convert constraint")
+		for _, target := range ct.Spec.Targets {
+			switch target.Target {
+			// TODO: Using consant from gcptarget package causes circular reference.  Fix circular reference and use gcptarget.Name
+			case "validation.gcp.forsetisecurity.org":
+				c.GCPTemplates = append(c.GCPTemplates, &ct)
+			case "admission.k8s.gatekeeper.sh":
+				c.K8STemplates = append(c.K8STemplates, &ct)
+			default:
+				return errors.Errorf("")
+			}
 		}
 
-		c.Constraints = append(c.Constraints, u)
+	case u.GroupVersionKind().Group == constraintGroup:
+		c.allConstraints = append(c.allConstraints, u)
+
 	default:
 		return errors.Errorf("unexpected data type %s", u.GroupVersionKind())
+	}
+	return nil
+}
+
+func (c *Configuration) finishLoad() error {
+	templates := map[string]string{}
+	for _, t := range c.GCPTemplates {
+		templates[t.Spec.CRD.Spec.Names.Kind] = gcpConstraint
+	}
+	for _, t := range c.K8STemplates {
+		templates[t.Spec.CRD.Spec.Names.Kind] = k8sConstraint
+	}
+
+	allConstraints := c.allConstraints
+	c.allConstraints = nil
+	for _, constraint := range allConstraints {
+		gvk := constraint.GroupVersionKind()
+		if gvk.Version == "v1alpha1" {
+			if err := convertLegacyConstraint(constraint); err != nil {
+				return errors.Wrapf(err, "failed to convert constraint")
+			}
+		}
+
+		switch templates[gvk.Kind] {
+		case gcpConstraint:
+			c.GCPConstraints = append(c.GCPConstraints, constraint)
+		case k8sConstraint:
+			c.K8SConstraints = append(c.K8SConstraints, constraint)
+		default:
+			return errors.Errorf("constraint %s does not correspond to any templates", gvk)
+		}
 	}
 	return nil
 }
@@ -416,6 +466,12 @@ func NewConfiguration(dirs []string, libDir string) (*Configuration, error) {
 	}
 	if !errs.Empty() {
 		return nil, errs.ToError()
+
 	}
+
+	if err := configuration.finishLoad(); err != nil {
+		return nil, errors.Wrapf(err, "config error")
+	}
+
 	return configuration, nil
 }
