@@ -62,6 +62,10 @@ func (e *Errors) Add(err error) {
 	if err == nil {
 		return
 	}
+	if ei, ok := err.(errorImpl); ok {
+		e.errs = append(e.errs, ei...)
+		return
+	}
 	e.errs = append(e.errs, err)
 }
 
