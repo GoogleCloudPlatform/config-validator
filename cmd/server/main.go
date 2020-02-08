@@ -46,27 +46,15 @@ type gcvServer struct {
 }
 
 func (s *gcvServer) AddData(ctx context.Context, request *validator.AddDataRequest) (*validator.AddDataResponse, error) {
-	err := s.validator.AddData(request)
-	if err != nil {
-		return &validator.AddDataResponse{}, status.Error(codes.Internal, err.Error())
-	}
-	return &validator.AddDataResponse{}, nil
+	return &validator.AddDataResponse{}, status.Error(codes.Internal, "Not supported")
 }
 
 func (s *gcvServer) Audit(ctx context.Context, request *validator.AuditRequest) (*validator.AuditResponse, error) {
-	resp, err := s.validator.Audit(ctx)
-	if err != nil {
-		return resp, status.Error(codes.Internal, err.Error())
-	}
-	return resp, nil
+	return &validator.AuditResponse{}, status.Error(codes.Internal, "Not supported")
 }
 
 func (s *gcvServer) Reset(ctx context.Context, request *validator.ResetRequest) (*validator.ResetResponse, error) {
-	err := s.validator.Reset(ctx)
-	if err != nil {
-		return &validator.ResetResponse{}, status.Error(codes.Internal, err.Error())
-	}
-	return &validator.ResetResponse{}, nil
+	return &validator.ResetResponse{}, status.Error(codes.Internal, "Not supported")
 }
 
 func (s *gcvServer) Review(ctx context.Context, request *validator.ReviewRequest) (*validator.ReviewResponse, error) {

@@ -347,13 +347,3 @@ func (v *Validator) Review(ctx context.Context, request *validator.ReviewRequest
 	}
 	return response, nil
 }
-
-// Reset clears previously added data from the underlying query evaluation engine.
-func (v *Validator) Reset(ctx context.Context) error {
-	return errors.Errorf("Reset not supported")
-}
-
-// Audit checks the GCP resource metadata that has been added via AddData to determine if any of the constraint is violated.
-func (v *Validator) Audit(ctx context.Context) (*validator.AuditResponse, error) {
-	return nil, errors.Errorf("Audit not supported")
-}
