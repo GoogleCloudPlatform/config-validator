@@ -17,6 +17,7 @@ package configs
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/url"
@@ -29,17 +30,17 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"google.golang.org/api/iterator"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 var (
 	globals struct {
+		// once for only running GCS client setup once
 		once   sync.Once
 		client *storage.Client
 	}
 )
 
+// configGCSClient sets up the GCS client when needed.
 func configGCSClient() {
 	ctx := context.Background()
 
@@ -50,156 +51,151 @@ func configGCSClient() {
 	}
 }
 
-// file encapsulates a YAML or Rego file to be read
-type file interface {
-	read() ([]byte, error)
-	String() string
-}
-
-type localFile struct {
-	path string
-}
-
-type gcsFile struct {
-	bucket string
-	path   string
-}
-
-// dir encapsulates a directory of YAML or Rego file to be read
-type dir interface {
-	listFiles() ([]string, error)
-}
-
-type gcsDir struct {
-	path string
-}
-
-type localDir struct {
-	path string
-}
-
-func newFile(name string) (file, error) {
-	fileURL, err := url.Parse(name)
+// newPath returns a new path to a local or gcs file.
+func newPath(path string) (path, error) {
+	fileURL, err := url.Parse(path)
 	if err != nil {
 		return nil, err
 	}
 
 	if fileURL.Scheme == "gs" {
 		globals.once.Do(configGCSClient)
-		configFile := new(gcsFile)
-		configFile.bucket = fileURL.Host
-		configFile.path = strings.Replace(fileURL.Path, "/", "", 1)
-		return configFile, nil
+		return &gcsPath{
+			bucket: fileURL.Host,
+			path:   strings.TrimLeft(fileURL.Path, "/"),
+		}, nil
 	}
 
-	configFile := new(localFile)
-	configFile.path = name
-
-	return configFile, nil
+	// local fileIface could be dirIface or fileIface
+	return &localPath{path: path}, nil
 }
 
-func (f *localFile) read() ([]byte, error) {
-	glog.V(2).Infof("Loading local file at path %s", f.path)
-	fileBytes, err := ioutil.ReadFile(f.path)
-	if err != nil {
-		return nil, errors.Wrapf(err, "unable to read file %s", f.path)
+// file represents the contents of a file
+type file struct {
+	path    string
+	content []byte
+}
+
+// readPredicate is a predicate function for readAll to determine whether to read a file
+type readPredicate func(path string) bool
+
+// suffixPredicate returns read predicate that returns true if the file name has the specified suffix.
+func suffixPredicate(suffix string) func(string) bool {
+	return func(path string) bool {
+		return strings.HasSuffix(path, suffix)
 	}
-	return fileBytes, nil
 }
 
-func (f *localFile) String() string {
-	return f.path
-}
-
-func (f *gcsFile) read() ([]byte, error) {
-	ctx := context.Background()
-	glog.V(2).Infof("Loading file in GCS at path %s", f.path)
-
-	rc, err := globals.client.Bucket(f.bucket).Object(f.path).NewReader(ctx)
-	if err != nil {
-		return nil, err
+func matchesPredicates(path string, predicates []readPredicate) bool {
+	for _, predicate := range predicates {
+		if !predicate(path) {
+			return false
+		}
 	}
-	defer rc.Close()
-
-	data, err := ioutil.ReadAll(rc)
-	if err != nil {
-		return nil, errors.Wrapf(err, "unable to read file %s from bucket %s", f.path, f.bucket)
-	}
-	return data, nil
-	// [END download_file]
+	return true
 }
 
-func (f *gcsFile) String() string {
-	return f.path
+// path represents a path to a file or directory.
+type path interface {
+	// readAll will read the given file, or recursively read all files under the specified directory.
+	readAll(ctx context.Context, predicates ...readPredicate) ([]file, error)
 }
 
-func newDir(name string) (dir, error) {
-	dirURL, err := url.Parse(name)
-	if err != nil {
-		return nil, err
-	}
-
-	if dirURL.Scheme == "gs" {
-		configDir := new(gcsDir)
-		configDir.path = name
-		return configDir, nil
-	}
-
-	configDir := new(localDir)
-	configDir.path = name
-
-	return configDir, nil
+// localPath handles local file paths.
+type localPath struct {
+	path string
 }
 
-func (d *localDir) listFiles() ([]string, error) {
-	var files []string
-
+// readAll implements path
+func (p *localPath) readAll(ctx context.Context, predicates ...readPredicate) ([]file, error) {
+	var files []file
 	visit := func(path string, f os.FileInfo, err error) error {
 		if err != nil {
 			return errors.Wrapf(err, "error visiting path %s", path)
 		}
-		if !f.IsDir() {
-
-			files = append(files, path)
+		if f.IsDir() {
+			return nil
 		}
+		if !matchesPredicates(path, predicates) {
+			return nil
+		}
+
+		content, err := ioutil.ReadFile(path)
+		if err != nil {
+			return errors.Wrapf(err, "failed to read %s", path)
+		}
+		files = append(files, file{path: path, content: content})
 		return nil
 	}
-
-	err := filepath.Walk(d.path, visit)
+	err := filepath.Walk(p.path, visit)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.Wrapf(err, "failed to read files in %s", p.path)
 	}
 	return files, nil
 }
 
-func (d *gcsDir) listFiles() ([]string, error) {
-	var files []string
-	ctx := context.Background()
-	dirURL, err := url.Parse(d.path)
+// gcsPath represents an object or prefix on GCS.
+type gcsPath struct {
+	bucket string
+	path   string
+}
 
+// read reads an object from GCS
+func (p *gcsPath) read(ctx context.Context, bucket *storage.BucketHandle, name string) (file, error) {
+	fileName := fmt.Sprintf("gs://%s/%s", p.bucket, name)
+	glog.V(2).Infof("Listing GCS Object %s", fileName)
+
+	reader, err := bucket.Object(name).NewReader(ctx)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error visiting path %s", d.path)
+		return file{}, errors.Wrapf(err, "failed to read object %s", fileName)
 	}
+	defer func() {
+		if err := reader.Close(); err != nil {
+			glog.Warningf("failed to close %s: %s", fileName, err)
+		}
+	}()
 
-	bucket := dirURL.Host
-	prefix := strings.Replace(dirURL.Path, "/", "", 1)
+	data, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return file{}, errors.Wrapf(err, "failed to read %s", fileName)
+	}
+	return file{
+		content: data,
+		path:    fileName,
+	}, nil
+}
 
-	it := globals.client.Bucket(bucket).Objects(ctx, &storage.Query{
-		Prefix: prefix,
+// readAll implements path
+func (p *gcsPath) readAll(ctx context.Context, predicates ...readPredicate) ([]file, error) {
+	var files []file
+
+	bucket := globals.client.Bucket(p.bucket)
+	it := bucket.Objects(ctx, &storage.Query{
+		Prefix: p.path,
 	})
-	glog.V(2).Infof("Listing files in GCS at host %s and path %s", bucket, prefix)
+	glog.V(2).Infof("Listing files in GCS at host %s and path %s", p.bucket, p.path)
 	for {
 		attrs, err := it.Next()
-		if err == iterator.Done {
-			break
-		}
 		if err != nil {
+			if err == iterator.Done {
+				break
+			}
 			return nil, err
 		}
-		fileName := "gs://" + bucket + "/" + attrs.Name
-		glog.V(2).Infof("Listing GCS Object %s", fileName)
 
-		files = append(files, fileName)
+		if !matchesPredicates(attrs.Name, predicates) {
+			continue
+		}
+
+		file, err := p.read(ctx, bucket, attrs.Name)
+		if err != nil {
+			return nil, errors.Wrapf(err, "")
+		}
+		files = append(files, file)
+	}
+
+	if len(files) == 0 {
+		return nil, errors.Errorf("no objects found at gs://%s/%s", p.bucket, p.path)
 	}
 	return files, nil
 }

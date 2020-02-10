@@ -16,13 +16,13 @@
 package configs
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/forseti-security/config-validator/pkg/multierror"
-	"github.com/golang/glog"
 	cfapis "github.com/open-policy-agent/frameworks/constraint/pkg/apis"
 	cfv1alpha1 "github.com/open-policy-agent/frameworks/constraint/pkg/apis/templates/v1alpha1"
 	cftemplates "github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
@@ -73,70 +73,25 @@ func arrayFilterSuffix(arr []string, suffix string) []string {
 	return filteredList
 }
 
-// ListYAMLFiles returns a list of YAML files under a dir. Errors will be grpc errors.
-func ListYAMLFiles(dir string) ([]string, error) {
-	return ListYAMLFilesD([]string{dir})
-}
-
-// ListYAMLFiles returns a list of YAML files under a dir. Errors will be grpc errors.
-func ListYAMLFilesD(dirs []string) ([]string, error) {
-	var files []string
-	for _, dir := range dirs {
-		configDir, err := newDir(dir)
-		if err != nil {
-			return nil, err
-		}
-
-		dirFiles, err := configDir.listFiles()
-		if err != nil {
-			return nil, err
-		}
-		glog.V(2).Infof("Found %d YAML files in dir %s", len(dirFiles), dir)
-		files = append(files, dirFiles...)
-	}
-	return arrayFilterSuffix(files, ".yaml"), nil
-}
-
-//ListRegoFiles returns a list of rego files under a dir. Errors will be grpc errors.
-func ListRegoFiles(dir string) ([]string, error) {
-	configDir, err := newDir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	files, err := configDir.listFiles()
-	if err != nil {
-		return nil, err
-	}
-	glog.V(2).Infof("Found %d rego files in dir %s", len(files), dir)
-
-	return arrayFilterSuffix(files, ".rego"), nil
-}
-
 // loadUnstructured loads .yaml files from the provided directories as k8s
 // unstructured.Unstructured types.
 func loadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
-	var err error
-
-	files, err := ListYAMLFilesD(dirs)
-	if err != nil {
-		return nil, err
+	var files []file
+	for _, dir := range dirs {
+		dirPath, err := newPath(dir)
+		if err != nil {
+			return nil, err
+		}
+		dirFiles, err := dirPath.readAll(context.Background(), suffixPredicate(".yaml"))
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, dirFiles...)
 	}
 
 	var yamlDocs []*unstructured.Unstructured
 	for _, file := range files {
-		glog.V(2).Infof("Loading yaml file: %s", file)
-		configFile, err := newFile(file)
-		if err != nil {
-			return nil, err
-		}
-
-		contents, err := configFile.read()
-		if err != nil {
-			return nil, err
-		}
-
-		documents := strings.Split(string(contents), "\n---")
+		documents := strings.Split(string(file.content), "\n---")
 		for _, rawDoc := range documents {
 			document := strings.TrimLeft(rawDoc, "\n ")
 			if len(document) == 0 {
@@ -153,7 +108,7 @@ func loadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
 			if annotations == nil {
 				annotations = map[string]string{}
 			}
-			annotations[yamlPath] = file
+			annotations[yamlPath] = file.path
 			u.SetAnnotations(annotations)
 			yamlDocs = append(yamlDocs, &u)
 		}
@@ -331,31 +286,19 @@ type Configuration struct {
 }
 
 func loadRegoFiles(dir string) ([]string, error) {
-	var libs []string
-	var content []byte
-	files, err := ListRegoFiles(dir)
-
+	dirPath, err := newPath(dir)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to list rego files from %s", dir)
+		return nil, errors.Wrapf(err, "failed to handle path for %s", dir)
 	}
 
-	for _, filePath := range files {
-		glog.V(2).Infof("Loading rego file: %s", filePath)
+	files, err := dirPath.readAll(context.Background(), suffixPredicate(".rego"))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read files from %s", dir)
+	}
 
-		configFile, err := newFile(filePath)
-		if err != nil {
-			return nil, err
-		}
-
-		content, err = configFile.read()
-		if err != nil {
-			return nil, err
-		}
-
-		if err != nil {
-			return nil, errors.Wrapf(err, "unable to read file %s", filePath)
-		}
-		libs = append(libs, string(content))
+	var libs []string
+	for _, f := range files {
+		libs = append(libs, string(f.content))
 	}
 	sort.Strings(libs)
 	return libs, nil

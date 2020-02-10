@@ -71,8 +71,8 @@ func init() {
 // Any data added in AddData stays in the underlying rule evaluation engine's memory.
 // To avoid out of memory errors, callers can invoke Reset to delete existing data.
 type Validator struct {
-	// policyPaths points to a list of directories where the constraints and
-	// constraint templates are stored as yaml files.
+	// policyPaths is a list of paths where the constraints and constraint templates are stored as yaml files.
+	// Each path can refer to a directory or file.
 	policyPaths []string
 	// policy dependencies directory points to rego files that provide supporting code for templates.
 	// These rego dependencies should be packaged with the GCV deployment.
