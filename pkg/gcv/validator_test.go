@@ -70,6 +70,7 @@ var defaultReviewTestAssets = []*validator.Asset{
 	storageAssetNoLogging(),
 	storageAssetWithLogging(),
 	storageAssetWithSecureLogging(),
+	namespaceAssetWithNoLabel(),
 }
 
 func TestReview(t *testing.T) {
@@ -101,7 +102,7 @@ func TestReview(t *testing.T) {
 			calls: []reviewCall{
 				{
 					assets:             defaultReviewTestAssets,
-					wantViolationCount: 2,
+					wantViolationCount: 3,
 				},
 			},
 		},
@@ -118,7 +119,7 @@ func TestReview(t *testing.T) {
 			reviewCall{
 				assets:             defaultReviewTestAssets,
 				scaleFactor:        16,
-				wantViolationCount: 2,
+				wantViolationCount: 3,
 			},
 		)
 	}
@@ -130,7 +131,7 @@ func TestReview(t *testing.T) {
 			{
 				assets:             defaultReviewTestAssets,
 				scaleFactor:        4 * 16,
-				wantViolationCount: 2,
+				wantViolationCount: 3,
 			},
 		},
 	}
@@ -390,6 +391,43 @@ func storageAssetWithSecureLogging() *validator.Asset {
     }
   }
 }`)
+}
+
+func namespaceAssetWithNoLabel() *validator.Asset {
+	return mustMakeAsset(`
+{
+  "name": "//container.googleapis.com/projects/malaise-forever/zones/us-central1-a/clusters/test-1/k8s/namespaces/whatever",
+  "asset_type": "k8s.io/Namespace",
+  "ancestry_path": "organization/1234567899/project/1234567890",
+  "resource": {
+    "version": "v1",
+    "discovery_document_uri": "https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/swagger.json",
+    "discovery_name": "io.k8s.api.core.v1.Namespace",
+    "parent": "//container.googleapis.com/projects/malaise-forever/zones/us-central1-a/clusters/test-1",
+    "data": {
+      "metadata": {
+        "creationTimestamp": "2019-07-03T21:59:39Z",
+        "name": "whatever",
+        "resourceVersion": "33",
+        "selfLink": "/api/v1/namespaces/whatever",
+        "uid": "dac58e10-9ddd-11e9-bd7a-42010a800008"
+      },
+      "spec": {
+        "finalizers": [
+          "kubernetes"
+        ]
+      },
+      "status": {
+        "phase": "Active"
+      }
+    }
+  },
+  "ancestors": [
+    "projects/1234567890",
+    "organizations/1234567899"
+  ]
+}
+`)
 }
 
 func mustMakeAsset(assetJSON string) *validator.Asset {

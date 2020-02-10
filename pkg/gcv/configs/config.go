@@ -44,6 +44,10 @@ func init() {
 }
 
 const (
+	K8STargetName = "admission.k8s.gatekeeper.sh"
+)
+
+const (
 	constraintGroup = "constraints.gatekeeper.sh"
 	expectedTarget  = "validation.gcp.forsetisecurity.org"
 	yamlPath        = expectedTarget + "/yamlpath"
@@ -396,7 +400,7 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 			// TODO: Using consant from gcptarget package causes circular reference.  Fix circular reference and use gcptarget.Name
 			case "validation.gcp.forsetisecurity.org":
 				c.GCPTemplates = append(c.GCPTemplates, &ct)
-			case "admission.k8s.gatekeeper.sh":
+			case K8STargetName:
 				c.K8STemplates = append(c.K8STemplates, &ct)
 			default:
 				return errors.Errorf("")
