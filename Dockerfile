@@ -16,8 +16,14 @@
 FROM golang:1.12 as build
 
 WORKDIR /go/src/app
-COPY . .
 
+# Cache dependency download step
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+
+# Copy all sources and build
+COPY . .
 RUN make linux
 
 # Now copy it into our static image.
