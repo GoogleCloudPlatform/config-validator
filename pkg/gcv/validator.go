@@ -25,12 +25,9 @@ import (
 	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 	"github.com/forseti-security/config-validator/pkg/multierror"
 	"github.com/golang/glog"
-	"github.com/golang/protobuf/jsonpb"
-	structpb "github.com/golang/protobuf/ptypes/struct"
 	cfclient "github.com/open-policy-agent/frameworks/constraint/pkg/client"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers/local"
 	cftemplates "github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
-	cftypes "github.com/open-policy-agent/frameworks/constraint/pkg/types"
 	k8starget "github.com/open-policy-agent/gatekeeper/pkg/target"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -169,7 +166,12 @@ func (v *Validator) ReviewAsset(ctx context.Context, asset *validator.Asset) ([]
 	}
 
 	assetMapInterface := assetInterface.(map[string]interface{})
-	return v.ReviewUnmarshalledJSON(ctx, assetMapInterface)
+	result, err := v.ReviewUnmarshalledJSON(ctx, assetMapInterface)
+	if err != nil {
+		return nil, err
+	}
+
+	return result.toViolations()
 }
 
 // fixAncestry will try to use the ancestors array to create the ancestorPath
@@ -190,7 +192,7 @@ func (v *Validator) fixAncestry(input map[string]interface{}) error {
 }
 
 // ReviewJSON reviews the content of a JSON string
-func (v *Validator) ReviewJSON(ctx context.Context, data string) ([]*validator.Violation, error) {
+func (v *Validator) ReviewJSON(ctx context.Context, data string) (*Result, error) {
 	asset := map[string]interface{}{}
 	if err := json.Unmarshal([]byte(data), &asset); err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal json")
@@ -198,53 +200,8 @@ func (v *Validator) ReviewJSON(ctx context.Context, data string) ([]*validator.V
 	return v.ReviewUnmarshalledJSON(ctx, asset)
 }
 
-func (v *Validator) convertResponses(
-	target string, resource map[string]interface{}, responses *cftypes.Responses) ([]*validator.Violation, error) {
-	response, found := responses.ByTarget[target]
-	if !found {
-		return nil, errors.Errorf("No response for target %s", target)
-	}
-
-	var violations []*validator.Violation
-	for _, result := range response.Results {
-		violation, err := v.convertResult(resource, result)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to convert result")
-		}
-		violations = append(violations, violation)
-	}
-	return violations, nil
-}
-
-func (v *Validator) convertResult(resource map[string]interface{}, result *cftypes.Result) (*validator.Violation, error) {
-	metadataJson, err := json.Marshal(result.Metadata)
-	if err != nil {
-		return nil, errors.Wrapf(
-			err, "failed to marshal result metadata %v to json", result.Metadata)
-	}
-	metadata := &structpb.Value{}
-	if err := jsonpb.UnmarshalString(string(metadataJson), metadata); err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal json %s into structpb", string(metadataJson))
-	}
-
-	resNameIface, found := resource["name"]
-	if !found {
-		return nil, errors.Errorf("result missing name field")
-	}
-	resName, ok := resNameIface.(string)
-	if !ok {
-		return nil, errors.Errorf("")
-	}
-	return &validator.Violation{
-		Constraint: result.Constraint.GetName(),
-		Resource:   resName,
-		Message:    result.Msg,
-		Metadata:   metadata,
-	}, nil
-}
-
 // ReviewJSON evaluates a single asset without any threading in the background.
-func (v *Validator) ReviewUnmarshalledJSON(ctx context.Context, asset map[string]interface{}) ([]*validator.Violation, error) {
+func (v *Validator) ReviewUnmarshalledJSON(ctx context.Context, asset map[string]interface{}) (*Result, error) {
 	if err := v.fixAncestry(asset); err != nil {
 		return nil, err
 	}
@@ -256,7 +213,7 @@ func (v *Validator) ReviewUnmarshalledJSON(ctx context.Context, asset map[string
 }
 
 // reviewK8SResource will unwrap k8s resources then pass them to the cf client with the gatekeeper target.
-func (v *Validator) reviewK8SResource(ctx context.Context, asset map[string]interface{}) ([]*validator.Violation, error) {
+func (v *Validator) reviewK8SResource(ctx context.Context, asset map[string]interface{}) (*Result, error) {
 	k8sResource, err := asset2.UnwrapCAIResource(asset)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to convert asset to admission request")
@@ -265,14 +222,14 @@ func (v *Validator) reviewK8SResource(ctx context.Context, asset map[string]inte
 	if err != nil {
 		return nil, errors.Wrapf(err, "K8S target Constraint Framework review call failed")
 	}
-	return v.convertResponses(configs.K8STargetName, asset, responses)
+	return NewResult(configs.K8STargetName, asset, k8sResource.Object, responses)
 }
 
 // reviewGCPResource will unwrap k8s resources then pass them to the cf client with the gatekeeper target.
-func (v *Validator) reviewGCPResource(ctx context.Context, asset map[string]interface{}) ([]*validator.Violation, error) {
+func (v *Validator) reviewGCPResource(ctx context.Context, asset map[string]interface{}) (*Result, error) {
 	responses, err := v.gcpCFClient.Review(ctx, asset)
 	if err != nil {
 		return nil, errors.Wrapf(err, "GCP target Constraint Framework review call failed")
 	}
-	return v.convertResponses(gcptarget.Name, asset, responses)
+	return NewResult(gcptarget.Name, asset, asset, responses)
 }
