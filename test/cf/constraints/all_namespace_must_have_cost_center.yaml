@@ -1,7 +1,7 @@
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: K8sRequiredLabels
 metadata:
-  name: pod-must-have-gk
+  name: namespace-cost-center-label
 spec:
   match:
     kinds:

@@ -42,7 +42,7 @@ var (
 )
 
 type gcvServer struct {
-	validator *gcv.Validator
+	validator *gcv.ParallelValidator
 }
 
 func (s *gcvServer) AddData(ctx context.Context, request *validator.AddDataRequest) (*validator.AddDataResponse, error) {
@@ -62,10 +62,11 @@ func (s *gcvServer) Review(ctx context.Context, request *validator.ReviewRequest
 }
 
 func newServer(stopChannel chan struct{}, policyPaths []string, policyLibraryPath string) (*gcvServer, error) {
-	v, err := gcv.NewValidator(stopChannel, policyPaths, policyLibraryPath)
+	cv, err := gcv.NewValidator(policyPaths, policyLibraryPath)
 	if err != nil {
 		return nil, err
 	}
+	v := gcv.NewParallelValidator(stopChannel, cv)
 	return &gcvServer{
 		validator: v,
 	}, nil

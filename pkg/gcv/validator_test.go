@@ -19,7 +19,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
@@ -33,37 +32,21 @@ const (
 )
 
 func TestCreateValidatorWithNoOptions(t *testing.T) {
-	stopChannel := make(chan struct{})
-	defer close(stopChannel)
-	_, err := NewValidator(stopChannel, nil, "/foo")
+	_, err := NewValidator(nil, "/foo")
 	if err == nil {
 		t.Fatal("expected an error since no policy path is provided")
 	}
-	_, err = NewValidator(stopChannel, []string{"/foo"}, "")
+	_, err = NewValidator([]string{"/foo"}, "")
 	if err == nil {
 		t.Fatal("expected an error since no policy library path is provided")
 	}
 }
 
 func TestDefaultTestDataCreatesValidator(t *testing.T) {
-	stopChannel := make(chan struct{})
-	defer close(stopChannel)
-	_, err := NewValidator(testOptions(stopChannel))
+	_, err := NewValidator(testOptions())
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-}
-
-type reviewTestcase struct {
-	name        string
-	workerCount int
-	calls       []reviewCall
-}
-
-type reviewCall struct {
-	assets             []*validator.Asset // assets to use if not using the default asset set
-	scaleFactor        int                // number of copies of asset list to put in one call to Review.
-	wantViolationCount int                // the total violation count
 }
 
 var defaultReviewTestAssets = []*validator.Asset{
@@ -73,114 +56,53 @@ var defaultReviewTestAssets = []*validator.Asset{
 	namespaceAssetWithNoLabel(),
 }
 
-func TestReview(t *testing.T) {
-	// we will run 3x this amount of assets through audit, then reset at end
-	// of test.
-	var testCases = []reviewTestcase{
-		{
-			name:        "no assets",
-			workerCount: 1,
-			calls: []reviewCall{
-				{
-					assets: []*validator.Asset{},
-				},
-			},
-		},
-		{
-			name:        "single call",
-			workerCount: 1,
-			calls: []reviewCall{
-				{
-					assets:             []*validator.Asset{storageAssetNoLogging()},
-					wantViolationCount: 2,
-				},
-			},
-		},
-		{
-			name:        "single call three assets",
-			workerCount: 1,
-			calls: []reviewCall{
-				{
-					assets:             defaultReviewTestAssets,
-					wantViolationCount: 3,
-				},
-			},
-		},
-	}
+type reviewAssetTestcase struct {
+	name           string
+	asset          *validator.Asset
+	wantViolations int
+}
 
-	var testCase *reviewTestcase
-	testCase = &reviewTestcase{
-		name:        "128 goroutines x32 calls x16 scale",
-		workerCount: 128,
-	}
-	for i := 0; i < 32; i++ {
-		testCase.calls = append(
-			testCase.calls,
-			reviewCall{
-				assets:             defaultReviewTestAssets,
-				scaleFactor:        16,
-				wantViolationCount: 3,
-			},
-		)
-	}
-	testCases = append(testCases, *testCase)
-	testCase = &reviewTestcase{
-		name:        "single call large scale deadlock test",
-		workerCount: 4,
-		calls: []reviewCall{
-			{
-				assets:             defaultReviewTestAssets,
-				scaleFactor:        4 * 16,
-				wantViolationCount: 3,
-			},
+func TestReviewAsset(t *testing.T) {
+	var testCases = []reviewAssetTestcase{
+		{
+			name:           "test asset with no logging",
+			asset:          storageAssetNoLogging(),
+			wantViolations: 2,
+		},
+		{
+			name:           "test asset with logging",
+			asset:          storageAssetWithLogging(),
+			wantViolations: 0,
+		},
+		{
+			name:           "test asset with secure logging",
+			asset:          storageAssetWithSecureLogging(),
+			wantViolations: 0,
+		},
+		{
+			name:           "test k8s asset violation",
+			asset:          namespaceAssetWithNoLabel(),
+			wantViolations: 1,
 		},
 	}
-	testCases = append(testCases, *testCase)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			oldWorkerCount := flags.workerCount
-			defer func() {
-				flags.workerCount = oldWorkerCount
-			}()
-			flags.workerCount = tc.workerCount
 
-			stopChannel := make(chan struct{})
-			defer close(stopChannel)
-
-			v, err := NewValidator(testOptions(stopChannel))
+			v, err := NewValidator(testOptions())
 			if err != nil {
 				t.Fatal("unexpected error", err)
 			}
 
-			var groupDone sync.WaitGroup
-			for callIdx, call := range tc.calls {
-				groupDone.Add(1)
-				go func(cIdx int, call reviewCall) {
-					defer groupDone.Done()
-					if call.scaleFactor == 0 {
-						call.scaleFactor = 1
-					}
-
-					var assets []*validator.Asset
-					for i := 0; i < call.scaleFactor; i++ {
-						assets = append(assets, call.assets...)
-					}
-
-					result, err := v.Review(context.Background(), &validator.ReviewRequest{
-						Assets: assets,
-					})
-					if err != nil {
-						t.Fatalf("review error in call %d: %s", cIdx, err)
-					}
-
-					wantViolationCount := call.wantViolationCount * call.scaleFactor
-					if len(result.Violations) != wantViolationCount {
-						t.Fatalf("wanted %d violations, got %d", wantViolationCount, len(result.Violations))
-					}
-				}(callIdx, call)
+			violations, err := v.ReviewAsset(context.Background(), tc.asset)
+			if err != nil {
+				t.Fatal("unexpected error", err)
 			}
-			groupDone.Wait()
+
+			got := len(violations)
+			if got != tc.wantViolations {
+				t.Errorf("wanted %d violations, got %d", tc.wantViolations, got)
+			}
 		})
 	}
 }
@@ -192,10 +114,7 @@ func TestCreateNoDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stopChannel := make(chan struct{})
-	defer close(stopChannel)
 	if _, err = NewValidator(
-		stopChannel,
 		[]string{filepath.Join(emptyFolder, "someDirThatDoesntExist")},
 		filepath.Join(emptyFolder, "someDirThatDoesntExist"),
 	); err == nil {
@@ -218,9 +137,7 @@ func TestCreateNoReadAccess(t *testing.T) {
 		t.Fatal("creating temp dir sub dir:", err)
 	}
 
-	stopChannel := make(chan struct{})
-	defer close(stopChannel)
-	if _, err = NewValidator(stopChannel, []string{tmpDir}, tmpDir); err == nil {
+	if _, err = NewValidator([]string{tmpDir}, tmpDir); err == nil {
 		t.Fatal("expected a file system error but got no error")
 	}
 }
@@ -237,9 +154,7 @@ func TestCreateEmptyDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stopChannel := make(chan struct{})
-	defer close(stopChannel)
-	if _, err = NewValidator(stopChannel, []string{policyDir}, policyLibDir); err == nil {
+	if _, err = NewValidator([]string{policyDir}, policyLibDir); err == nil {
 		t.Fatal("directory without a configuration should generate error")
 	}
 }
@@ -252,9 +167,9 @@ func cleanup(t *testing.T, dir string) {
 
 // testOptions provides a set of default options that allows the successful creation
 // of a validator.
-func testOptions(stopChannel <-chan struct{}) (<-chan struct{}, []string, string) {
+func testOptions() ([]string, string) {
 	// Add default options to this list
-	return stopChannel, []string{localPolicyDir}, localPolicyDepDir
+	return []string{localPolicyDir}, localPolicyDepDir
 }
 
 func storageAssetNoLogging() *validator.Asset {

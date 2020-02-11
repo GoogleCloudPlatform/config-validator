@@ -31,7 +31,7 @@ func init() {
 }
 
 func lintCmd(cmd *cobra.Command, args []string) error {
-	_, err := gcv.NewValidator(make(chan struct{}), flags.policies, flags.libs)
+	_, err := gcv.NewValidator(flags.policies, flags.libs)
 	if err != nil {
 		fmt.Printf("linter errors:\n%s\n", err)
 		os.Exit(1)
