@@ -172,8 +172,14 @@ func testOptions() ([]string, string) {
 	return []string{localPolicyDir}, localPolicyDepDir
 }
 
-func storageAssetNoLogging() *validator.Asset {
-	return mustMakeAsset(`{
+var defaultReviewTestAssetJSONs = map[string]string{
+	"storageAssetNoLoggingJSON":         storageAssetNoLoggingJSON,
+	"storageAssetWithLoggingJSON":       storageAssetWithLoggingJSON,
+	"storageAssetWithSecureLoggingJSON": storageAssetWithSecureLoggingJSON,
+	"namespaceAssetWithNoLabelJSON":     namespaceAssetWithNoLabelJSON,
+}
+
+var storageAssetNoLoggingJSON = `{
   "name": "//storage.googleapis.com/my-storage-bucket",
   "ancestry_path": "organization/1/folder/2/project/3",
   "asset_type": "storage.googleapis.com/Bucket",
@@ -213,10 +219,13 @@ func storageAssetNoLogging() *validator.Asset {
       "website": {}
     }
   }
-}`)
+}`
+
+func storageAssetNoLogging() *validator.Asset {
+	return mustMakeAsset(storageAssetNoLoggingJSON)
 }
-func storageAssetWithLogging() *validator.Asset {
-	return mustMakeAsset(`{
+
+var storageAssetWithLoggingJSON = `{
   "name": "//storage.googleapis.com/my-storage-bucket-with-logging",
   "ancestry_path": "organization/1/folder/2/project/3",
   "asset_type": "storage.googleapis.com/Bucket",
@@ -259,10 +268,13 @@ func storageAssetWithLogging() *validator.Asset {
       "website": {}
     }
   }
-}`)
+}`
+
+func storageAssetWithLogging() *validator.Asset {
+	return mustMakeAsset(storageAssetWithLoggingJSON)
 }
-func storageAssetWithSecureLogging() *validator.Asset {
-	return mustMakeAsset(`{
+
+var storageAssetWithSecureLoggingJSON = `{
   "name": "//storage.googleapis.com/my-storage-bucket-with-secure-logging",
   "asset_type": "storage.googleapis.com/Bucket",
   "ancestry_path": "organization/1/folder/2/project/3",
@@ -305,11 +317,13 @@ func storageAssetWithSecureLogging() *validator.Asset {
       "website": {}
     }
   }
-}`)
+}`
+
+func storageAssetWithSecureLogging() *validator.Asset {
+	return mustMakeAsset(storageAssetWithSecureLoggingJSON)
 }
 
-func namespaceAssetWithNoLabel() *validator.Asset {
-	return mustMakeAsset(`
+var namespaceAssetWithNoLabelJSON = `
 {
   "name": "//container.googleapis.com/projects/malaise-forever/zones/us-central1-a/clusters/test-1/k8s/namespaces/whatever",
   "asset_type": "k8s.io/Namespace",
@@ -342,7 +356,10 @@ func namespaceAssetWithNoLabel() *validator.Asset {
     "organizations/1234567899"
   ]
 }
-`)
+`
+
+func namespaceAssetWithNoLabel() *validator.Asset {
+	return mustMakeAsset(namespaceAssetWithNoLabelJSON)
 }
 
 func mustMakeAsset(assetJSON string) *validator.Asset {
@@ -351,4 +368,42 @@ func mustMakeAsset(assetJSON string) *validator.Asset {
 		panic(err)
 	}
 	return data
+}
+
+func BenchmarkReviewJSON(b *testing.B) {
+	v, err := NewValidator(testOptions())
+	if err != nil {
+		b.Fatal("unexpected error", err)
+	}
+
+	b.ResetTimer()
+	for name, asset := range defaultReviewTestAssetJSONs {
+		b.Run(name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_, err = v.ReviewJSON(context.Background(), asset)
+				if err != nil {
+					b.Fatalf("unexpected error %s", err)
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkReviewAsset(b *testing.B) {
+	v, err := NewValidator(testOptions())
+	if err != nil {
+		b.Fatal("unexpected error", err)
+	}
+
+	b.ResetTimer()
+	for idx, a := range defaultReviewTestAssets {
+		b.Run(a.Name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_, err = v.ReviewAsset(context.Background(), defaultReviewTestAssets[idx])
+				if err != nil {
+					b.Fatalf("unexpected error %s", err)
+				}
+			}
+		})
+	}
 }
