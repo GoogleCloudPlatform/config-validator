@@ -16,6 +16,7 @@ package gcv
 
 import (
 	"context"
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -58,6 +59,7 @@ var defaultReviewTestAssets = []*validator.Asset{
 
 type reviewAssetTestcase struct {
 	name           string
+	assetJson      string
 	asset          *validator.Asset
 	wantViolations int
 }
@@ -66,40 +68,63 @@ func TestReviewAsset(t *testing.T) {
 	var testCases = []reviewAssetTestcase{
 		{
 			name:           "test asset with no logging",
-			asset:          storageAssetNoLogging(),
+			assetJson:      storageAssetNoLoggingJSON,
 			wantViolations: 2,
 		},
 		{
 			name:           "test asset with logging",
-			asset:          storageAssetWithLogging(),
+			assetJson:      storageAssetWithLoggingJSON,
 			wantViolations: 0,
 		},
 		{
 			name:           "test asset with secure logging",
-			asset:          storageAssetWithSecureLogging(),
+			assetJson:      storageAssetWithSecureLoggingJSON,
 			wantViolations: 0,
 		},
 		{
 			name:           "test k8s asset violation",
-			asset:          namespaceAssetWithNoLabel(),
+			assetJson:      namespaceAssetWithNoLabelJSON,
 			wantViolations: 1,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			v, err := NewValidator(testOptions())
 			if err != nil {
 				t.Fatal("unexpected error", err)
 			}
 
-			violations, err := v.ReviewAsset(context.Background(), tc.asset)
+			var assetObj map[string]interface{}
+			err = json.Unmarshal([]byte(tc.assetJson), &assetObj)
 			if err != nil {
 				t.Fatal("unexpected error", err)
 			}
 
+			var violations []*validator.Violation
+			violations, err = v.ReviewJSON(context.Background(), tc.assetJson)
+			if err != nil {
+				t.Fatal("unexpected error", err)
+			}
 			got := len(violations)
+			if got != tc.wantViolations {
+				t.Errorf("wanted %d violations, got %d", tc.wantViolations, got)
+			}
+
+			violations, err = v.ReviewUnmarshalledJSON(context.Background(), assetObj)
+			if err != nil {
+				t.Fatal("unexpected error", err)
+			}
+			got = len(violations)
+			if got != tc.wantViolations {
+				t.Errorf("wanted %d violations, got %d", tc.wantViolations, got)
+			}
+
+			violations, err = v.ReviewAsset(context.Background(), mustMakeAsset(tc.assetJson))
+			if err != nil {
+				t.Fatal("unexpected error", err)
+			}
+			got = len(violations)
 			if got != tc.wantViolations {
 				t.Errorf("wanted %d violations, got %d", tc.wantViolations, got)
 			}

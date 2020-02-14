@@ -41,7 +41,7 @@ const (
 	// The JSON object key for ancestry path
 	ancestryPathKey = "ancestry_path"
 	// The JSON object key for ancestors list
-	ancestorsKey = "ancestors"
+	ancestorSliceKey = "ancestors"
 )
 
 type ConfigValidator interface {
@@ -175,25 +175,18 @@ func (v *Validator) ReviewAsset(ctx context.Context, asset *validator.Asset) ([]
 // fixAncestry will try to use the ancestors array to create the ancestorPath
 // value if it is not present.
 func (v *Validator) fixAncestry(input map[string]interface{}) error {
-	ancestry, found, err := unstructured.NestedString(input, ancestryPathKey)
-	if found && err != nil {
-		input[ancestryPathKey] = configs.NormalizeAncestry(ancestry)
+	ancestors, found, err := unstructured.NestedStringSlice(input, ancestorSliceKey)
+	if found && err == nil {
+		input[ancestryPathKey] = asset2.AncestryPath(ancestors)
 		return nil
 	}
 
-	ancestors, found, err := unstructured.NestedStringSlice(input, ancestorsKey)
-	if !found {
-		glog.Infof("asset missing ancestry information: %v", input)
+	ancestry, found, err := unstructured.NestedString(input, ancestryPathKey)
+	if found && err == nil {
+		input[ancestryPathKey] = configs.NormalizeAncestry(ancestry)
 		return nil
 	}
-	if err != nil {
-		return errors.Wrapf(err, "failed to access ancestors list")
-	}
-	if len(ancestors) == 0 {
-		return nil
-	}
-	input[ancestryPathKey] = asset2.AncestryPath(ancestors)
-	return nil
+	return errors.Errorf("asset missing ancestry information: %v", input)
 }
 
 // ReviewJSON reviews the content of a JSON string
