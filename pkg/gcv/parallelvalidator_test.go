@@ -185,18 +185,20 @@ func TestReview(t *testing.T) {
 					})
 					if call.wantError {
 						if err == nil {
-							t.Fatal("Expected error, got none")
+							t.Errorf("Expected error, got none")
+							return
 						}
 						return
 					} else {
 						if err != nil {
-							t.Fatalf("review error in call %d: %s", cIdx, err)
+							t.Errorf("review error in call %d: %s", cIdx, err)
+							return
 						}
 					}
 
 					wantViolationCount := call.wantViolationCount * call.scaleFactor
 					if len(result.Violations) != wantViolationCount {
-						t.Fatalf("wanted %d violations, got %d", wantViolationCount, len(result.Violations))
+						t.Errorf("wanted %d violations, got %d", wantViolationCount, len(result.Violations))
 					}
 				}(callIdx, call)
 			}
