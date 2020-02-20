@@ -31,10 +31,9 @@ matching_constraints[constraint] {
 
 	# Default matcher behavior is to match everything.
 	target := get_default(match, "target", ["**"])
-  #re_match(target[_], asset.ancestry_path)
-	path_matches(asset.ancestry_path, target[_])
+	target_match := {asset.ancestry_path | path_matches(asset.ancestry_path, target[_])}
+	count(target_match) != 0
 	exclude := get_default(match, "exclude", [])
-	#exclusion_match := {asset.ancestry_path | re_match(exclude[_], asset.ancestry_path)}
 	exclusion_match := {asset.ancestry_path | path_matches(asset.ancestry_path, exclude[_])}
 	count(exclusion_match) == 0
 }

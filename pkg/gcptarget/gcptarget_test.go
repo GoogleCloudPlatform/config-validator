@@ -120,6 +120,12 @@ var testData = []reviewTestData{
 		wantMatch:    true,
 	},
 	{
+		name:         "Only match once.",
+		match:        match(target("**", "organizations/**")),
+		ancestryPath: "organizations/123454321/folders/1221214",
+		wantMatch:    true,
+	},
+	{
 		name:         "Match org on exact ID",
 		match:        match(target("organizations/123454321")),
 		ancestryPath: "organizations/123454321",
