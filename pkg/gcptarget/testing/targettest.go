@@ -186,10 +186,10 @@ func (tc *ReviewTestcase) Run(t *testing.T) {
 	}
 
 	if tc.WantMatch {
-		if len(review.Results) == 0 {
+		if len(review.Results) != 1 {
 			unitTestTraceDump(t, review)
 			t.Logf("match block: %v", tc.Match)
-			t.Fatalf("expected results in review, got none")
+			t.Fatalf("expected exactly one results in review, got %d", len(review.Results))
 		}
 	} else {
 		if len(review.Results) != 0 {
