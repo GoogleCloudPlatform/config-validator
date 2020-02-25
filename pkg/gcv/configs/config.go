@@ -76,13 +76,13 @@ func arrayFilterSuffix(arr []string, suffix string) []string {
 // loadUnstructured loads .yaml files from the provided directories as k8s
 // unstructured.Unstructured types.
 func loadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
-	var files []file
+	var files []File
 	for _, dir := range dirs {
-		dirPath, err := newPath(dir)
+		dirPath, err := NewPath(dir)
 		if err != nil {
 			return nil, err
 		}
-		dirFiles, err := dirPath.readAll(context.Background(), suffixPredicate(".yaml"))
+		dirFiles, err := dirPath.ReadAll(context.Background(), SuffixPredicate(".yaml"))
 		if err != nil {
 			return nil, err
 		}
@@ -91,7 +91,7 @@ func loadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
 
 	var yamlDocs []*unstructured.Unstructured
 	for _, file := range files {
-		documents := strings.Split(string(file.content), "\n---")
+		documents := strings.Split(string(file.Content), "\n---")
 		for _, rawDoc := range documents {
 			document := strings.TrimLeft(rawDoc, "\n ")
 			if len(document) == 0 {
@@ -108,7 +108,7 @@ func loadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
 			if annotations == nil {
 				annotations = map[string]string{}
 			}
-			annotations[yamlPath] = file.path
+			annotations[yamlPath] = file.Path
 			u.SetAnnotations(annotations)
 			yamlDocs = append(yamlDocs, &u)
 		}
@@ -286,19 +286,19 @@ type Configuration struct {
 }
 
 func loadRegoFiles(dir string) ([]string, error) {
-	dirPath, err := newPath(dir)
+	dirPath, err := NewPath(dir)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to handle path for %s", dir)
 	}
 
-	files, err := dirPath.readAll(context.Background(), suffixPredicate(".rego"))
+	files, err := dirPath.ReadAll(context.Background(), SuffixPredicate(".rego"))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read files from %s", dir)
 	}
 
 	var libs []string
 	for _, f := range files {
-		libs = append(libs, string(f.content))
+		libs = append(libs, string(f.Content))
 	}
 	sort.Strings(libs)
 	return libs, nil

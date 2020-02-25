@@ -34,12 +34,12 @@ type pathTestcase struct {
 }
 
 func (tc *pathTestcase) Run(t *testing.T) {
-	p, err := newPath(tc.path)
+	p, err := NewPath(tc.path)
 	if err != nil {
 		t.Fatalf("unexpected error %s", err)
 	}
 
-	files, err := p.readAll(context.Background(), tc.predicates...)
+	files, err := p.ReadAll(context.Background(), tc.predicates...)
 	if tc.wantError {
 		if err == nil {
 			t.Fatal("wanted error from p.ReadAll, got none")
@@ -52,7 +52,7 @@ func (tc *pathTestcase) Run(t *testing.T) {
 
 	var gotFiles []string
 	for _, f := range files {
-		gotFiles = append(gotFiles, f.path)
+		gotFiles = append(gotFiles, f.Path)
 	}
 	sort.Strings(gotFiles)
 	sort.Strings(tc.wantFiles)
@@ -81,7 +81,7 @@ var pathTestCases = []pathTestcase{
 	{
 		name:       "yaml only",
 		path:       "../../../test/cf",
-		predicates: []readPredicate{suffixPredicate(".yaml")},
+		predicates: []readPredicate{SuffixPredicate(".yaml")},
 		wantFiles: []string{
 			"../../../test/cf/constraints/all_namespace_must_have_cost_center.yaml",
 			"../../../test/cf/constraints/cf_gcp_storage_logging_constraint.yaml",
@@ -95,7 +95,7 @@ var pathTestCases = []pathTestcase{
 	{
 		name:       "rego only",
 		path:       "../../../test/cf",
-		predicates: []readPredicate{suffixPredicate(".rego")},
+		predicates: []readPredicate{SuffixPredicate(".rego")},
 		wantFiles: []string{
 			"../../../test/cf/library/constraints.rego",
 			"../../../test/cf/library/util.rego",
@@ -104,7 +104,7 @@ var pathTestCases = []pathTestcase{
 	{
 		name:       "no files",
 		path:       "../../../test/cf",
-		predicates: []readPredicate{suffixPredicate(".xyz")},
+		predicates: []readPredicate{SuffixPredicate(".xyz")},
 		wantFiles:  nil,
 	},
 	{

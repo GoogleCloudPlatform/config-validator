@@ -51,8 +51,8 @@ func configGCSClient() {
 	}
 }
 
-// newPath returns a new path to a local or gcs file.
-func newPath(path string) (path, error) {
+// NewPath returns a new Path to a local or gcs file.
+func NewPath(path string) (Path, error) {
 	fileURL, err := url.Parse(path)
 	if err != nil {
 		return nil, err
@@ -70,17 +70,19 @@ func newPath(path string) (path, error) {
 	return &localPath{path: path}, nil
 }
 
-// file represents the contents of a file
-type file struct {
-	path    string
-	content []byte
+// File represents the contents of a file
+type File struct {
+	// Path is the path to the file.
+	Path string
+	// Content is the full contents for the file.
+	Content []byte
 }
 
-// readPredicate is a predicate function for readAll to determine whether to read a file
+// readPredicate is a predicate function for ReadAll to determine whether to read a file
 type readPredicate func(path string) bool
 
-// suffixPredicate returns read predicate that returns true if the file name has the specified suffix.
-func suffixPredicate(suffix string) func(string) bool {
+// SuffixPredicate returns read predicate that returns true if the file name has the specified suffix.
+func SuffixPredicate(suffix string) readPredicate {
 	return func(path string) bool {
 		return strings.HasSuffix(path, suffix)
 	}
@@ -95,10 +97,10 @@ func matchesPredicates(path string, predicates []readPredicate) bool {
 	return true
 }
 
-// path represents a path to a file or directory.
-type path interface {
-	// readAll will read the given file, or recursively read all files under the specified directory.
-	readAll(ctx context.Context, predicates ...readPredicate) ([]file, error)
+// Path represents a path to a file or directory.
+type Path interface {
+	// ReadAll will read the given file, or recursively read all files under the specified directory.
+	ReadAll(ctx context.Context, predicates ...readPredicate) ([]File, error)
 }
 
 // localPath handles local file paths.
@@ -106,9 +108,9 @@ type localPath struct {
 	path string
 }
 
-// readAll implements path
-func (p *localPath) readAll(ctx context.Context, predicates ...readPredicate) ([]file, error) {
-	var files []file
+// ReadAll implements Path
+func (p *localPath) ReadAll(ctx context.Context, predicates ...readPredicate) ([]File, error) {
+	var files []File
 	visit := func(path string, f os.FileInfo, err error) error {
 		if err != nil {
 			return errors.Wrapf(err, "error visiting path %s", path)
@@ -124,7 +126,7 @@ func (p *localPath) readAll(ctx context.Context, predicates ...readPredicate) ([
 		if err != nil {
 			return errors.Wrapf(err, "failed to read %s", path)
 		}
-		files = append(files, file{path: path, content: content})
+		files = append(files, File{Path: path, Content: content})
 		return nil
 	}
 	err := filepath.Walk(p.path, visit)
@@ -141,13 +143,13 @@ type gcsPath struct {
 }
 
 // read reads an object from GCS
-func (p *gcsPath) read(ctx context.Context, bucket *storage.BucketHandle, name string) (file, error) {
+func (p *gcsPath) read(ctx context.Context, bucket *storage.BucketHandle, name string) (File, error) {
 	fileName := fmt.Sprintf("gs://%s/%s", p.bucket, name)
 	glog.V(2).Infof("Listing GCS Object %s", fileName)
 
 	reader, err := bucket.Object(name).NewReader(ctx)
 	if err != nil {
-		return file{}, errors.Wrapf(err, "failed to read object %s", fileName)
+		return File{}, errors.Wrapf(err, "failed to read object %s", fileName)
 	}
 	defer func() {
 		if err := reader.Close(); err != nil {
@@ -157,17 +159,17 @@ func (p *gcsPath) read(ctx context.Context, bucket *storage.BucketHandle, name s
 
 	data, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return file{}, errors.Wrapf(err, "failed to read %s", fileName)
+		return File{}, errors.Wrapf(err, "failed to read %s", fileName)
 	}
-	return file{
-		content: data,
-		path:    fileName,
+	return File{
+		Content: data,
+		Path:    fileName,
 	}, nil
 }
 
-// readAll implements path
-func (p *gcsPath) readAll(ctx context.Context, predicates ...readPredicate) ([]file, error) {
-	var files []file
+// ReadAll implements Path
+func (p *gcsPath) ReadAll(ctx context.Context, predicates ...readPredicate) ([]File, error) {
+	var files []File
 
 	bucket := globals.client.Bucket(p.bucket)
 	it := bucket.Objects(ctx, &storage.Query{
