@@ -1,2 +1,5 @@
 bin/
+
+# intellij stuff
 /.idea/
+/config-validator.iml
