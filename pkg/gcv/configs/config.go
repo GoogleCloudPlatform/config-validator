@@ -73,9 +73,9 @@ func arrayFilterSuffix(arr []string, suffix string) []string {
 	return filteredList
 }
 
-// loadUnstructured loads .yaml files from the provided directories as k8s
+// LoadUnstructured loads .yaml files from the provided directories as k8s
 // unstructured.Unstructured types.
-func loadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
+func LoadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
 	var files []File
 	for _, dir := range dirs {
 		dirPath, err := NewPath(dir)
@@ -392,7 +392,7 @@ func (c *Configuration) finishLoad() error {
 
 // NewConfiguration returns the configuration from the list of provided directories.
 func NewConfiguration(dirs []string, libDir string) (*Configuration, error) {
-	unstructuredObjects, err := loadUnstructured(dirs)
+	unstructuredObjects, err := LoadUnstructured(dirs)
 	if err != nil {
 		return nil, err
 	}
