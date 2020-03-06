@@ -20,7 +20,7 @@ require (
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/open-policy-agent/frameworks/constraint v0.0.0-20200127222620-69dff9b895a2
 	github.com/open-policy-agent/gatekeeper v0.0.0-20200130050101-a7990e5bc83a
-	github.com/open-policy-agent/opa v0.16.2
+	github.com/open-policy-agent/opa v0.17.2
 	github.com/pkg/errors v0.8.1
 	github.com/smallfish/simpleyaml v0.0.0-20170911015856-a32031077861
 	github.com/spf13/cobra v0.0.5
