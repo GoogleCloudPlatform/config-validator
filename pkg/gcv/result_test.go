@@ -38,7 +38,7 @@ var conversionTestCases = []ConversionTestCase{
 			{
 				Description:     "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
 				TargetResources: []string{"//storage.googleapis.com/my-storage-bucket"},
-				InsightSubtype:  "require-storage-logging",
+				InsightSubtype:  "CFGCPStorageLoggingConstraint.require-storage-logging",
 				Content: map[string]interface{}{
 					"metadata": map[string]interface{}{
 						"details": map[string]interface{}{
@@ -89,7 +89,7 @@ var conversionTestCases = []ConversionTestCase{
 			{
 				Description:     "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
 				TargetResources: []string{"//storage.googleapis.com/my-storage-bucket"},
-				InsightSubtype:  "require-storage-logging-xx",
+				InsightSubtype:  "GCPStorageLoggingConstraint.require-storage-logging-xx",
 				Content: map[string]interface{}{
 					"metadata": map[string]interface{}{
 						"details": map[string]interface{}{
@@ -140,7 +140,7 @@ var conversionTestCases = []ConversionTestCase{
 		},
 		wantViolations: []*validator.Violation{
 			{
-				Constraint: "require-storage-logging",
+				Constraint: "CFGCPStorageLoggingConstraint.require-storage-logging",
 				Resource:   "//storage.googleapis.com/my-storage-bucket",
 				Message:    "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
 				Metadata: &structpb.Value{
@@ -169,7 +169,7 @@ var conversionTestCases = []ConversionTestCase{
 				},
 			},
 			{
-				Constraint: "require-storage-logging-xx",
+				Constraint: "GCPStorageLoggingConstraint.require-storage-logging-xx",
 				Resource:   "//storage.googleapis.com/my-storage-bucket",
 				Message:    "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
 				Metadata: &structpb.Value{

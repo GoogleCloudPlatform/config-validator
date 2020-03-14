@@ -16,6 +16,7 @@ package gcv
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
 	"github.com/golang/protobuf/jsonpb"
@@ -96,7 +97,7 @@ func (r *Result) ToInsights() []*Insight {
 		insights[idx] = &Insight{
 			Description:     cv.Message,
 			TargetResources: []string{r.Name},
-			InsightSubtype:  cv.Constraint.GetName(),
+			InsightSubtype:  cv.name(),
 			Content: map[string]interface{}{
 				"resource": r.CAIResource,
 				"metadata": cv.Metadata,
@@ -119,11 +120,18 @@ func (r *Result) toViolations() ([]*validator.Violation, error) {
 	return violations, nil
 }
 
-func (v *ConstraintViolation) toViolation(name string) (*validator.Violation, error) {
-	metadataJson, err := json.Marshal(v.Metadata)
+// name returns the name for the constraint, this is given as "[Kind].[Name]" to uniquely identify which template and
+// constraint the violation came from.
+func (cv *ConstraintViolation) name() string {
+	return fmt.Sprintf("%s.%s", cv.Constraint.GetKind(), cv.Constraint.GetName())
+}
+
+// toViolation converts the constriant to a violation.
+func (cv *ConstraintViolation) toViolation(name string) (*validator.Violation, error) {
+	metadataJson, err := json.Marshal(cv.Metadata)
 	if err != nil {
 		return nil, errors.Wrapf(
-			err, "failed to marshal result metadata %v to json", v.Metadata)
+			err, "failed to marshal result metadata %v to json", cv.Metadata)
 	}
 	metadata := &structpb.Value{}
 	if err := jsonpb.UnmarshalString(string(metadataJson), metadata); err != nil {
@@ -131,9 +139,9 @@ func (v *ConstraintViolation) toViolation(name string) (*validator.Violation, er
 	}
 
 	return &validator.Violation{
-		Constraint: v.Constraint.GetName(),
+		Constraint: cv.name(),
 		Resource:   name,
-		Message:    v.Message,
+		Message:    cv.Message,
 		Metadata:   metadata,
 	}, nil
 }
