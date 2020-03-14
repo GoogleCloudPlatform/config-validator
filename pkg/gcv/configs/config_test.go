@@ -15,7 +15,10 @@
 package configs
 
 import (
+	"path/filepath"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 func TestFixLegacyMatcher(t *testing.T) {
@@ -85,4 +88,56 @@ func TestNewConfiguration(t *testing.T) {
 	if want != got {
 		t.Errorf("len(K8SConstraints) got %d, want %d", got, want)
 	}
+}
+
+func TestLegacyTemplateConversion(t *testing.T) {
+	var testCases = []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "legacy template with schema",
+			input: "test/cf/templates/gcp_bq_dataset_location_v1.yaml",
+		},
+		{
+			name:  "legacy template no schema",
+			input: "test/cf/templates/gcp_storage_logging_template.yaml",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			unst, err := LoadUnstructured(
+				[]string{filepath.Join("..", "..", "..", tc.input)})
+			if err != nil {
+				t.Fatalf("unexpected error %s", err)
+			}
+			if len(unst) != 1 {
+				t.Fatalf("unst must have exactly one item: %v", unst)
+			}
+
+			u := unst[0]
+			origName := u.GetName()
+			err = convertLegacyConstraintTemplate(u, []string{})
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+
+			// Check annotation for new name
+			origNameAnnotation, found, err := unstructured.NestedString(u.Object, "metadata", "annotations", OriginalName)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if !found {
+				t.Fatal("original name annotation not found")
+			}
+			if origNameAnnotation != origName {
+				t.Errorf("original name annotation has wrong value want %s got %s", origName, origNameAnnotation)
+			}
+		})
+	}
+}
+
+func TestLegacyConstraintConversion(t *testing.T) {
+
 }

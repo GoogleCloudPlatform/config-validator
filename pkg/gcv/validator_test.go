@@ -101,26 +101,25 @@ func TestReviewAsset(t *testing.T) {
 				t.Fatal("unexpected error", err)
 			}
 
-			var violations []*validator.Violation
-			violations, err = v.ReviewJSON(context.Background(), tc.assetJson)
+			result, err := v.ReviewJSON(context.Background(), tc.assetJson)
 			if err != nil {
 				t.Fatal("unexpected error", err)
 			}
-			got := len(violations)
+			got := len(result.ConstraintViolations)
 			if got != tc.wantViolations {
 				t.Errorf("wanted %d violations, got %d", tc.wantViolations, got)
 			}
 
-			violations, err = v.ReviewUnmarshalledJSON(context.Background(), assetObj)
+			result, err = v.ReviewUnmarshalledJSON(context.Background(), assetObj)
 			if err != nil {
 				t.Fatal("unexpected error", err)
 			}
-			got = len(violations)
+			got = len(result.ConstraintViolations)
 			if got != tc.wantViolations {
 				t.Errorf("wanted %d violations, got %d", tc.wantViolations, got)
 			}
 
-			violations, err = v.ReviewAsset(context.Background(), mustMakeAsset(tc.assetJson))
+			violations, err := v.ReviewAsset(context.Background(), mustMakeAsset(tc.assetJson))
 			if err != nil {
 				t.Fatal("unexpected error", err)
 			}

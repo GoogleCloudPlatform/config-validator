@@ -51,6 +51,7 @@ const (
 	constraintGroup = "constraints.gatekeeper.sh"
 	expectedTarget  = "validation.gcp.forsetisecurity.org"
 	yamlPath        = expectedTarget + "/yamlpath"
+	OriginalName    = expectedTarget + "/originalName"
 )
 
 const (
@@ -71,6 +72,15 @@ func arrayFilterSuffix(arr []string, suffix string) []string {
 		}
 	}
 	return filteredList
+}
+
+func setAnnotation(u *unstructured.Unstructured, key, value string) {
+	annotations := u.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	annotations[key] = value
+	u.SetAnnotations(annotations)
 }
 
 // LoadUnstructured loads .yaml files from the provided directories as k8s
@@ -104,12 +114,7 @@ func LoadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
 				return nil, errors.Wrapf(err, "failed to decode %s", file)
 			}
 
-			annotations := u.GetAnnotations()
-			if annotations == nil {
-				annotations = map[string]string{}
-			}
-			annotations[yamlPath] = file.Path
-			u.SetAnnotations(annotations)
+			setAnnotation(&u, yamlPath, file.Path)
 			yamlDocs = append(yamlDocs, &u)
 		}
 	}
@@ -215,7 +220,9 @@ func convertLegacyConstraintTemplate(u *unstructured.Unstructured, regoLib []str
 	if err := unstructured.SetNestedSlice(u.Object, targets, "spec", "targets"); err != nil {
 		return errors.Wrapf(err, "failed to set transcoded target spec")
 	}
+	originalName := u.GetName()
 	u.SetName(strings.ToLower(ctKind))
+	setAnnotation(u, OriginalName, originalName)
 	return nil
 }
 
@@ -244,6 +251,16 @@ func NormalizeAncestry(val string) string {
 	return val
 }
 
+func convertLegacyResourceName(u *unstructured.Unstructured) {
+	originalName := u.GetName()
+	compatibleName := strings.ReplaceAll(strings.ToLower(originalName), "_", "-")
+	if originalName == compatibleName {
+		return
+	}
+	u.SetName(compatibleName)
+	setAnnotation(u, OriginalName, originalName)
+}
+
 func convertLegacyCRM(obj map[string]interface{}, field ...string) error {
 	strs, found, err := unstructured.NestedStringSlice(obj, field...)
 	if err != nil {
@@ -259,10 +276,7 @@ func convertLegacyCRM(obj map[string]interface{}, field ...string) error {
 }
 
 func convertLegacyConstraint(u *unstructured.Unstructured) error {
-	name := u.GetName()
-	name = strings.ToLower(name)
-	name = strings.Replace(name, "_", "-", -1)
-	u.SetName(name)
+	convertLegacyResourceName(u)
 	if err := convertLegacyCRM(u.Object, "spec", "match", "target"); err != nil {
 		return err
 	}
