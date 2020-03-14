@@ -16,6 +16,7 @@ package gcv
 
 import (
 	"context"
+	"sort"
 	"testing"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
@@ -38,7 +39,7 @@ var conversionTestCases = []ConversionTestCase{
 			{
 				Description:     "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
 				TargetResources: []string{"//storage.googleapis.com/my-storage-bucket"},
-				InsightSubtype:  "require-storage-logging",
+				InsightSubtype:  "CFGCPStorageLoggingConstraint.require-storage-logging",
 				Content: map[string]interface{}{
 					"metadata": map[string]interface{}{
 						"details": map[string]interface{}{
@@ -89,7 +90,7 @@ var conversionTestCases = []ConversionTestCase{
 			{
 				Description:     "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
 				TargetResources: []string{"//storage.googleapis.com/my-storage-bucket"},
-				InsightSubtype:  "require-storage-logging-xx",
+				InsightSubtype:  "GCPStorageLoggingConstraint.require_storage_logging_XX",
 				Content: map[string]interface{}{
 					"metadata": map[string]interface{}{
 						"details": map[string]interface{}{
@@ -140,7 +141,7 @@ var conversionTestCases = []ConversionTestCase{
 		},
 		wantViolations: []*validator.Violation{
 			{
-				Constraint: "require-storage-logging",
+				Constraint: "CFGCPStorageLoggingConstraint.require-storage-logging",
 				Resource:   "//storage.googleapis.com/my-storage-bucket",
 				Message:    "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
 				Metadata: &structpb.Value{
@@ -169,7 +170,7 @@ var conversionTestCases = []ConversionTestCase{
 				},
 			},
 			{
-				Constraint: "require-storage-logging-xx",
+				Constraint: "GCPStorageLoggingConstraint.require_storage_logging_XX",
 				Resource:   "//storage.googleapis.com/my-storage-bucket",
 				Message:    "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
 				Metadata: &structpb.Value{
@@ -214,11 +215,17 @@ func TestConversion(t *testing.T) {
 			}
 
 			insights := result.ToInsights()
+			sort.Slice(insights, func(i, j int) bool {
+				return insights[i].InsightSubtype < insights[j].InsightSubtype
+			})
 			if diff := cmp.Diff(insights, tc.wantInsights); diff != "" {
 				t.Errorf("insight mismatch, +got -want\n%s", diff)
 			}
 
 			violations, err := result.toViolations()
+			sort.Slice(violations, func(i, j int) bool {
+				return violations[i].Constraint < violations[j].Constraint
+			})
 			if err != nil {
 				t.Fatal("fatal error:", err)
 			}
