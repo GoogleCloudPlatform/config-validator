@@ -17,8 +17,8 @@ package gcv
 import (
 	"encoding/json"
 	"fmt"
-
 	"github.com/forseti-security/config-validator/pkg/api/validator"
+	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 	"github.com/golang/protobuf/jsonpb"
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	cftypes "github.com/open-policy-agent/frameworks/constraint/pkg/types"
@@ -94,7 +94,7 @@ func (r *Result) ToInsights() []*Insight {
 
 	insights := make([]*Insight, len(r.ConstraintViolations))
 	for idx, cv := range r.ConstraintViolations {
-		insights[idx] = &Insight{
+		i := &Insight{
 			Description:     cv.Message,
 			TargetResources: []string{r.Name},
 			InsightSubtype:  cv.name(),
@@ -104,6 +104,7 @@ func (r *Result) ToInsights() []*Insight {
 			},
 			Category: "SECURITY",
 		}
+		insights[idx] = i
 	}
 	return insights
 }
@@ -123,7 +124,14 @@ func (r *Result) toViolations() ([]*validator.Violation, error) {
 // name returns the name for the constraint, this is given as "[Kind].[Name]" to uniquely identify which template and
 // constraint the violation came from.
 func (cv *ConstraintViolation) name() string {
-	return fmt.Sprintf("%s.%s", cv.Constraint.GetKind(), cv.Constraint.GetName())
+	name := cv.Constraint.GetName()
+	ans := cv.Constraint.GetAnnotations()
+	if ans != nil {
+		if originalName, ok := ans[configs.OriginalName]; ok {
+			name = originalName
+		}
+	}
+	return fmt.Sprintf("%s.%s", cv.Constraint.GetKind(), name)
 }
 
 // toViolation converts the constriant to a violation.
