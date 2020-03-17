@@ -17,6 +17,7 @@ package gcv
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/forseti-security/config-validator/pkg/api/validator"
 	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 	"github.com/golang/protobuf/jsonpb"
@@ -24,6 +25,10 @@ import (
 	cftypes "github.com/open-policy-agent/frameworks/constraint/pkg/types"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+)
+
+const (
+	ConstraintKey = "constraint"
 )
 
 // Result is the result of reviewing an individual resource
@@ -67,6 +72,11 @@ func NewResult(
 		ConstraintViolations: make([]ConstraintViolation, len(cfResponse.Results)),
 	}
 	for idx, cfResult := range cfResponse.Results {
+		for k, _ := range cfResult.Metadata {
+			if k == ConstraintKey {
+				return nil, errors.Errorf("constraint template metadata contains reserved key %s", ConstraintKey)
+			}
+		}
 		result.ConstraintViolations[idx] = ConstraintViolation{
 			Message:    cfResult.Msg,
 			Metadata:   cfResult.Metadata,
@@ -100,7 +110,7 @@ func (r *Result) ToInsights() []*Insight {
 			InsightSubtype:  cv.name(),
 			Content: map[string]interface{}{
 				"resource": r.CAIResource,
-				"metadata": cv.Metadata,
+				"metadata": cv.metadata(),
 			},
 			Category: "SECURITY",
 		}
@@ -121,6 +131,37 @@ func (r *Result) toViolations() ([]*validator.Violation, error) {
 	return violations, nil
 }
 
+func (cv *ConstraintViolation) metadata() map[string]interface{} {
+	labels := cv.Constraint.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	annotations := cv.Constraint.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	params, found, err := unstructured.NestedMap(cv.Constraint.Object, "spec", "parameters")
+	if err != nil {
+		panic(fmt.Sprintf(
+			"constraint has invalid schema (%#v), should have already been validated, "+
+				" .spec.parameters got schema error on access: %s", cv.Constraint.Object, err))
+	}
+	if !found {
+		params = map[string]interface{}{}
+	}
+	metadata := map[string]interface{}{
+		ConstraintKey: map[string]interface{}{
+			"labels":      labels,
+			"annotations": annotations,
+			"parameters":  params,
+		},
+	}
+	for k, v := range cv.Metadata {
+		metadata[k] = v
+	}
+	return metadata
+}
+
 // name returns the name for the constraint, this is given as "[Kind].[Name]" to uniquely identify which template and
 // constraint the violation came from.
 func (cv *ConstraintViolation) name() string {
@@ -136,7 +177,7 @@ func (cv *ConstraintViolation) name() string {
 
 // toViolation converts the constriant to a violation.
 func (cv *ConstraintViolation) toViolation(name string) (*validator.Violation, error) {
-	metadataJson, err := json.Marshal(cv.Metadata)
+	metadataJson, err := json.Marshal(cv.metadata())
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "failed to marshal result metadata %v to json", cv.Metadata)
