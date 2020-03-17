@@ -171,7 +171,7 @@ func (v *Validator) ReviewAsset(ctx context.Context, asset *validator.Asset) ([]
 		return nil, err
 	}
 
-	return result.toViolations()
+	return result.ToViolations()
 }
 
 // fixAncestry will try to use the ancestors array to create the ancestorPath

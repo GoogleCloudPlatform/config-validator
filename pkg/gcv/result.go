@@ -119,7 +119,7 @@ func (r *Result) ToInsights() []*Insight {
 	return insights
 }
 
-func (r *Result) toViolations() ([]*validator.Violation, error) {
+func (r *Result) ToViolations() ([]*validator.Violation, error) {
 	var violations []*validator.Violation
 	for _, rv := range r.ConstraintViolations {
 		violation, err := rv.toViolation(r.Name)

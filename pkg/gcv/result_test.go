@@ -242,7 +242,7 @@ func TestConversion(t *testing.T) {
 				t.Errorf("insight mismatch, +got -want\n%s", diff)
 			}
 
-			violations, err := result.toViolations()
+			violations, err := result.ToViolations()
 			sort.Slice(violations, func(i, j int) bool {
 				return violations[i].Constraint < violations[j].Constraint
 			})
