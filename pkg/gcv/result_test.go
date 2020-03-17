@@ -16,6 +16,7 @@ package gcv
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"testing"
 
@@ -45,6 +46,14 @@ var conversionTestCases = []ConversionTestCase{
 						"details": map[string]interface{}{
 							"destination_bucket": string(""),
 							"resource":           string("//storage.googleapis.com/my-storage-bucket"),
+						},
+						"constraint": map[string]interface{}{
+							"annotations": map[string]string{
+								"benchmark": "CIS11_5.03",
+								"validation.gcp.forsetisecurity.org/yamlpath": "../../test/cf/constraints/cf_gcp_storage_logging_constraint.yaml",
+							},
+							"labels":     map[string]string{},
+							"parameters": map[string]interface{}{},
 						},
 					},
 					"resource": map[string]interface{}{
@@ -97,6 +106,15 @@ var conversionTestCases = []ConversionTestCase{
 							"destination_bucket": string(""),
 							"resource":           string("//storage.googleapis.com/my-storage-bucket"),
 						},
+						"constraint": map[string]interface{}{
+							"annotations": map[string]string{
+								"benchmark": "CIS11_5.03",
+								"validation.gcp.forsetisecurity.org/originalName": "require_storage_logging_XX",
+								"validation.gcp.forsetisecurity.org/yamlpath":     "../../test/cf/constraints/gcp_storage_logging_constraint.yaml",
+							},
+							"labels":     map[string]string{},
+							"parameters": map[string]interface{}{},
+						},
 					},
 					"resource": map[string]interface{}{
 						"ancestry_path": string("organizations/1/folders/2/projects/3"),
@@ -144,62 +162,64 @@ var conversionTestCases = []ConversionTestCase{
 				Constraint: "CFGCPStorageLoggingConstraint.require-storage-logging",
 				Resource:   "//storage.googleapis.com/my-storage-bucket",
 				Message:    "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
-				Metadata: &structpb.Value{
-					Kind: &structpb.Value_StructValue{
-						StructValue: &structpb.Struct{
-							Fields: map[string]*structpb.Value{
-								"details": &structpb.Value{
-									Kind: &structpb.Value_StructValue{
-										StructValue: &structpb.Struct{
-											Fields: map[string]*structpb.Value{
-												"destination_bucket": {
-													Kind: &structpb.Value_StringValue{},
-												},
-												"resource": {
-													Kind: &structpb.Value_StringValue{
-														StringValue: "//storage.googleapis.com/my-storage-bucket",
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
+				Metadata: mustAsStruct(map[string]interface{}{
+					"details": map[string]interface{}{
+						"destination_bucket": "",
+						"resource":           "//storage.googleapis.com/my-storage-bucket",
 					},
-				},
+					"constraint": map[string]interface{}{
+						"annotations": map[string]interface{}{
+							"benchmark": "CIS11_5.03",
+							"validation.gcp.forsetisecurity.org/yamlpath": "../../test/cf/constraints/cf_gcp_storage_logging_constraint.yaml",
+						},
+						"labels":     map[string]interface{}{},
+						"parameters": map[string]interface{}{},
+					},
+				}),
 			},
 			{
 				Constraint: "GCPStorageLoggingConstraint.require_storage_logging_XX",
 				Resource:   "//storage.googleapis.com/my-storage-bucket",
 				Message:    "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
-				Metadata: &structpb.Value{
-					Kind: &structpb.Value_StructValue{
-						StructValue: &structpb.Struct{
-							Fields: map[string]*structpb.Value{
-								"details": &structpb.Value{
-									Kind: &structpb.Value_StructValue{
-										StructValue: &structpb.Struct{
-											Fields: map[string]*structpb.Value{
-												"destination_bucket": {
-													Kind: &structpb.Value_StringValue{},
-												},
-												"resource": {
-													Kind: &structpb.Value_StringValue{
-														StringValue: "//storage.googleapis.com/my-storage-bucket",
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
+				Metadata: mustAsStruct(map[string]interface{}{
+					"details": map[string]interface{}{
+						"destination_bucket": "",
+						"resource":           "//storage.googleapis.com/my-storage-bucket",
 					},
-				},
+					"constraint": map[string]interface{}{
+						"annotations": map[string]interface{}{
+							"benchmark": "CIS11_5.03",
+							"validation.gcp.forsetisecurity.org/originalName": "require_storage_logging_XX",
+							"validation.gcp.forsetisecurity.org/yamlpath":     "../../test/cf/constraints/gcp_storage_logging_constraint.yaml",
+						},
+						"labels":     map[string]interface{}{},
+						"parameters": map[string]interface{}{},
+					},
+				}),
 			},
 		},
 	},
+}
+
+func mustAsStruct(v interface{}) *structpb.Value {
+	switch vv := v.(type) {
+	case map[string]interface{}:
+		fields := map[string]*structpb.Value{}
+		for k, value := range vv {
+			fields[k] = mustAsStruct(value)
+		}
+		return &structpb.Value{
+			Kind: &structpb.Value_StructValue{
+				StructValue: &structpb.Struct{
+					Fields: fields,
+				},
+			},
+		}
+
+	case string:
+		return &structpb.Value{Kind: &structpb.Value_StringValue{StringValue: vv}}
+	}
+	panic(fmt.Sprintf("unhandled: %v", v))
 }
 
 func TestConversion(t *testing.T) {
