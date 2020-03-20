@@ -13,7 +13,7 @@ require (
 	github.com/go-openapi/validate v0.19.4
 	github.com/gogo/protobuf v1.3.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.3
 	github.com/google/go-cmp v0.3.1
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/go-multierror v1.0.0
@@ -26,8 +26,8 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.3
 	google.golang.org/api v0.4.0
-	google.golang.org/genproto v0.0.0-20190502173448-54afdca5d873
-	google.golang.org/grpc v1.23.0
+	google.golang.org/genproto v0.0.0-20200319113533-08878b785e9c
+	google.golang.org/grpc v1.27.0
 	k8s.io/api v0.16.4
 	k8s.io/apiextensions-apiserver v0.16.4
 	k8s.io/apimachinery v0.16.4
