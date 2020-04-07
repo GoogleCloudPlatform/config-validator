@@ -13,6 +13,7 @@ see the [User Guide](https://github.com/forseti-security/policy-library/blob/mas
 
 ```sh
 make proto     rebuilt protobuf library
+make pyproto   build python gRPC client stub and proto lib
 make test      run unit tests
 make build     rebuilt and reformat
 make release   build binaries

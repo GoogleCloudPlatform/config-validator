@@ -11,15 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+
+# NOTE: This Dockerfile is optimized for ease of changes (dev/release work)
+# rather than number of layers.
 FROM golang:1.11
 
 RUN apt-get update && apt-get -y install wget unzip
 RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip && \
     unzip -d /usr/local protoc-3.6.1-linux-x86_64.zip
 
+RUN apt install python-pip --assume-yes
+RUN pip install grpcio-tools
+
 # Add a common directory for .proto includes
 RUN mkdir /proto
 RUN git clone https://github.com/googleapis/googleapis /tmp/googleapis
+
 # Maintain expected import paths when using protoc -I/proto
 RUN mv /tmp/googleapis/google /proto/google
 

@@ -13,6 +13,8 @@ import (
 	v1 "google.golang.org/genproto/googleapis/cloud/asset/v1"
 	v11 "google.golang.org/genproto/googleapis/iam/v1"
 	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -650,6 +652,23 @@ type ValidatorServer interface {
 	// Review checks the GCP resources and returns any constraint violations.  Note that referential checks are not supported
 	// with this mode.
 	Review(context.Context, *ReviewRequest) (*ReviewResponse, error)
+}
+
+// UnimplementedValidatorServer can be embedded to have forward compatible implementations.
+type UnimplementedValidatorServer struct {
+}
+
+func (*UnimplementedValidatorServer) AddData(ctx context.Context, req *AddDataRequest) (*AddDataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddData not implemented")
+}
+func (*UnimplementedValidatorServer) Audit(ctx context.Context, req *AuditRequest) (*AuditResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Audit not implemented")
+}
+func (*UnimplementedValidatorServer) Reset(ctx context.Context, req *ResetRequest) (*ResetResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Reset not implemented")
+}
+func (*UnimplementedValidatorServer) Review(ctx context.Context, req *ReviewRequest) (*ReviewResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Review not implemented")
 }
 
 func RegisterValidatorServer(s *grpc.Server, srv ValidatorServer) {
