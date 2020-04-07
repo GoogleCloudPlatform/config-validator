@@ -14,6 +14,13 @@ proto: proto-builder
 		$(PROTO_DOCKER_IMAGE) \
 		protoc -I/proto -I./api --go_out=plugins=grpc:./pkg/api/validator ./api/validator.proto
 
+.PHONY: proto
+proto: proto-builder
+	docker run \
+		-v `pwd`:/go/src/github.com/forseti-security/config-validator \
+		$(PROTO_DOCKER_IMAGE) \
+		protoc -I/proto -I./api --python_out=plugins=grpc:./pkg/api/validator ./api/validator.proto
+
 .PHONY: test
 test:
 	GO111MODULE=on go test ./...
