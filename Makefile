@@ -14,6 +14,15 @@ proto: proto-builder
 		$(PROTO_DOCKER_IMAGE) \
 		protoc -I/proto -I./api --go_out=plugins=grpc:./pkg/api/validator ./api/validator.proto
 
+.PHONY: pyproto
+pyproto:
+	mkdir -p build-grpc
+	docker run \
+		-v `pwd`:/go/src/github.com/forseti-security/config-validator \
+		$(PROTO_DOCKER_IMAGE) \
+		python -m grpc_tools.protoc -I/proto -I./api --python_out=./build-grpc --grpc_python_out=./build-grpc ./api/validator.proto
+	@echo "Generated files available in ./build-grpc"
+
 .PHONY: test
 test:
 	GO111MODULE=on go test ./...
