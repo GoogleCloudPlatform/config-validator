@@ -15,6 +15,8 @@
 package configs
 
 import (
+	"fmt"
+
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
@@ -24,21 +26,25 @@ var (
 	objectType = spec.StringOrArray{"object"}
 )
 
-var definitions = map[string]spec.Schema{
-	"stringstringmap": {
-		SchemaProps: spec.SchemaProps{
-			ID:   "#stringstringmap",
-			Type: objectType,
-			PatternProperties: map[string]spec.Schema{
-				".*": *spec.StringProperty(),
-			},
-		},
-	},
+func mustMergeDefs(defMaps ...map[string]spec.Schema) map[string]spec.Schema {
+	merged := map[string]spec.Schema{}
+	for _, defMap := range defMaps {
+		for name, def := range defMap {
+			if _, duplicate := merged[name]; duplicate {
+				panic(fmt.Sprintf("duplicate def %s", name))
+			}
+			merged[name] = def
+		}
+	}
+	return merged
+}
+
+var constraintDefinitions = map[string]spec.Schema{
 	"metadata": {
 		SchemaProps: spec.SchemaProps{
-			ID:       "#metadata",
-			Type:     objectType,
-			Required: []string{"name"},
+			Type:                 objectType,
+			Required:             []string{"name"},
+			AdditionalProperties: &spec.SchemaOrBool{Allows: false},
 			Properties: map[string]spec.Schema{
 				"name":        *spec.StringProperty(),
 				"labels":      *spec.MapProperty(spec.StringProperty()),
@@ -48,7 +54,6 @@ var definitions = map[string]spec.Schema{
 	},
 	"speccrd": {
 		SchemaProps: spec.SchemaProps{
-			ID:                   "#speccrd",
 			AdditionalProperties: &spec.SchemaOrBool{Allows: false},
 			Required:             []string{"spec"},
 			Properties: map[string]spec.Schema{
@@ -66,7 +71,15 @@ var definitions = map[string]spec.Schema{
 									},
 								},
 							},
-							"validation": openAPISpecSchema,
+							"validation": {
+								SchemaProps: spec.SchemaProps{
+									AdditionalProperties: &spec.SchemaOrBool{Allows: false},
+									Required:             []string{"openAPIV3Schema"},
+									Properties: map[string]spec.Schema{
+										"openAPIV3Schema": *refProperty("#/definitions/jsonschemaprops"),
+									},
+								},
+							},
 						},
 					},
 				},
@@ -79,7 +92,7 @@ var definitions = map[string]spec.Schema{
 			AdditionalProperties: &spec.SchemaOrBool{Allows: false},
 			Required:             []string{"crd", "targets"},
 			Properties: map[string]spec.Schema{
-				"crd": *refProperty("#speccrd"),
+				"crd": *refProperty("#/definitions/speccrd"),
 				"targets": *spec.MapProperty(&spec.Schema{
 					SchemaProps: spec.SchemaProps{
 						Type:                 objectType,
@@ -100,7 +113,7 @@ var definitions = map[string]spec.Schema{
 			AdditionalProperties: &spec.SchemaOrBool{Allows: false},
 			Required:             []string{"crd", "targets"},
 			Properties: map[string]spec.Schema{
-				"crd": *refProperty("#speccrd"),
+				"crd": *refProperty("#/definitions/speccrd"),
 				// convert to array here.
 				"targets": *spec.ArrayProperty(&spec.Schema{
 					VendorExtensible: spec.VendorExtensible{},
@@ -124,11 +137,13 @@ var definitions = map[string]spec.Schema{
 // a subtle difference between this where "targets" is a map rather than an array.
 var configValidatorV1Alpha1Schema = spec.Schema{
 	SchemaProps: spec.SchemaProps{
-		Definitions:          definitions,
-		AdditionalProperties: &spec.SchemaOrBool{Allows: true},
+		Definitions:          mustMergeDefs(openAPISpecSchemaDefinitions, constraintDefinitions),
+		AdditionalProperties: &spec.SchemaOrBool{Allows: false},
 		Properties: map[string]spec.Schema{
-			"metadata": *refProperty("#metadata"),
-			"spec":     *refProperty("#alphav1spec"),
+			"apiVersion": *spec.StringProperty(),
+			"kind":       *spec.StringProperty(),
+			"metadata":   *refProperty("#/definitions/metadata"),
+			"spec":       *refProperty("#/definitions/alphav1spec"),
 		},
 	},
 }
@@ -138,11 +153,13 @@ var configValidatorV1Alpha1SchemaValidator = validate.NewSchemaValidator(
 
 var configValidatorV1Beta1Schema = spec.Schema{
 	SchemaProps: spec.SchemaProps{
-		Definitions:          definitions,
-		AdditionalProperties: &spec.SchemaOrBool{Allows: true},
+		Definitions:          mustMergeDefs(openAPISpecSchemaDefinitions, constraintDefinitions),
+		AdditionalProperties: &spec.SchemaOrBool{Allows: false},
 		Properties: map[string]spec.Schema{
-			"metadata": *refProperty("#metadata"),
-			"spec":     *refProperty("#betav1spec"),
+			"apiVersion": *spec.StringProperty(),
+			"kind":       *spec.StringProperty(),
+			"metadata":   *refProperty("#/definitions/metadata"),
+			"spec":       *refProperty("#/definitions/betav1spec"),
 		},
 	},
 }
