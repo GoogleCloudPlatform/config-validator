@@ -47,7 +47,7 @@ func init() {
 func lintCmd(cmd *cobra.Command, args []string) error {
 	_, err := gcv.NewValidator(flags.policies, flags.libs)
 	if err != nil {
-		fmt.Printf("linter errors:\n%s\n", err)
+		fmt.Printf("linter errors:\n%v\n", err)
 		os.Exit(1)
 	}
 	fmt.Printf("No lint errors found.\n")
