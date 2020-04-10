@@ -12,94 +12,70 @@ func refProperty(refURI string) *spec.Schema {
 	}
 }
 
-var openAPISpecSchema = spec.Schema{
-	SchemaProps: spec.SchemaProps{
-		Definitions: map[string]spec.Schema{
-			"jsonschemaprops": {
-				SchemaProps: spec.SchemaProps{
-					ID:   "#jsonschemaprops",
-					Type: objectType,
-					Properties: map[string]spec.Schema{
-						"id":                   *spec.StringProperty(),
-						"schema":               *spec.StringProperty(),
-						"ref":                  *spec.StringProperty(),
-						"description":          *spec.StringProperty(),
-						"type":                 *spec.StringProperty(),
-						"format":               *spec.StringProperty(),
-						"title":                *spec.StringProperty(),
-						"default":              *refProperty("#json"),
-						"maximum":              *spec.Float64Property(),
-						"exclusiveMaximum":     *spec.BooleanProperty(),
-						"minimum":              *spec.Float64Property(),
-						"exclusiveMinimum":     *spec.BooleanProperty(),
-						"maxLength":            *spec.Int64Property(),
-						"minLength":            *spec.Int64Property(),
-						"pattern":              *spec.StringProperty(),
-						"maxItems":             *spec.Int64Property(),
-						"minItems":             *spec.Int64Property(),
-						"uniqueItems":          *spec.BooleanProperty(),
-						"multipleOf":           *spec.Float64Property(),
-						"enum":                 *spec.ArrayProperty(refProperty("#json")),
-						"maxProperties":        *spec.Int64Property(),
-						"minProperties":        *spec.Int64Property(),
-						"required":             *spec.ArrayProperty(spec.StringProperty()),
-						"items":                *refProperty("#jsonschemapropsorarray"),
-						"allOf":                *spec.ArrayProperty(refProperty("#jsonschemaprops")),
-						"oneOf":                *spec.ArrayProperty(refProperty("#jsonschemaprops")),
-						"anyOf":                *spec.ArrayProperty(refProperty("#jsonschemaprops")),
-						"not":                  *refProperty("#jsonschemaprops"),
-						"properties":           *spec.MapProperty(refProperty("#jsonschemaprops")),
-						"additionalProperties": *refProperty("#jsonschemapropsorbool"),
-						"patternProperties":    *spec.MapProperty(refProperty("#jsonschemaprops")),
-						"dependencies":         *spec.MapProperty(refProperty("#jsonschemapropsorstringarray")),
-						"additionalItems":      *refProperty("#jsonschemapropsorbool"),
-						"externalDocs":         *refProperty("#externaldocumentation"),
-						"example":              *refProperty("#json"),
-						"nullable":             *spec.BooleanProperty(),
-					},
-				},
+var openAPISpecSchemaDefinitions = map[string]spec.Schema{
+	"jsonschemaprops": {
+		SchemaProps: spec.SchemaProps{
+			Type:                 objectType,
+			AdditionalProperties: &spec.SchemaOrBool{Allows: false},
+			Properties: map[string]spec.Schema{
+				"id":                   *spec.StringProperty(),
+				"schema":               *spec.StringProperty(),
+				"ref":                  *spec.StringProperty(),
+				"description":          *spec.StringProperty(),
+				"type":                 *spec.StringProperty(),
+				"format":               *spec.StringProperty(),
+				"title":                *spec.StringProperty(),
+				"default":              *refProperty("#/definitions/json"),
+				"maximum":              *spec.Float64Property(),
+				"exclusiveMaximum":     *spec.BooleanProperty(),
+				"minimum":              *spec.Float64Property(),
+				"exclusiveMinimum":     *spec.BooleanProperty(),
+				"maxLength":            *spec.Int64Property(),
+				"minLength":            *spec.Int64Property(),
+				"pattern":              *spec.StringProperty(),
+				"maxItems":             *spec.Int64Property(),
+				"minItems":             *spec.Int64Property(),
+				"uniqueItems":          *spec.BooleanProperty(),
+				"multipleOf":           *spec.Float64Property(),
+				"enum":                 *spec.ArrayProperty(refProperty("#/definitions/json")),
+				"maxProperties":        *spec.Int64Property(),
+				"minProperties":        *spec.Int64Property(),
+				"required":             *spec.ArrayProperty(spec.StringProperty()),
+				"items":                *refProperty("#/definitions/jsonschemaprops"),
+				"allOf":                *spec.ArrayProperty(refProperty("#/definitions/jsonschemaprops")),
+				"oneOf":                *spec.ArrayProperty(refProperty("#/definitions/jsonschemaprops")),
+				"anyOf":                *spec.ArrayProperty(refProperty("#/definitions/jsonschemaprops")),
+				"not":                  *refProperty("#/definitions/jsonschemaprops"),
+				"properties":           *spec.MapProperty(refProperty("#/definitions/jsonschemaprops")),
+				"additionalProperties": *refProperty("#/definitions/jsonschemapropsorbool"),
+				"patternProperties":    *spec.MapProperty(refProperty("#/definitions/jsonschemaprops")),
+				"dependencies":         *spec.MapProperty(refProperty("#/definitions/jsonschemapropsorstringarray")),
+				"additionalItems":      *refProperty("#/definitions/jsonschemapropsorbool"),
+				"externalDocs":         *refProperty("#/definitions/externaldocumentation"),
+				"example":              *refProperty("#/definitions/json"),
+				"nullable":             *spec.BooleanProperty(),
 			},
-			"json": {SchemaProps: spec.SchemaProps{ID: "#json"}},
-			"externaldocumentation": {
-				SchemaProps: spec.SchemaProps{
-					ID:   "#externaldocumentation",
-					Type: objectType,
-					Properties: map[string]spec.Schema{
-						"description": *spec.StringProperty(),
-						"url":         *spec.StringProperty(),
-					},
-				},
+		},
+	},
+	"json": {SchemaProps: spec.SchemaProps{ID: "#json"}},
+	"externaldocumentation": {
+		SchemaProps: spec.SchemaProps{
+			Type:                 objectType,
+			AdditionalProperties: &spec.SchemaOrBool{Allows: false},
+			Properties: map[string]spec.Schema{
+				"description": *spec.StringProperty(),
+				"url":         *spec.StringProperty(),
 			},
-			"jsonschemapropsorstringarray": {
-				SchemaProps: spec.SchemaProps{
-					ID:   "#jsonschemapropsorstringarray",
-					Type: objectType,
-					Properties: map[string]spec.Schema{
-						"property": *spec.ArrayProperty(spec.StringProperty()),
-						"schema":   *refProperty("#jsonschemaprops"),
-					},
-				},
-			},
-			"jsonschemapropsorarray": {
-				SchemaProps: spec.SchemaProps{
-					ID:   "#jsonschemapropsorarray",
-					Type: objectType,
-					Properties: map[string]spec.Schema{
-						"jSONSchemas": *spec.ArrayProperty(refProperty("#jsonschemaprops")),
-						"schema":      *refProperty("#jsonschemaprops"),
-					},
-				},
-			},
-			"jsonschemapropsorbool": {
-				SchemaProps: spec.SchemaProps{
-					ID:   "#jsonschemapropsorbool",
-					Type: objectType,
-					Properties: map[string]spec.Schema{
-						"allows": *spec.BooleanProperty(),
-						"schema": *refProperty("#jsonschemaprops"),
-					},
-				},
-			},
+		},
+	},
+	"jsonschemapropsorstringarray": {
+		SchemaProps: spec.SchemaProps{
+			OneOf: []spec.Schema{*spec.ArrayProperty(spec.StringProperty()), *refProperty("#/definitions/jsonschemaprops")},
+		},
+	},
+	"jsonschemapropsorbool": {
+		SchemaProps: spec.SchemaProps{
+			OneOf: []spec.Schema{*spec.BooleanProperty(), *refProperty("#/definitions/jsonschemaprops")},
 		},
 	},
 }
