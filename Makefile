@@ -55,6 +55,9 @@ $(POLICY_TOOLS):
 	GO111MODULE=on GOOS=$(subst policy-tool-,,$@) GOARCH=amd64 CGO_ENABLED=0 \
 		go build -o "${BUILD_DIR}/$@-amd64" cmd/policy-tool/policy-tool.go
 
+DIRTY := $(shell git diff --no-ext-diff --quiet --exit-code || echo -n -dirty)
+TAG := $(shell git log -n1 --pretty=format:%h)
+IMAGE := gcr.io/config-validator/policy-tool:commit-$(TAG)$(DIRTY)
 policy-tool-docker:
-	docker build -t gcr.io/config-validator/policy-tool -f ./build/policy-tool/Dockerfile .
-
+	docker build -t $(IMAGE) -f ./build/policy-tool/Dockerfile .
+	docker push $(IMAGE)

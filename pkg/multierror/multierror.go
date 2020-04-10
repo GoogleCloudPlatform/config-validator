@@ -40,10 +40,11 @@ func (errs errorImpl) Format(s fmt.State, verb rune) {
 		_, _ = fmt.Fprintf(s, "errors (%d):\n", len(errs))
 		for _, err := range errs {
 			if formatter, ok := err.(fmt.Formatter); ok {
+				_, _ = io.WriteString(s, "  ")
 				formatter.Format(s, verb)
 				_, _ = io.WriteString(s, "\n")
 			} else {
-				_, _ = fmt.Fprintf(s, "%v\n", err)
+				_, _ = fmt.Fprintf(s, "  %v\n", err)
 			}
 		}
 
