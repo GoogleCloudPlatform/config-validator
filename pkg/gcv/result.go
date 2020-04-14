@@ -83,6 +83,8 @@ func NewResult(
 			Constraint: cfResult.Constraint,
 		}
 	}
+
+	fmt.Printf("Found result %v translates to %v", cfResponse, result)
 	return result, nil
 }
 

@@ -18,17 +18,18 @@ package gcv
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
 	asset2 "github.com/forseti-security/config-validator/pkg/asset"
 	"github.com/forseti-security/config-validator/pkg/gcptarget"
 	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 	"github.com/forseti-security/config-validator/pkg/multierror"
+	"github.com/forseti-security/config-validator/pkg/tftarget"
 	"github.com/golang/glog"
 	cfclient "github.com/open-policy-agent/frameworks/constraint/pkg/client"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers/local"
 	cftemplates "github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
-	k8starget "github.com/open-policy-agent/gatekeeper/pkg/target"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -67,6 +68,7 @@ type Validator struct {
 	policyLibraryDir string
 	gcpCFClient      *cfclient.Client
 	k8sCFClient      *cfclient.Client
+	tfCFClient       *cfclient.Client
 }
 
 // NewValidatorConfig returns a new ValidatorConfig.
@@ -127,14 +129,21 @@ func NewValidatorFromConfig(config *configs.Configuration) (*Validator, error) {
 		return nil, errors.Wrap(err, "unable to set up GCP Constraint Framework client")
 	}
 
-	k8sCFClient, err := newCFClient(&k8starget.K8sValidationTarget{}, config.K8STemplates, config.K8SConstraints)
+	tfCFClient, err := newCFClient(tftarget.New(), config.TerraformTemplates, config.TerraformConstraints)
+	fmt.Printf("constraints: %v\n", config.TerraformConstraints)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to set up K8S Constraint Framework client")
+		return nil, errors.Wrap(err, "unable to set up Terraform Constraint Framework client")
 	}
+
+	// k8sCFClient, err := newCFClient(&k8starget.K8sValidationTarget{}, config.K8STemplates, config.K8SConstraints)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "unable to set up K8S Constraint Framework client")
+	// }
 
 	ret := &Validator{
 		gcpCFClient: gcpCFClient,
-		k8sCFClient: k8sCFClient,
+		k8sCFClient: nil,
+		tfCFClient:  tfCFClient,
 	}
 	return ret, nil
 }
@@ -227,9 +236,9 @@ func (v *Validator) reviewK8SResource(ctx context.Context, asset map[string]inte
 
 // reviewGCPResource will unwrap k8s resources then pass them to the cf client with the gatekeeper target.
 func (v *Validator) reviewGCPResource(ctx context.Context, asset map[string]interface{}) (*Result, error) {
-	responses, err := v.gcpCFClient.Review(ctx, asset)
+	responses, err := v.tfCFClient.Review(ctx, asset)
 	if err != nil {
 		return nil, errors.Wrapf(err, "GCP target Constraint Framework review call failed")
 	}
-	return NewResult(gcptarget.Name, asset, asset, responses)
+	return NewResult(tftarget.Name, asset, asset, responses)
 }

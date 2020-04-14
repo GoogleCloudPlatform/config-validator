@@ -48,6 +48,11 @@ const (
 )
 
 const (
+	// TerraformTargetName for raw Terraform resources
+	TerraformTargetName = "terraform.forsetisecurity.org"
+)
+
+const (
 	constraintGroup = "constraints.gatekeeper.sh"
 	expectedTarget  = "validation.gcp.forsetisecurity.org"
 	yamlPath        = expectedTarget + "/yamlpath"
@@ -57,6 +62,7 @@ const (
 const (
 	gcpConstraint = "gcp"
 	k8sConstraint = "k8s"
+	tfConstraint  = "terraform"
 )
 
 var (
@@ -288,10 +294,12 @@ func convertLegacyConstraint(u *unstructured.Unstructured) error {
 
 // Configuration represents the configuration files fed into FCV.
 type Configuration struct {
-	GCPTemplates   []*cftemplates.ConstraintTemplate // Constraint Templates for GCP
-	GCPConstraints []*unstructured.Unstructured      // Constraints for GCP
-	K8STemplates   []*cftemplates.ConstraintTemplate // Constraint Templates for GKE
-	K8SConstraints []*unstructured.Unstructured      // Constraints for GKE
+	GCPTemplates         []*cftemplates.ConstraintTemplate // Constraint Templates for GCP
+	GCPConstraints       []*unstructured.Unstructured      // Constraints for GCP
+	K8STemplates         []*cftemplates.ConstraintTemplate // Constraint Templates for GKE
+	K8SConstraints       []*unstructured.Unstructured      // Constraints for GKE
+	TerraformTemplates   []*cftemplates.ConstraintTemplate // Constraint Templates for GCP
+	TerraformConstraints []*unstructured.Unstructured      // Constraints for GCP
 
 	// regoLib contains the set of rego libraries, it is only used during construction of Configuration
 	regoLib []string
@@ -357,10 +365,12 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 			// TODO: Using consant from gcptarget package causes circular reference.  Fix circular reference and use gcptarget.Name
 			case "validation.gcp.forsetisecurity.org":
 				c.GCPTemplates = append(c.GCPTemplates, &ct)
+			case TerraformTargetName:
+				c.TerraformTemplates = append(c.TerraformTemplates, &ct)
 			case K8STargetName:
 				c.K8STemplates = append(c.K8STemplates, &ct)
 			default:
-				return errors.Errorf("")
+				return errors.Errorf("Unknown target")
 			}
 		}
 
@@ -381,6 +391,9 @@ func (c *Configuration) finishLoad() error {
 	for _, t := range c.K8STemplates {
 		templates[t.Spec.CRD.Spec.Names.Kind] = k8sConstraint
 	}
+	for _, t := range c.TerraformTemplates {
+		templates[t.Spec.CRD.Spec.Names.Kind] = tfConstraint
+	}
 
 	allConstraints := c.allConstraints
 	c.allConstraints = nil
@@ -397,6 +410,8 @@ func (c *Configuration) finishLoad() error {
 			c.GCPConstraints = append(c.GCPConstraints, constraint)
 		case k8sConstraint:
 			c.K8SConstraints = append(c.K8SConstraints, constraint)
+		case tfConstraint:
+			c.TerraformConstraints = append(c.TerraformConstraints, constraint)
 		default:
 			return errors.Errorf("constraint %s does not correspond to any templates", gvk)
 		}
