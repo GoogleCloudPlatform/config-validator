@@ -297,6 +297,17 @@ type Configuration struct {
 	regoLib []string
 	// allConstraints contains all input constraints, it is only used during construction of Configuration
 	allConstraints []*unstructured.Unstructured
+	// templateNames is a set of the names of all templates for checking exclusivity.
+	templateNames map[string]*cftemplates.ConstraintTemplate
+	// templateNames is a set of the kinds of all templates for checking exclusivity.
+	templateKinds map[string]*cftemplates.ConstraintTemplate
+}
+
+func newConfiguration() *Configuration {
+	return &Configuration{
+		templateNames: map[string]*cftemplates.ConstraintTemplate{},
+		templateKinds: map[string]*cftemplates.ConstraintTemplate{},
+	}
 }
 
 func loadRegoFiles(dir string) ([]string, error) {
@@ -352,6 +363,19 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 			return errors.Wrapf(err, "failed to convert to versioned constraint template internal struct")
 		}
 
+		if dup, found := c.templateNames[ct.Name]; found {
+			return errors.Errorf(
+				"ConstraintTemplate %q declared at path %q has duplicate name conflict with template declared at path %q",
+				ct.Name, ct.GetAnnotations()[yamlPath], dup.GetAnnotations()[yamlPath])
+		}
+		c.templateNames[ct.Name] = &ct
+		if dup, found := c.templateKinds[ct.Name]; found {
+			return errors.Errorf(
+				"ConstraintTemplate %q crd kind %q declared at path %q has duplicate kind conflict with template declared at path %q",
+				ct.Name, ct.Spec.CRD.Spec.Names.Kind, ct.GetAnnotations()[yamlPath], dup.GetAnnotations()[yamlPath])
+		}
+		c.templateKinds[ct.Name] = &ct
+
 		for _, target := range ct.Spec.Targets {
 			switch target.Target {
 			// TODO: Using consant from gcptarget package causes circular reference.  Fix circular reference and use gcptarget.Name
@@ -382,6 +406,7 @@ func (c *Configuration) finishLoad() error {
 		templates[t.Spec.CRD.Spec.Names.Kind] = k8sConstraint
 	}
 
+	byTemplate := map[string]map[string]*unstructured.Unstructured{}
 	allConstraints := c.allConstraints
 	c.allConstraints = nil
 	for _, constraint := range allConstraints {
@@ -390,6 +415,17 @@ func (c *Configuration) finishLoad() error {
 			if err := convertLegacyConstraint(constraint); err != nil {
 				return errors.Wrapf(err, "failed to convert constraint")
 			}
+		}
+
+		templateConstraints, found := byTemplate[constraint.GetKind()]
+		if !found {
+			templateConstraints = map[string]*unstructured.Unstructured{}
+			byTemplate[constraint.GetKind()] = templateConstraints
+		}
+		if dup, found := templateConstraints[constraint.GetName()]; found {
+			return errors.Errorf(
+				"Constraint %q declared at path %q has duplicate name conflict with constraint declared at path %q",
+				dup.GetName(), dup.GetAnnotations()[yamlPath], constraint.GetAnnotations()[yamlPath])
 		}
 
 		switch templates[gvk.Kind] {
@@ -416,8 +452,9 @@ func NewConfiguration(dirs []string, libDir string) (*Configuration, error) {
 		return nil, err
 	}
 
+	configuration := newConfiguration()
+	configuration.regoLib = regoLib
 	var errs multierror.Errors
-	configuration := &Configuration{regoLib: regoLib}
 	for _, u := range unstructuredObjects {
 		if err := configuration.loadUnstructured(u); err != nil {
 			yamlPath := u.GetAnnotations()[yamlPath]
