@@ -20,6 +20,10 @@ package validator;
 import "google/iam/v1/policy.proto";
 import "google/protobuf/struct.proto";
 import "google/cloud/asset/v1/assets.proto";
+import "google/cloud/orgpolicy/v1/orgpolicy.proto";
+import "google/identity/accesscontextmanager/v1/access_level.proto";
+import "google/identity/accesscontextmanager/v1/access_policy.proto";
+import "google/identity/accesscontextmanager/v1/service_perimeter.proto";
 
 // Asset contains GCP resource metadata and additional metadata set on a resource, such as Cloud IAM policy.
 // WARNING: these field names are directly used to structure data passed to templates.
@@ -42,6 +46,19 @@ message Asset {
   google.iam.v1.Policy iam_policy = 5;
   // Ancestor list as returned by CAI (added sometime around Oct 2019)
   repeated string ancestors = 6;
+  // Representation of the Cloud Organization Policy set on an asset. For each
+  // asset, there could be multiple Organization policies with different
+  // constraints.
+  repeated google.cloud.orgpolicy.v1.Policy org_policy = 7;
+
+  // Representation of the Cloud Organization access policy.
+  oneof access_context_policy {
+    google.identity.accesscontextmanager.v1.AccessPolicy access_policy = 8;
+
+    google.identity.accesscontextmanager.v1.AccessLevel access_level = 9;
+
+    google.identity.accesscontextmanager.v1.ServicePerimeter service_perimeter = 10;
+  }
 }
 
 // Constraint contains the configuration for a constraint.
