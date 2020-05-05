@@ -107,11 +107,47 @@ func (g *GCPTarget) HandleReview(obj interface{}) (bool, interface{}, error) {
 		if err != nil {
 			return false, nil, err
 		}
-		if !foundIam && !foundResource {
+		foundOrgPolicy := false
+		if asset["org_policy"] != nil {
+			foundOrgPolicy = true
+		}
+		_, foundAccessPolicy, err := unstructured.NestedMap(asset, "access_policy")
+		if err != nil {
+			return false, nil, err
+		}
+		_, foundAcessLevel, err := unstructured.NestedMap(asset, "access_level")
+		if err != nil {
+			return false, nil, err
+		}
+		_, foundServicePerimeter, err := unstructured.NestedMap(asset, "service_perimeter")
+		if err != nil {
+			return false, nil, err
+		}
+
+		if !foundIam && !foundResource && !foundOrgPolicy && !foundAccessPolicy && !foundAcessLevel && !foundServicePerimeter {
 			return false, nil, nil
 		}
-		if foundIam && foundResource {
-			return false, nil, errors.Errorf("malformed asset has iam_policy and resource: %v", asset)
+		resourceTypes := 0
+		if foundResource {
+			resourceTypes++
+		}
+		if foundIam {
+			resourceTypes++
+		}
+		if foundOrgPolicy {
+			resourceTypes++
+		}
+		if foundAccessPolicy {
+			resourceTypes++
+		}
+		if foundAcessLevel {
+			resourceTypes++
+		}
+		if foundServicePerimeter {
+			resourceTypes++
+		}
+		if resourceTypes > 1 {
+			return false, nil, errors.Errorf("malformed asset has more than one of: resource, iam policy, org policy, access context policy: %v", asset)
 		}
 		return true, asset, nil
 	}
