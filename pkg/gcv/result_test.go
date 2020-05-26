@@ -163,6 +163,7 @@ var conversionTestCases = []ConversionTestCase{
 				Resource:   "//storage.googleapis.com/my-storage-bucket",
 				Message:    "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
 				Metadata: mustAsStruct(map[string]interface{}{
+					"ancestry_path": "organizations/1/folders/2/projects/3",
 					"details": map[string]interface{}{
 						"destination_bucket": "",
 						"resource":           "//storage.googleapis.com/my-storage-bucket",
@@ -182,6 +183,7 @@ var conversionTestCases = []ConversionTestCase{
 				Resource:   "//storage.googleapis.com/my-storage-bucket",
 				Message:    "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
 				Metadata: mustAsStruct(map[string]interface{}{
+					"ancestry_path": "organizations/1/folders/2/projects/3",
 					"details": map[string]interface{}{
 						"destination_bucket": "",
 						"resource":           "//storage.googleapis.com/my-storage-bucket",
