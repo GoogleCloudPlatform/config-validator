@@ -110,7 +110,7 @@ func (r *Result) ToInsights() []*Insight {
 			InsightSubtype:  cv.name(),
 			Content: map[string]interface{}{
 				"resource": r.CAIResource,
-				"metadata": cv.metadata(),
+				"metadata": cv.metadata(nil),
 			},
 			Category: "SECURITY",
 		}
@@ -120,9 +120,18 @@ func (r *Result) ToInsights() []*Insight {
 }
 
 func (r *Result) ToViolations() ([]*validator.Violation, error) {
+	ancestryPath, found, err := unstructured.NestedString(r.CAIResource, ancestryPathKey)
+	if err != nil {
+
+		return nil, errors.Wrapf(err, "error getting ancestry path from %v", r.CAIResource)
+	}
+	if !found {
+		return nil, errors.Errorf("ancestry path not found in %v", r.CAIResource)
+	}
+
 	var violations []*validator.Violation
 	for _, rv := range r.ConstraintViolations {
-		violation, err := rv.toViolation(r.Name)
+		violation, err := rv.toViolation(r.Name, ancestryPath)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to convert result")
 		}
@@ -131,7 +140,7 @@ func (r *Result) ToViolations() ([]*validator.Violation, error) {
 	return violations, nil
 }
 
-func (cv *ConstraintViolation) metadata() map[string]interface{} {
+func (cv *ConstraintViolation) metadata(auxMetadata map[string]interface{}) map[string]interface{} {
 	labels := cv.Constraint.GetLabels()
 	if labels == nil {
 		labels = map[string]string{}
@@ -156,6 +165,9 @@ func (cv *ConstraintViolation) metadata() map[string]interface{} {
 			"parameters":  params,
 		},
 	}
+	for k, v := range auxMetadata {
+		metadata[k] = v
+	}
 	for k, v := range cv.Metadata {
 		metadata[k] = v
 	}
@@ -176,8 +188,8 @@ func (cv *ConstraintViolation) name() string {
 }
 
 // toViolation converts the constriant to a violation.
-func (cv *ConstraintViolation) toViolation(name string) (*validator.Violation, error) {
-	metadataJson, err := json.Marshal(cv.metadata())
+func (cv *ConstraintViolation) toViolation(name string, ancestryPath string) (*validator.Violation, error) {
+	metadataJson, err := json.Marshal(cv.metadata(map[string]interface{}{ancestryPathKey: ancestryPath}))
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "failed to marshal result metadata %v to json", cv.Metadata)
