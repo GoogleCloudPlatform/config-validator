@@ -18,6 +18,7 @@ package configs
 import (
 	"context"
 	"fmt"
+	"github.com/golang/glog"
 	"regexp"
 	"sort"
 	"strings"
@@ -391,8 +392,11 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 	case u.GroupVersionKind().Group == constraintGroup:
 		c.allConstraints = append(c.allConstraints, u)
 
+	case u.GroupVersionKind().Group == cfv1alpha1.SchemeGroupVersion.Group:
+		return errors.Errorf("unexpected data type %s in group %s", u.GroupVersionKind(), cfv1alpha1.SchemeGroupVersion.Group)
+
 	default:
-		return errors.Errorf("unexpected data type %s", u.GroupVersionKind())
+		glog.V(1).Infof("Ignoring %s %s", u.GroupVersionKind(), u.GetName())
 	}
 	return nil
 }
