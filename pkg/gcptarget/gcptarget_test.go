@@ -216,6 +216,12 @@ var testData = []reviewTestData{
 		wantMatch:    true,
 	},
 	{
+		name:         "Match any project",
+		match:        match(target("**/projects/*")),
+		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
+		wantMatch:    true,
+	},
+	{
 		name:         "Exclude project",
 		match:        match(exclude("**/projects/557385378")),
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
@@ -225,6 +231,12 @@ var testData = []reviewTestData{
 		name:         "Exclude project multiple",
 		match:        match(exclude("**/projects/525572987", "**/projects/557385378")),
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
+		wantMatch:    false,
+	},
+	{
+		name:         "Exclude project via wildcard on org",
+		match:        match(exclude("organizations/*/projects/557385378")),
+		ancestryPath: "organizations/123454321/projects/557385378",
 		wantMatch:    false,
 	},
 	{
