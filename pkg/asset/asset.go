@@ -149,10 +149,10 @@ func UnwrapCAIResource(asset map[string]interface{}) (*unstructured.Unstructured
 
 	ancestors, found, err := unstructured.NestedStringSlice(asset, "ancestors")
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to access resource.data field")
+		return nil, errors.Wrapf(err, "failed to access ancestors field")
 	}
 	if !found {
-		return nil, errors.Errorf("resource.data field not found")
+		return nil, errors.Errorf("ancestors field not found")
 	}
 
 	annotations := u.GetAnnotations()
