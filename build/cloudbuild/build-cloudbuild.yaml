@@ -46,4 +46,4 @@ images:
 - 'gcr.io/$PROJECT_ID/config-validator:latest'
 - 'gcr.io/$PROJECT_ID/config-validator:$SHORT_SHA'
 
-timeout: 1800s
+timeout: 3600s
