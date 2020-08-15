@@ -80,6 +80,8 @@ message Violation {
   google.protobuf.Value metadata = 4;
   // The full constraint configuration.
   Constraint constraint_config = 5;
+  // The constraint severity
+  string severity = 6;
 }
 
 message AddDataRequest {

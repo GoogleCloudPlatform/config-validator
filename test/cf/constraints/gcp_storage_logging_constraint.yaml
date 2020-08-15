@@ -20,7 +20,7 @@ metadata:
     # Example of tying a constraint to a CIS benchmark
     benchmark: CIS11_5.03
 spec:
-  severity: high
+  severity: medium
   match:
     target: ["organization/*"]
   parameters: {}
