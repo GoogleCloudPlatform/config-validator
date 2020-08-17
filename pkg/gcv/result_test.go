@@ -177,6 +177,7 @@ var conversionTestCases = []ConversionTestCase{
 						"parameters": map[string]interface{}{},
 					},
 				}),
+				Severity: "high",
 			},
 			{
 				Constraint: "GCPStorageLoggingConstraint.require_storage_logging_XX",
@@ -198,6 +199,7 @@ var conversionTestCases = []ConversionTestCase{
 						"parameters": map[string]interface{}{},
 					},
 				}),
+				Severity: "medium",
 			},
 		},
 	},

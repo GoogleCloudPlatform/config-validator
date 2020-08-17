@@ -3,6 +3,9 @@ bin/
 # build artifacts
 /build-grpc/
 
+# debug
+/cmd/policy-tool/policy-tool
+
 # intellij stuff
 /.idea/
 /config-validator.iml

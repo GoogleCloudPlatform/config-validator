@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC
+// Copyright 2020 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -77,10 +77,15 @@ func NewResult(
 				return nil, errors.Errorf("constraint template metadata contains reserved key %s", ConstraintKey)
 			}
 		}
+		severity, found, err := unstructured.NestedString(cfResult.Constraint.Object, "spec", "severity")
+		if err != nil || !found {
+			severity = ""
+		}
 		result.ConstraintViolations[idx] = ConstraintViolation{
 			Message:    cfResult.Msg,
 			Metadata:   cfResult.Metadata,
 			Constraint: cfResult.Constraint,
+			Severity:   severity,
 		}
 	}
 	return result, nil
@@ -94,6 +99,8 @@ type ConstraintViolation struct {
 	Metadata map[string]interface{}
 	// Constraint is the K8S resource of the constraint that triggered the violation
 	Constraint *unstructured.Unstructured
+	// Constraint Severity
+	Severity string
 }
 
 // ToInsights returns the result represented as a slice of insights.
@@ -204,5 +211,6 @@ func (cv *ConstraintViolation) toViolation(name string, ancestryPath string) (*v
 		Resource:   name,
 		Message:    cv.Message,
 		Metadata:   metadata,
+		Severity:   cv.Severity,
 	}, nil
 }
