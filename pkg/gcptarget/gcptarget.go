@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package gcptarget is a constraint framework target for FCV to use for integrating with the opa constraint framework.
 package gcptarget
 
 import (
@@ -211,6 +212,10 @@ const (
 
 var numberRegex = regexp.MustCompile(`^[0-9]+\*{0,2}$`)
 
+// From https://cloud.google.com/resource-manager/docs/creating-managing-projects:
+// The project ID must be a unique string of 6 to 30 lowercase letters, digits, or hyphens. It must start with a letter, and cannot have a trailing hyphen.
+var projectIDRegex = regexp.MustCompile(`^[a-z][a-z0-9-]{5,27}[a-z0-9]$`)
+
 // checkPathGlob
 func checkPathGlob(expression string) error {
 	// check for path components / numbers
@@ -234,6 +239,7 @@ func checkPathGlob(expression string) error {
 		case item == "*":
 		case item == "**":
 		case numberRegex.MatchString(item):
+		case state == stateProject && projectIDRegex.MatchString(item):
 		default:
 			return errors.Errorf("unexpected item %s element %d in %s", item, i, expression)
 		}
