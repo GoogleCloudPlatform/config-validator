@@ -198,6 +198,12 @@ var testData = []reviewTestData{
 		wantMatch:    true,
 	},
 	{
+		name:         "Match project by ID, not number",
+		match:        match(target("**/projects/tfv-test-project")),
+		ancestryPath: "organizations/123454321/folders/1221214/projects/tfv-test-project",
+		wantMatch:    true,
+	},
+	{
 		name:         "Match any project",
 		match:        match(target("**/projects/**")),
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
@@ -225,6 +231,12 @@ var testData = []reviewTestData{
 		name:         "Exclude project",
 		match:        match(exclude("**/projects/557385378")),
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
+		wantMatch:    false,
+	},
+	{
+		name:         "Exclude project by ID, not number",
+		match:        match(exclude("**/projects/tfv-exclude-project")),
+		ancestryPath: "organizations/123454321/folders/1221214/projects/tfv-exclude-project",
 		wantMatch:    false,
 	},
 	{
