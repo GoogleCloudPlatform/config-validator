@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
+	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 	"github.com/golang/protobuf/jsonpb"
 )
 
@@ -46,6 +47,39 @@ func TestCreateValidatorWithNoOptions(t *testing.T) {
 func TestDefaultTestDataCreatesValidator(t *testing.T) {
 	_, err := NewValidator(testOptions())
 	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+}
+
+func TestDefaultTestDataCreatesValidatorFromContents(t *testing.T) {
+	policyFilePaths, policyLibPath := testOptions()
+
+	// Load contents of policy files.
+	var policyFiles []*configs.PolicyFile
+	for _, dir := range policyFilePaths {
+		dirPath, err := configs.NewPath(dir)
+		if err != nil {
+			t.Fatal("unexpected error loading policy constraints", err)
+		}
+		dirFiles, err := dirPath.ReadAll(context.Background(), configs.SuffixPredicate(".yaml"))
+		if err != nil {
+			t.Fatal("unexpected error reading .yaml files", err)
+		}
+		for _, dirFile := range dirFiles {
+			policyFiles = append(policyFiles, &configs.PolicyFile{
+				Path:    dirFile.Path,
+				Content: dirFile.Content,
+			})
+		}
+	}
+
+	// Load contents of policy library.
+	policyLibrary, err := configs.LoadRegoFiles(policyLibPath)
+	if err != nil {
+		t.Fatal("unexpected error loading policy library", err)
+	}
+
+	if _, err := NewValidatorFromContents(policyFiles, policyLibrary); err != nil {
 		t.Fatal("unexpected error", err)
 	}
 }

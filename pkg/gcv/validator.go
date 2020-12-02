@@ -150,6 +150,29 @@ func NewValidator(policyPaths []string, policyLibraryPath string) (*Validator, e
 	return NewValidatorFromConfig(config)
 }
 
+// NewValidatorFromContents returns a new Validator built from the provided contents of the policy constraints and policy library.
+// This provides a way to create a validator directly from contents instead of reading from the file system.
+// policyLibrary is a slice of file contents of all policy library files.
+func NewValidatorFromContents(policyFiles []*configs.PolicyFile, policyLibrary []string) (*Validator, error) {
+	if len(policyFiles) == 0 {
+		return nil, errors.Errorf("No policy constraints provided")
+	}
+	if len(policyLibrary) == 0 {
+		return nil, errors.Errorf("No policy library provided")
+	}
+
+	unstructuredObjects, err := configs.LoadUnstructuredFromContents(policyFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := configs.NewConfigurationFromContents(unstructuredObjects, policyLibrary)
+	if err != nil {
+		return nil, err
+	}
+	return NewValidatorFromConfig(config)
+}
+
 // ReviewAsset reviews a single asset.
 func (v *Validator) ReviewAsset(ctx context.Context, asset *validator.Asset) ([]*validator.Violation, error) {
 	if err := asset2.ValidateAsset(asset); err != nil {
