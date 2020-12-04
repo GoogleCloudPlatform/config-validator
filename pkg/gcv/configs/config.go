@@ -18,10 +18,11 @@ package configs
 import (
 	"context"
 	"fmt"
-	"github.com/golang/glog"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/golang/glog"
 
 	"github.com/forseti-security/config-validator/pkg/multierror"
 	cfapis "github.com/open-policy-agent/frameworks/constraint/pkg/apis"
@@ -84,10 +85,17 @@ func setAnnotation(u *unstructured.Unstructured, key, value string) {
 	u.SetAnnotations(annotations)
 }
 
+// PolicyFile represents a .yaml file with its path and contents,
+// which may or may not have been loaded from the file system.
+type PolicyFile struct {
+	Path    string
+	Content []byte
+}
+
 // LoadUnstructured loads .yaml files from the provided directories as k8s
 // unstructured.Unstructured types.
 func LoadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
-	var files []File
+	var files []*PolicyFile
 	for _, dir := range dirs {
 		dirPath, err := NewPath(dir)
 		if err != nil {
@@ -97,9 +105,26 @@ func LoadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
 		if err != nil {
 			return nil, err
 		}
-		files = append(files, dirFiles...)
+		for _, dirFile := range dirFiles {
+			files = append(files, &PolicyFile{
+				Path:    dirFile.Path,
+				Content: dirFile.Content,
+			})
+		}
 	}
 
+	yamlDocs, err := LoadUnstructuredFromContents(files)
+	if err != nil {
+		return nil, err
+	}
+	if len(yamlDocs) == 0 {
+		return nil, fmt.Errorf("zero configurations found in the provided directories: %v", dirs)
+	}
+	return yamlDocs, nil
+}
+
+// LoadUnstructuredFromContents loads provided file contents as k8s unstructured.Unstructured types.
+func LoadUnstructuredFromContents(files []*PolicyFile) ([]*unstructured.Unstructured, error) {
 	var yamlDocs []*unstructured.Unstructured
 	for _, file := range files {
 		documents := strings.Split(string(file.Content), "\n---")
@@ -112,16 +137,14 @@ func LoadUnstructured(dirs []string) ([]*unstructured.Unstructured, error) {
 			var u unstructured.Unstructured
 			_, _, err := scheme.Codecs.UniversalDeserializer().Decode([]byte(document), nil, &u)
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to decode %s", file)
+				return nil, errors.Wrapf(err, "failed to decode %s", file.Path)
 			}
 
 			setAnnotation(&u, yamlPath, file.Path)
 			yamlDocs = append(yamlDocs, &u)
 		}
 	}
-	if len(yamlDocs) == 0 {
-		return nil, fmt.Errorf("zero configurations found in the provided directories: %v", dirs)
-	}
+
 	return yamlDocs, nil
 }
 
@@ -311,7 +334,8 @@ func newConfiguration() *Configuration {
 	}
 }
 
-func loadRegoFiles(dir string) ([]string, error) {
+// LoadRegoFiles load rego policy library files from the given directory.
+func LoadRegoFiles(dir string) ([]string, error) {
 	dirPath, err := NewPath(dir)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to handle path for %s", dir)
@@ -451,11 +475,18 @@ func NewConfiguration(dirs []string, libDir string) (*Configuration, error) {
 		return nil, err
 	}
 
-	regoLib, err := loadRegoFiles(libDir)
+	regoLib, err := LoadRegoFiles(libDir)
 	if err != nil {
 		return nil, err
 	}
 
+	return NewConfigurationFromContents(unstructuredObjects, regoLib)
+}
+
+// NewConfigurationFromContents returns the configuration from the given
+// unstructured objects and the rego library file contents.
+// This can be used by code that may not have access to a file system and passes in the contents directly.
+func NewConfigurationFromContents(unstructuredObjects []*unstructured.Unstructured, regoLib []string) (*Configuration, error) {
 	configuration := newConfiguration()
 	configuration.regoLib = regoLib
 	var errs multierror.Errors
