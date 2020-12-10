@@ -1339,7 +1339,7 @@ func regoDependencies() map[string]string {
 }
 
 func mustConvertToProtoVal(from interface{}) *pb.Value {
-	converted, err := convertToProtoVal(from)
+	converted, err := ConvertToProtoVal(from)
 	if err != nil {
 		panic(err)
 	}
@@ -1361,7 +1361,7 @@ kind: %s
 metadata:
   name: %s
 spec:
-  match:    
+  match:
     target: ["organization/*"]
   parameters:
     asset_type_to_check: "%s"
@@ -1414,7 +1414,7 @@ spec:
 
             deny[{
             	"msg": message,
-            }] {                
+            }] {
                 message := "always violate!"
             }
 `, alwaysViolateConstraint))

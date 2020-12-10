@@ -20,6 +20,7 @@ import (
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
 	"github.com/forseti-security/config-validator/pkg/gcv/configs"
+	"github.com/forseti-security/config-validator/pkg/gcv/cf"
 	"github.com/golang/protobuf/jsonpb"
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	cftypes "github.com/open-policy-agent/frameworks/constraint/pkg/types"
@@ -198,16 +199,22 @@ func (cv *ConstraintViolation) name() string {
 func (cv *ConstraintViolation) toViolation(name string, ancestryPath string) (*validator.Violation, error) {
 	metadataJson, err := json.Marshal(cv.metadata(map[string]interface{}{ancestryPathKey: ancestryPath}))
 	if err != nil {
-		return nil, errors.Wrapf(
-			err, "failed to marshal result metadata %v to json", cv.Metadata)
+		return nil, errors.Wrapf(err, "failed to marshal result metadata %v to json", cv.Metadata)
 	}
 	metadata := &structpb.Value{}
 	if err := jsonpb.UnmarshalString(string(metadataJson), metadata); err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal json %s into structpb", string(metadataJson))
 	}
 
+	pbVal, err := cf.ConvertToProtoVal(cv.Constraint.Object)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to convert constraint object into proto struct value")
+	}
+	constraintConfig := &validator.Constraint{Metadata: pbVal}
+
 	return &validator.Violation{
 		Constraint: cv.name(),
+	        ConstraintConfig: constraintConfig,
 		Resource:   name,
 		Message:    cv.Message,
 		Metadata:   metadata,

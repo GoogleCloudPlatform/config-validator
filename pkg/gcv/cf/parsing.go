@@ -82,14 +82,14 @@ func convertToViolations(expression *rego.ExpressionValue) ([]*validator.Violati
 			Message:    parsedExpression[i].Violation.Msg,
 		}
 		if parsedExpression[i].Violation.Metadata != nil {
-			convertedMetadata, err := convertToProtoVal(parsedExpression[i].Violation.Metadata)
+			convertedMetadata, err := ConvertToProtoVal(parsedExpression[i].Violation.Metadata)
 			if err != nil {
 				return nil, err
 			}
 			violationToAdd.Metadata = convertedMetadata
 		}
 		if parsedExpression[i].ConstraintConfig != nil {
-			constraintMetadata, err := convertToProtoVal(parsedExpression[i].ConstraintConfig["metadata"])
+			constraintMetadata, err := ConvertToProtoVal(parsedExpression[i].ConstraintConfig["metadata"])
 			if err != nil {
 				return nil, err
 			}
@@ -107,7 +107,8 @@ type convertFailed struct {
 	err error
 }
 
-func convertToProtoVal(from interface{}) (val *pb.Value, err error) {
+// ConvertToProtoVal converts an interface into a proto struct value.
+func ConvertToProtoVal(from interface{}) (val *pb.Value, err error) {
 	defer func() {
 		if x := recover(); x != nil {
 			convFail, ok := x.(*convertFailed)
