@@ -93,8 +93,13 @@ func convertToViolations(expression *rego.ExpressionValue) ([]*validator.Violati
 			if err != nil {
 				return nil, err
 			}
+			fullConfig, err := ConvertToProtoVal(parsedExpression[i].ConstraintConfig)
+			if err != nil {
+				return nil, err
+			}
 			violationToAdd.ConstraintConfig = &validator.Constraint{
-				Metadata: constraintMetadata,
+				Metadata:   constraintMetadata,
+				FullConfig: fullConfig,
 			}
 		}
 

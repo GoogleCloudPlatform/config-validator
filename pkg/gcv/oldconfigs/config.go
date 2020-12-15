@@ -104,9 +104,15 @@ func (c *Constraint) AsProto() (*validator.Constraint, error) {
 
 	metadata, err := convertToProtoVal(ci.(map[string]interface{})["metadata"])
 	if err != nil {
-		return nil, errors.Wrap(err, "converting to proto")
+		return nil, errors.Wrap(err, "converting metadata to proto")
 	}
 	cp.Metadata = metadata
+
+	fullConfig, err := convertToProtoVal(ci.(map[string]interface{}))
+	if err != nil {
+		return nil, errors.Wrap(err, "converting to proto")
+	}
+	cp.FullConfig = fullConfig
 
 	return cp, nil
 }

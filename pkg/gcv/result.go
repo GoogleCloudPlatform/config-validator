@@ -19,8 +19,8 @@ import (
 	"fmt"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
-	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 	"github.com/forseti-security/config-validator/pkg/gcv/cf"
+	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 	"github.com/golang/protobuf/jsonpb"
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	cftypes "github.com/open-policy-agent/frameworks/constraint/pkg/types"
@@ -206,18 +206,33 @@ func (cv *ConstraintViolation) toViolation(name string, ancestryPath string) (*v
 		return nil, errors.Wrapf(err, "failed to unmarshal json %s into structpb", string(metadataJson))
 	}
 
-	pbVal, err := cf.ConvertToProtoVal(cv.Constraint.Object)
+	// Extract metadata if it exists.
+	var pbMetadata *structpb.Value
+	if constraintMetadata, ok := cv.Constraint.Object["metadata"]; ok {
+		if pbMetadata, err = cf.ConvertToProtoVal(constraintMetadata); err != nil {
+			return nil, errors.Wrapf(err, "failed to convert constraint metadata into structpb.Value")
+		}
+	}
+
+	// Save the whole object. This can be useful for displaying the exact
+	// rule that triggered a violation.
+	pbConstraintConfig, err := cf.ConvertToProtoVal(cv.Constraint.Object)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to convert constraint object into proto struct value")
 	}
-	constraintConfig := &validator.Constraint{Metadata: pbVal}
+
+	// Build the ConstraintConfig proto.
+	constraintConfig := &validator.Constraint{
+		Metadata:   pbMetadata,
+		FullConfig: pbConstraintConfig,
+	}
 
 	return &validator.Violation{
-		Constraint: cv.name(),
-	        ConstraintConfig: constraintConfig,
-		Resource:   name,
-		Message:    cv.Message,
-		Metadata:   metadata,
-		Severity:   cv.Severity,
+		Constraint:       cv.name(),
+		ConstraintConfig: constraintConfig,
+		Resource:         name,
+		Message:          cv.Message,
+		Metadata:         metadata,
+		Severity:         cv.Severity,
 	}, nil
 }
