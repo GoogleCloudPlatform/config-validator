@@ -16,6 +16,7 @@ package cf
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
@@ -89,17 +90,21 @@ func convertToViolations(expression *rego.ExpressionValue) ([]*validator.Violati
 			violationToAdd.Metadata = convertedMetadata
 		}
 		if parsedExpression[i].ConstraintConfig != nil {
+			constraintApiVersion := fmt.Sprintf("%s", parsedExpression[i].ConstraintConfig["apiVersion"])
+			constraintKind := fmt.Sprintf("%s", parsedExpression[i].ConstraintConfig["kind"])
 			constraintMetadata, err := ConvertToProtoVal(parsedExpression[i].ConstraintConfig["metadata"])
 			if err != nil {
 				return nil, err
 			}
-			fullConfig, err := ConvertToProtoVal(parsedExpression[i].ConstraintConfig)
+			constraintSpec, err := ConvertToProtoVal(parsedExpression[i].ConstraintConfig["spec"])
 			if err != nil {
 				return nil, err
 			}
 			violationToAdd.ConstraintConfig = &validator.Constraint{
+				ApiVersion: constraintApiVersion,
+				Kind:       constraintKind,
 				Metadata:   constraintMetadata,
-				FullConfig: fullConfig,
+				Spec:       constraintSpec,
 			}
 		}
 

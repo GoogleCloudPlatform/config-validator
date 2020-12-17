@@ -63,12 +63,17 @@ message Asset {
 
 // Constraint contains the configuration for a constraint.
 message Constraint {
+  // ApiVersion is the version of the API.
+  string api_version = 1;
+
+  // Kind is the kind of object.
+  string kind = 2;
+
   // Metadata contains the user-provided constraint metadata.
   google.protobuf.Value metadata = 5;
 
-  // FullConfig contains the full constraint configuration object.
-  // This is useful for displaying the exact rule that triggered a violation.
-  google.protobuf.Value full_config = 6;
+  // Spec is the object spec.
+  google.protobuf.Value spec = 6;
 }
 
 // Violation contains the relevant information to explain how a constraint is violated.

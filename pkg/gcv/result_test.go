@@ -161,6 +161,8 @@ var conversionTestCases = []ConversionTestCase{
 			{
 				Constraint: "CFGCPStorageLoggingConstraint.require-storage-logging",
 				ConstraintConfig: &validator.Constraint{
+					ApiVersion: "constraints.gatekeeper.sh/v1alpha1",
+					Kind:       "CFGCPStorageLoggingConstraint",
 					Metadata: mustAsStruct(map[string]interface{}{
 						"annotations": map[string]interface{}{
 							"benchmark": "CIS11_5.03",
@@ -168,25 +170,14 @@ var conversionTestCases = []ConversionTestCase{
 						},
 						"name": "require-storage-logging",
 					}),
-					FullConfig: mustAsStruct(map[string]interface{}{
-						"apiVersion": "constraints.gatekeeper.sh/v1alpha1",
-						"kind":       "CFGCPStorageLoggingConstraint",
-						"metadata": map[string]interface{}{
-							"annotations": map[string]interface{}{
-								"benchmark": "CIS11_5.03",
-								"validation.gcp.forsetisecurity.org/yamlpath": "../../test/cf/constraints/cf_gcp_storage_logging_constraint.yaml",
+					Spec: mustAsStruct(map[string]interface{}{
+						"match": map[string]interface{}{
+							"target": []interface{}{
+								"organizations/**",
 							},
-							"name": "require-storage-logging",
 						},
-						"spec": map[string]interface{}{
-							"match": map[string]interface{}{
-								"target": []interface{}{
-									"organizations/**",
-								},
-							},
-							"parameters": map[string]interface{}{},
-							"severity":   "high",
-						},
+						"parameters": map[string]interface{}{},
+						"severity":   "high",
 					}),
 				},
 				Resource: "//storage.googleapis.com/my-storage-bucket",
@@ -211,6 +202,8 @@ var conversionTestCases = []ConversionTestCase{
 			{
 				Constraint: "GCPStorageLoggingConstraint.require_storage_logging_XX",
 				ConstraintConfig: &validator.Constraint{
+					ApiVersion: "constraints.gatekeeper.sh/v1alpha1",
+					Kind:       "GCPStorageLoggingConstraint",
 					Metadata: mustAsStruct(map[string]interface{}{
 						"annotations": map[string]interface{}{
 							"benchmark": "CIS11_5.03",
@@ -219,26 +212,14 @@ var conversionTestCases = []ConversionTestCase{
 						},
 						"name": "require-storage-logging-xx",
 					}),
-					FullConfig: mustAsStruct(map[string]interface{}{
-						"apiVersion": "constraints.gatekeeper.sh/v1alpha1",
-						"kind":       "GCPStorageLoggingConstraint",
-						"metadata": map[string]interface{}{
-							"annotations": map[string]interface{}{
-								"benchmark": "CIS11_5.03",
-								"validation.gcp.forsetisecurity.org/originalName": "require_storage_logging_XX",
-								"validation.gcp.forsetisecurity.org/yamlpath":     "../../test/cf/constraints/gcp_storage_logging_constraint.yaml",
+					Spec: mustAsStruct(map[string]interface{}{
+						"match": map[string]interface{}{
+							"target": []interface{}{
+								"organizations/**",
 							},
-							"name": "require-storage-logging-xx",
 						},
-						"spec": map[string]interface{}{
-							"match": map[string]interface{}{
-								"target": []interface{}{
-									"organizations/**",
-								},
-							},
-							"parameters": map[string]interface{}{},
-							"severity":   "medium",
-						},
+						"parameters": map[string]interface{}{},
+						"severity":   "medium",
 					}),
 				},
 				Resource: "//storage.googleapis.com/my-storage-bucket",
