@@ -160,8 +160,28 @@ var conversionTestCases = []ConversionTestCase{
 		wantViolations: []*validator.Violation{
 			{
 				Constraint: "CFGCPStorageLoggingConstraint.require-storage-logging",
-				Resource:   "//storage.googleapis.com/my-storage-bucket",
-				Message:    "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
+				ConstraintConfig: &validator.Constraint{
+					ApiVersion: "constraints.gatekeeper.sh/v1alpha1",
+					Kind:       "CFGCPStorageLoggingConstraint",
+					Metadata: mustAsStruct(map[string]interface{}{
+						"annotations": map[string]interface{}{
+							"benchmark": "CIS11_5.03",
+							"validation.gcp.forsetisecurity.org/yamlpath": "../../test/cf/constraints/cf_gcp_storage_logging_constraint.yaml",
+						},
+						"name": "require-storage-logging",
+					}),
+					Spec: mustAsStruct(map[string]interface{}{
+						"match": map[string]interface{}{
+							"target": []interface{}{
+								"organizations/**",
+							},
+						},
+						"parameters": map[string]interface{}{},
+						"severity":   "high",
+					}),
+				},
+				Resource: "//storage.googleapis.com/my-storage-bucket",
+				Message:  "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
 				Metadata: mustAsStruct(map[string]interface{}{
 					"ancestry_path": "organizations/1/folders/2/projects/3",
 					"details": map[string]interface{}{
@@ -181,8 +201,29 @@ var conversionTestCases = []ConversionTestCase{
 			},
 			{
 				Constraint: "GCPStorageLoggingConstraint.require_storage_logging_XX",
-				Resource:   "//storage.googleapis.com/my-storage-bucket",
-				Message:    "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
+				ConstraintConfig: &validator.Constraint{
+					ApiVersion: "constraints.gatekeeper.sh/v1alpha1",
+					Kind:       "GCPStorageLoggingConstraint",
+					Metadata: mustAsStruct(map[string]interface{}{
+						"annotations": map[string]interface{}{
+							"benchmark": "CIS11_5.03",
+							"validation.gcp.forsetisecurity.org/originalName": "require_storage_logging_XX",
+							"validation.gcp.forsetisecurity.org/yamlpath":     "../../test/cf/constraints/gcp_storage_logging_constraint.yaml",
+						},
+						"name": "require-storage-logging-xx",
+					}),
+					Spec: mustAsStruct(map[string]interface{}{
+						"match": map[string]interface{}{
+							"target": []interface{}{
+								"organizations/**",
+							},
+						},
+						"parameters": map[string]interface{}{},
+						"severity":   "medium",
+					}),
+				},
+				Resource: "//storage.googleapis.com/my-storage-bucket",
+				Message:  "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
 				Metadata: mustAsStruct(map[string]interface{}{
 					"ancestry_path": "organizations/1/folders/2/projects/3",
 					"details": map[string]interface{}{
@@ -216,6 +257,19 @@ func mustAsStruct(v interface{}) *structpb.Value {
 			Kind: &structpb.Value_StructValue{
 				StructValue: &structpb.Struct{
 					Fields: fields,
+				},
+			},
+		}
+
+	case []interface{}:
+		fields := []*structpb.Value{}
+		for _, value := range vv {
+			fields = append(fields, mustAsStruct(value))
+		}
+		return &structpb.Value{
+			Kind: &structpb.Value_ListValue{
+				&structpb.ListValue{
+					Values: fields,
 				},
 			},
 		}

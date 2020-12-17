@@ -102,11 +102,23 @@ func (c *Constraint) AsProto() (*validator.Constraint, error) {
 	}
 	cp := &validator.Constraint{}
 
-	metadata, err := convertToProtoVal(ci.(map[string]interface{})["metadata"])
+	ciMap := ci.(map[string]interface{})
+
+	cp.ApiVersion = fmt.Sprintf("%s", ciMap["apiVersion"])
+
+	cp.Kind = fmt.Sprintf("%s", ciMap["kind"])
+
+	metadata, err := convertToProtoVal(ciMap["metadata"])
 	if err != nil {
-		return nil, errors.Wrap(err, "converting to proto")
+		return nil, errors.Wrap(err, "converting metadata to proto")
 	}
 	cp.Metadata = metadata
+
+	spec, err := convertToProtoVal(ciMap["spec"])
+	if err != nil {
+		return nil, errors.Wrap(err, "converting spec to proto")
+	}
+	cp.Spec = spec
 
 	return cp, nil
 }

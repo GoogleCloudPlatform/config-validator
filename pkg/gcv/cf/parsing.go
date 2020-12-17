@@ -16,6 +16,7 @@ package cf
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
@@ -82,19 +83,28 @@ func convertToViolations(expression *rego.ExpressionValue) ([]*validator.Violati
 			Message:    parsedExpression[i].Violation.Msg,
 		}
 		if parsedExpression[i].Violation.Metadata != nil {
-			convertedMetadata, err := convertToProtoVal(parsedExpression[i].Violation.Metadata)
+			convertedMetadata, err := ConvertToProtoVal(parsedExpression[i].Violation.Metadata)
 			if err != nil {
 				return nil, err
 			}
 			violationToAdd.Metadata = convertedMetadata
 		}
 		if parsedExpression[i].ConstraintConfig != nil {
-			constraintMetadata, err := convertToProtoVal(parsedExpression[i].ConstraintConfig["metadata"])
+			constraintApiVersion := fmt.Sprintf("%s", parsedExpression[i].ConstraintConfig["apiVersion"])
+			constraintKind := fmt.Sprintf("%s", parsedExpression[i].ConstraintConfig["kind"])
+			constraintMetadata, err := ConvertToProtoVal(parsedExpression[i].ConstraintConfig["metadata"])
+			if err != nil {
+				return nil, err
+			}
+			constraintSpec, err := ConvertToProtoVal(parsedExpression[i].ConstraintConfig["spec"])
 			if err != nil {
 				return nil, err
 			}
 			violationToAdd.ConstraintConfig = &validator.Constraint{
-				Metadata: constraintMetadata,
+				ApiVersion: constraintApiVersion,
+				Kind:       constraintKind,
+				Metadata:   constraintMetadata,
+				Spec:       constraintSpec,
 			}
 		}
 
@@ -107,7 +117,8 @@ type convertFailed struct {
 	err error
 }
 
-func convertToProtoVal(from interface{}) (val *pb.Value, err error) {
+// ConvertToProtoVal converts an interface into a proto struct value.
+func ConvertToProtoVal(from interface{}) (val *pb.Value, err error) {
 	defer func() {
 		if x := recover(); x != nil {
 			convFail, ok := x.(*convertFailed)

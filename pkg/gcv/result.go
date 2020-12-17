@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/forseti-security/config-validator/pkg/api/validator"
+	"github.com/forseti-security/config-validator/pkg/gcv/cf"
 	"github.com/forseti-security/config-validator/pkg/gcv/configs"
 	"github.com/golang/protobuf/jsonpb"
 	structpb "github.com/golang/protobuf/ptypes/struct"
@@ -198,19 +199,52 @@ func (cv *ConstraintViolation) name() string {
 func (cv *ConstraintViolation) toViolation(name string, ancestryPath string) (*validator.Violation, error) {
 	metadataJson, err := json.Marshal(cv.metadata(map[string]interface{}{ancestryPathKey: ancestryPath}))
 	if err != nil {
-		return nil, errors.Wrapf(
-			err, "failed to marshal result metadata %v to json", cv.Metadata)
+		return nil, errors.Wrapf(err, "failed to marshal result metadata %v to json", cv.Metadata)
 	}
 	metadata := &structpb.Value{}
 	if err := jsonpb.UnmarshalString(string(metadataJson), metadata); err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal json %s into structpb", string(metadataJson))
 	}
 
+	// Extract the object fields if they exists.
+	var apiVersion string
+	if constraintAPIVersion, ok := cv.Constraint.Object["apiVersion"]; ok {
+		apiVersion = fmt.Sprintf("%s", constraintAPIVersion)
+	}
+
+	var kind string
+	if constraintKind, ok := cv.Constraint.Object["kind"]; ok {
+		kind = fmt.Sprintf("%s", constraintKind)
+	}
+
+	var pbMetadata *structpb.Value
+	if constraintMetadata, ok := cv.Constraint.Object["metadata"]; ok {
+		if pbMetadata, err = cf.ConvertToProtoVal(constraintMetadata); err != nil {
+			return nil, errors.Wrapf(err, "failed to convert constraint metadata into structpb.Value")
+		}
+	}
+
+	var pbSpec *structpb.Value
+	if constraintSpec, ok := cv.Constraint.Object["spec"]; ok {
+		if pbSpec, err = cf.ConvertToProtoVal(constraintSpec); err != nil {
+			return nil, errors.Wrapf(err, "failed to convert constraint spec into structpb.Value")
+		}
+	}
+
+	// Build the ConstraintConfig proto.
+	constraintConfig := &validator.Constraint{
+		ApiVersion: apiVersion,
+		Kind:       kind,
+		Metadata:   pbMetadata,
+		Spec:       pbSpec,
+	}
+
 	return &validator.Violation{
-		Constraint: cv.name(),
-		Resource:   name,
-		Message:    cv.Message,
-		Metadata:   metadata,
-		Severity:   cv.Severity,
+		Constraint:       cv.name(),
+		ConstraintConfig: constraintConfig,
+		Resource:         name,
+		Message:          cv.Message,
+		Metadata:         metadata,
+		Severity:         cv.Severity,
 	}, nil
 }
