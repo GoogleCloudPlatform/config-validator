@@ -31,21 +31,23 @@ var Cmd = &cobra.Command{
 
 var (
 	flags struct {
-		policies []string
-		libs     string
+		policies         []string
+		libs             string
+		disabledBuiltins []string
 	}
 )
 
 func init() {
 	Cmd.Flags().StringSliceVar(&flags.policies, "policies", nil, "Path to one or more policies directories.")
 	Cmd.Flags().StringVar(&flags.libs, "libs", "", "Path to the libs directory.")
+	Cmd.Flags().StringSliceVar(&flags.disabledBuiltins, "disabledBuiltins", nil, "Built in functions that should be disabled.")
 	if err := Cmd.MarkFlagRequired("policies"); err != nil {
 		panic(err)
 	}
 }
 
 func lintCmd(cmd *cobra.Command, args []string) error {
-	_, err := gcv.NewValidator(flags.policies, flags.libs)
+	_, err := gcv.NewValidator(flags.policies, flags.libs, gcv.DisableBuiltins(flags.disabledBuiltins...))
 	if err != nil {
 		fmt.Printf("linter errors:\n%v\n", err)
 		os.Exit(1)

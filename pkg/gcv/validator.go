@@ -69,6 +69,21 @@ type Validator struct {
 	k8sCFClient      *cfclient.Client
 }
 
+// Stores functional options for CF client
+type initOptions struct {
+	driverArgs  []local.Arg
+	backendArgs []cfclient.BackendOpt
+	clientArgs  []cfclient.Opt
+}
+
+type Option = func(*initOptions)
+
+func DisableBuiltins(builtins ...string) Option {
+	return func(o *initOptions) {
+		o.driverArgs = append(o.driverArgs, local.DisableBuiltins(builtins...))
+	}
+}
+
 // NewValidatorConfig returns a new ValidatorConfig.
 // By default it will initialize the underlying query evaluation engine by loading supporting library, constraints, and constraint templates.
 // We may want to make this initialization behavior configurable in the future.
@@ -86,14 +101,26 @@ func NewValidatorConfig(policyPaths []string, policyLibraryPath string) (*config
 func newCFClient(
 	targetHandler cfclient.TargetHandler,
 	templates []*cftemplates.ConstraintTemplate,
-	constraints []*unstructured.Unstructured) (
-	*cfclient.Client, error) {
-	driver := local.New(local.Tracing(false))
-	backend, err := cfclient.NewBackend(cfclient.Driver(driver))
+	constraints []*unstructured.Unstructured,
+	opts ...Option) (
+	*cfclient.Client, error) {	
+	options := &initOptions{
+		driverArgs: []local.Arg{local.Tracing(false)},
+		clientArgs: []cfclient.Opt{cfclient.Targets(targetHandler)},
+	}
+
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	driver := local.New(options.driverArgs...)
+	// Append driver option after creation
+	options.backendArgs = append(options.backendArgs, cfclient.Driver(driver))
+	backend, err := cfclient.NewBackend(options.backendArgs...)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to set up Constraint Framework backend")
 	}
-	cfClient, err := backend.NewClient(cfclient.Targets(targetHandler))
+	cfClient, err := backend.NewClient(options.clientArgs...)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to set up Constraint Framework client")
 	}
@@ -121,13 +148,13 @@ func newCFClient(
 }
 
 // NewValidatorFromConfig creates the validator from a config.
-func NewValidatorFromConfig(config *configs.Configuration) (*Validator, error) {
-	gcpCFClient, err := newCFClient(gcptarget.New(), config.GCPTemplates, config.GCPConstraints)
+func NewValidatorFromConfig(config *configs.Configuration, opts ...Option) (*Validator, error) {
+	gcpCFClient, err := newCFClient(gcptarget.New(), config.GCPTemplates, config.GCPConstraints, opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to set up GCP Constraint Framework client")
 	}
 
-	k8sCFClient, err := newCFClient(&k8starget.K8sValidationTarget{}, config.K8STemplates, config.K8SConstraints)
+	k8sCFClient, err := newCFClient(&k8starget.K8sValidationTarget{}, config.K8STemplates, config.K8SConstraints, opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to set up K8S Constraint Framework client")
 	}
@@ -142,18 +169,18 @@ func NewValidatorFromConfig(config *configs.Configuration) (*Validator, error) {
 // NewValidator returns a new Validator.
 // By default it will initialize the underlying query evaluation engine by loading supporting library, constraints, and constraint templates.
 // We may want to make this initialization behavior configurable in the future.
-func NewValidator(policyPaths []string, policyLibraryPath string) (*Validator, error) {
+func NewValidator(policyPaths []string, policyLibraryPath string, opts ...Option) (*Validator, error) {
 	config, err := NewValidatorConfig(policyPaths, policyLibraryPath)
 	if err != nil {
 		return nil, err
 	}
-	return NewValidatorFromConfig(config)
+	return NewValidatorFromConfig(config, opts...)
 }
 
 // NewValidatorFromContents returns a new Validator built from the provided contents of the policy constraints and policy library.
 // This provides a way to create a validator directly from contents instead of reading from the file system.
 // policyLibrary is a slice of file contents of all policy library files.
-func NewValidatorFromContents(policyFiles []*configs.PolicyFile, policyLibrary []string) (*Validator, error) {
+func NewValidatorFromContents(policyFiles []*configs.PolicyFile, policyLibrary []string, opts ...Option) (*Validator, error) {
 	if len(policyFiles) == 0 {
 		return nil, errors.Errorf("No policy constraints provided")
 	}
@@ -170,7 +197,7 @@ func NewValidatorFromContents(policyFiles []*configs.PolicyFile, policyLibrary [
 	if err != nil {
 		return nil, err
 	}
-	return NewValidatorFromConfig(config)
+	return NewValidatorFromConfig(config, opts...)
 }
 
 // ReviewAsset reviews a single asset.
