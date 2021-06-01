@@ -39,6 +39,7 @@ var (
 	port               = flag.Int("port", 10000, "The server port")
 	maxMessageRecvSize = flag.Int(
 		"maxMessageRecvSize", 128*1024*1024, "The max message receive size for the RPC service")
+	disabledBuiltins = flag.String("disabledBuiltins", "", "Built-in functions, separated by comma, that should be disabled.")
 )
 
 type gcvServer struct {
@@ -61,8 +62,8 @@ func (s *gcvServer) Review(ctx context.Context, request *validator.ReviewRequest
 	return s.validator.Review(ctx, request)
 }
 
-func newServer(stopChannel chan struct{}, policyPaths []string, policyLibraryPath string) (*gcvServer, error) {
-	cv, err := gcv.NewValidator(policyPaths, policyLibraryPath)
+func newServer(stopChannel chan struct{}, policyPaths []string, policyLibraryPath string, options *gcv.InitOptions) (*gcvServer, error) {
+	cv, err := gcv.NewValidator(policyPaths, policyLibraryPath, options)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +86,9 @@ func main() {
 		grpc.MaxRecvMsgSize(*maxMessageRecvSize),
 	)
 	policyPaths := strings.Split(*policyPath, ",")
-	serverImpl, err := newServer(stopChannel, policyPaths, *policyLibraryPath)
+	disabledBuiltins := strings.Split(*disabledBuiltins, ",")
+	options := &gcv.InitOptions{DisabledBuiltins: disabledBuiltins}
+	serverImpl, err := newServer(stopChannel, policyPaths, *policyLibraryPath, options)
 	if err != nil {
 		log.Fatalf("Failed to load server %v", err)
 	}

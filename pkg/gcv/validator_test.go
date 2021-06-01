@@ -34,11 +34,11 @@ const (
 )
 
 func TestCreateValidatorWithNoOptions(t *testing.T) {
-	_, err := NewValidator(nil, "/foo")
+	_, err := NewValidator(nil, "/foo", &InitOptions{})
 	if err == nil {
 		t.Fatal("expected an error since no policy path is provided")
 	}
-	_, err = NewValidator([]string{"/foo"}, "")
+	_, err = NewValidator([]string{"/foo"}, "", &InitOptions{})
 	if err == nil {
 		t.Fatal("expected an error since no policy library path is provided")
 	}
@@ -51,8 +51,17 @@ func TestDefaultTestDataCreatesValidator(t *testing.T) {
 	}
 }
 
+func TestDefaultTestDataWithDisabledBuiltins(t *testing.T) {
+	policyFilePaths, policyLibPath, options := testOptions()
+	options.DisabledBuiltins = append(options.DisabledBuiltins, "http.send")
+	_, err := NewValidator(policyFilePaths, policyLibPath, options)
+	if err == nil {
+		t.Fatal("expected an error since http.send was disabled")
+	}
+}
+
 func TestDefaultTestDataCreatesValidatorFromContents(t *testing.T) {
-	policyFilePaths, policyLibPath := testOptions()
+	policyFilePaths, policyLibPath, options := testOptions()
 
 	// Load contents of policy files.
 	var policyFiles []*configs.PolicyFile
@@ -79,7 +88,7 @@ func TestDefaultTestDataCreatesValidatorFromContents(t *testing.T) {
 		t.Fatal("unexpected error loading policy library", err)
 	}
 
-	if _, err := NewValidatorFromContents(policyFiles, policyLibrary); err != nil {
+	if _, err := NewValidatorFromContents(policyFiles, policyLibrary, options); err != nil {
 		t.Fatal("unexpected error", err)
 	}
 }
@@ -175,6 +184,7 @@ func TestCreateNoDir(t *testing.T) {
 	if _, err = NewValidator(
 		[]string{filepath.Join(emptyFolder, "someDirThatDoesntExist")},
 		filepath.Join(emptyFolder, "someDirThatDoesntExist"),
+		&InitOptions{},
 	); err == nil {
 		t.Fatal("expected a file system error but got no error")
 	}
@@ -195,7 +205,7 @@ func TestCreateNoReadAccess(t *testing.T) {
 		t.Fatal("creating temp dir sub dir:", err)
 	}
 
-	if _, err = NewValidator([]string{tmpDir}, tmpDir); err == nil {
+	if _, err = NewValidator([]string{tmpDir}, tmpDir, &InitOptions{}); err == nil {
 		t.Fatal("expected a file system error but got no error")
 	}
 }
@@ -212,7 +222,7 @@ func TestCreateEmptyDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err = NewValidator([]string{policyDir}, policyLibDir); err == nil {
+	if _, err = NewValidator([]string{policyDir}, policyLibDir, &InitOptions{}); err == nil {
 		t.Fatal("directory without a configuration should generate error")
 	}
 }
@@ -225,9 +235,9 @@ func cleanup(t *testing.T, dir string) {
 
 // testOptions provides a set of default options that allows the successful creation
 // of a validator.
-func testOptions() ([]string, string) {
+func testOptions() ([]string, string, *InitOptions) {
 	// Add default options to this list
-	return []string{localPolicyDir}, localPolicyDepDir
+	return []string{localPolicyDir}, localPolicyDepDir, &InitOptions{}
 }
 
 var defaultReviewTestAssetJSONs = map[string]string{
