@@ -69,7 +69,7 @@ func TestNewConfiguration(t *testing.T) {
 
 	var got, want int
 	got = len(config.GCPTemplates)
-	want = 3
+	want = 4
 	if want != got {
 		t.Errorf("len(GCPTemplates) got %d, want %d", got, want)
 	}

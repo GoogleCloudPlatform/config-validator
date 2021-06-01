@@ -20,9 +20,10 @@ var Cmd = &cobra.Command{
 
 var (
 	flags struct {
-		policies []string
-		libs     string
-		files    []string
+		policies         []string
+		libs             string
+		files            []string
+		disabledBuiltins []string
 	}
 )
 
@@ -30,13 +31,14 @@ func init() {
 	Cmd.Flags().StringSliceVar(&flags.policies, "policies", nil, "Path to one or more policies directories.")
 	Cmd.Flags().StringVar(&flags.libs, "libs", "", "Path to the libs directory.")
 	Cmd.Flags().StringSliceVar(&flags.files, "file", nil, "Files to process.")
+	Cmd.Flags().StringSliceVar(&flags.disabledBuiltins, "disabledBuiltins", nil, "Built in functions that should be disabled.")
 	if err := Cmd.MarkFlagRequired("policies"); err != nil {
 		panic(err)
 	}
 }
 
 func debugCmd(cmd *cobra.Command, args []string) error {
-	validator, err := gcv.NewValidator(flags.policies, flags.libs)
+	validator, err := gcv.NewValidator(flags.policies, flags.libs, &gcv.InitOptions{DisabledBuiltins: flags.disabledBuiltins})
 	if err != nil {
 		fmt.Printf("Errors Loading Policies:\n%s\n", err)
 		os.Exit(1)
