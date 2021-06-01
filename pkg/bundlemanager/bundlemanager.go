@@ -29,7 +29,7 @@ import (
 )
 
 func init() {
-	utilruntime.Must(constraintv1alpha1.AddToSchemes.AddToScheme(scheme.Scheme))
+	utilruntime.Must(constraintv1alpha1.AddToScheme(scheme.Scheme))
 }
 
 type Object interface {

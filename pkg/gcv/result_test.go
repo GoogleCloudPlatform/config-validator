@@ -23,6 +23,7 @@ import (
 	"github.com/forseti-security/config-validator/pkg/api/validator"
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 type ConversionTestCase struct {
@@ -307,7 +308,13 @@ func TestConversion(t *testing.T) {
 			if err != nil {
 				t.Fatal("fatal error:", err)
 			}
-			if diff := cmp.Diff(violations, tc.wantViolations); diff != "" {
+			// Ignore protobuf internal fields
+			cmpOptions := []cmp.Option{
+				cmpopts.IgnoreFields(structpb.Value{}, "state", "sizeCache", "unknownFields"),
+				cmpopts.IgnoreFields(structpb.Struct{}, "state", "sizeCache", "unknownFields"),
+				cmpopts.IgnoreFields(structpb.ListValue{}, "state", "sizeCache", "unknownFields"),
+			}
+			if diff := cmp.Diff(violations, tc.wantViolations, cmpOptions...); diff != "" {
 				t.Errorf("violations mismatch, +got -want\n%s", diff)
 			}
 		})
