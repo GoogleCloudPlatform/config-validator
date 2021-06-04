@@ -51,6 +51,15 @@ func TestDefaultTestDataCreatesValidator(t *testing.T) {
 	}
 }
 
+func TestDefaultTestDataWithDisabledBuiltins(t *testing.T) {
+	policyFilePaths, policyLibPath := testOptions()
+	// options.DisabledBuiltins = append(options.DisabledBuiltins, "http.send")
+	_, err := NewValidator(policyFilePaths, policyLibPath, DisableBuiltins("http.send"))
+	if err == nil {
+		t.Fatal("expected an error since http.send was disabled")
+	}
+}
+
 func TestDefaultTestDataCreatesValidatorFromContents(t *testing.T) {
 	policyFilePaths, policyLibPath := testOptions()
 
