@@ -1,4 +1,4 @@
-module github.com/forseti-security/config-validator
+module github.com/GoogleCloudPlatform/config-validator
 
 go 1.12
 

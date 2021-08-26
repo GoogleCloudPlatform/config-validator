@@ -7,14 +7,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/forseti-security/config-validator/pkg/gcv"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv"
 	"github.com/spf13/cobra"
 )
 
 var Cmd = &cobra.Command{
 	Use:     "debug",
 	Short:   "Run the config validator on a set of policies / cai data and print out any info on errors.",
-	Example: `policy-tool debug --policies ./forseti-security/policy-library/policies --libs ./forseti-security/policy-library/libs --file resource.json`,
+	Example: `policy-tool debug --policies ./GoogleCloudPlatform/policy-library/policies --libs ./GoogleCloudPlatform/policy-library/libs --file resource.json`,
 	RunE:    debugCmd,
 }
 

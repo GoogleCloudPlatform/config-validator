@@ -22,8 +22,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/forseti-security/config-validator/pkg/api/validator"
-	asset2 "github.com/forseti-security/config-validator/pkg/asset"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
+	asset2 "github.com/GoogleCloudPlatform/config-validator/pkg/asset"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/types"

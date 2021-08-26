@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/forseti-security/config-validator/pkg/api/validator"
-	gcptest "github.com/forseti-security/config-validator/pkg/gcptarget/testing"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
+	gcptest "github.com/GoogleCloudPlatform/config-validator/pkg/gcptarget/testing"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client"
 	v1 "google.golang.org/genproto/googleapis/cloud/asset/v1"
 )

@@ -19,8 +19,8 @@ import (
 	"flag"
 	"runtime"
 
-	"github.com/forseti-security/config-validator/pkg/api/validator"
-	"github.com/forseti-security/config-validator/pkg/multierror"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/multierror"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 )

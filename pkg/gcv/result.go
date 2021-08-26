@@ -18,9 +18,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/forseti-security/config-validator/pkg/api/validator"
-	"github.com/forseti-security/config-validator/pkg/gcv/cf"
-	"github.com/forseti-security/config-validator/pkg/gcv/configs"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv/cf"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv/configs"
 	"github.com/golang/protobuf/jsonpb"
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	cftypes "github.com/open-policy-agent/frameworks/constraint/pkg/types"
