@@ -21,7 +21,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/forseti-security/config-validator/pkg/api/validator"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 )
 
 type reviewTestcase struct {

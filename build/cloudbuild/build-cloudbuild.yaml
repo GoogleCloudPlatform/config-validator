@@ -32,7 +32,7 @@ steps:
 
 - name: 'gcr.io/cloud-builders/docker'
   id: 'Create proto files'
-  args: ['run', '-v', '/workspace:/go/src/github.com/forseti-security/config-validator', 'gcv-proto-builder', 'protoc', '-I/proto', '-I./api', '--go_out=plugins=grpc:./pkg/api/validator', './api/validator.proto']
+  args: ['run', '-v', '/workspace:/go/src/github.com/GoogleCloudPlatform/config-validator', 'gcv-proto-builder', 'protoc', '-I/proto', '-I./api', '--go_out=plugins=grpc:./pkg/api/validator', './api/validator.proto']
 
 - name: 'gcr.io/cloud-builders/docker'
   id: Build config validator container latest

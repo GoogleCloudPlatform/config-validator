@@ -37,7 +37,7 @@ handle_asset[result] {
 	# Default matcher behavior is to match everything.
 	target := _get_default(match, "target", ["organization/*"])
 	# TODO: Retire the "gcp" wrapper.
-	# See https://github.com/forseti-security/config-validator/issues/42
+	# See https://github.com/GoogleCloudPlatform/config-validator/issues/42
 	gcp := _get_default(match, "gcp", {})
 	gcp_target := _get_default(gcp, "target", target)
 	re_match(gcp_target[_], asset.ancestry_path)

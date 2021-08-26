@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/forseti-security/config-validator/pkg/api/validator"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	pb "github.com/golang/protobuf/ptypes/struct"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/pkg/errors"

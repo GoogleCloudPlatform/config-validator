@@ -19,13 +19,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/forseti-security/config-validator/pkg/bundlemanager"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/bundlemanager"
 )
 
 var Cmd = &cobra.Command{
 	Use:     "status",
 	Short:   "Print the status of the policy library's constraint templates and bundles.",
-	Example: `policy-tool status --path ./forseti-security/policy-library/policies`,
+	Example: `policy-tool status --path ./GoogleCloudPlatform/policy-library/policies`,
 	RunE:    statusCmd,
 }
 

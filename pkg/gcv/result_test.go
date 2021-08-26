@@ -20,7 +20,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/forseti-security/config-validator/pkg/api/validator"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"

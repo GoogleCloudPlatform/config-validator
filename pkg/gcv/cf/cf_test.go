@@ -22,12 +22,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/forseti-security/config-validator/pkg/gcv/oldconfigs"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv/oldconfigs"
 	"github.com/golang/protobuf/proto"
 	pb "github.com/golang/protobuf/ptypes/struct"
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/forseti-security/config-validator/pkg/api/validator"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 )
 
 const alwaysViolateConstraint = "GCPAlwaysViolatesConstraintV1"

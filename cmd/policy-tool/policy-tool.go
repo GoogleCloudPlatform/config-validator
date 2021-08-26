@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/forseti-security/config-validator/cmd/policy-tool/debug"
-	"github.com/forseti-security/config-validator/cmd/policy-tool/lint"
-	"github.com/forseti-security/config-validator/cmd/policy-tool/status"
+	"github.com/GoogleCloudPlatform/config-validator/cmd/policy-tool/debug"
+	"github.com/GoogleCloudPlatform/config-validator/cmd/policy-tool/lint"
+	"github.com/GoogleCloudPlatform/config-validator/cmd/policy-tool/status"
 	_ "github.com/golang/glog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

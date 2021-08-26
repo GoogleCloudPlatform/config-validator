@@ -23,8 +23,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/forseti-security/config-validator/pkg/api/validator"
-	"github.com/forseti-security/config-validator/pkg/gcv"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv"
 	"github.com/golang/glog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

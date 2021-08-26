@@ -18,14 +18,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/forseti-security/config-validator/pkg/gcv"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv"
 	"github.com/spf13/cobra"
 )
 
 var Cmd = &cobra.Command{
 	Use:     "lint",
 	Short:   "Lint a directory containing ConstraintTemplates and/or Constraints.",
-	Example: `policy-tool status --policies ./forseti-security/policy-library/policies --libs ./forseti-security/policy-library/libs`,
+	Example: `policy-tool status --policies ./GoogleCloudPlatform/policy-library/policies --libs ./GoogleCloudPlatform/policy-library/libs`,
 	RunE:    lintCmd,
 }
 

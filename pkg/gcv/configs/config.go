@@ -24,7 +24,7 @@ import (
 
 	"github.com/golang/glog"
 
-	"github.com/forseti-security/config-validator/pkg/multierror"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/multierror"
 	cfapis "github.com/open-policy-agent/frameworks/constraint/pkg/apis"
 	cfv1alpha1 "github.com/open-policy-agent/frameworks/constraint/pkg/apis/templates/v1alpha1"
 	cftemplates "github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
