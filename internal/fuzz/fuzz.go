@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	testRoot        = "../../../test/cf"
+	testRoot        = "../../test/cf"
 	localPolicyDir  = testRoot
 	localLibraryDir = testRoot + "/library"
 )
