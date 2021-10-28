@@ -1,0 +1,36 @@
+{
+  "name": "//cloudresourcemanager.googleapis.com/projects/1234567890",
+  "asset_type": "cloudresourcemanager.googleapis.com/Project",
+  "iam_policy": {
+    "etag": "BwWwnnRlhsE=",
+    "bindings": [
+      {
+        "role": "roles/owner",
+        "members": [
+          "group:nefarious-owners@google.com"
+        ]
+      }
+    ],
+    "audit_configs": [
+      {
+        "service": "allServices",
+        "audit_log_configs": [
+          {
+            "log_type": 2
+          },
+          {
+            "log_type": 3
+          },
+          {
+            "log_type": 1
+          }
+        ]
+      }
+    ]
+  },
+  "ancestors": [
+    "projects/1234567890",
+    "organizations/9876543210"
+  ],
+  "update_time": "2020-10-01T16:24:47.685313Z"
+}

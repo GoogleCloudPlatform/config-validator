@@ -1,0 +1,27 @@
+{
+  "name": "//bigquery.googleapis.com/projects/testing-project/datasets/testing_logs",
+  "asset_type": "bigquery.googleapis.com/Dataset",
+  "resource": {
+    "version": "v2",
+    "discovery_document_uri": "https://www.googleapis.com/discovery/v1/apis/bigquery/v2/rest",
+    "discovery_name": "Dataset",
+    "parent": "//cloudresourcemanager.googleapis.com/projects/1234567890",
+    "data": {
+      "creationTime": "1583336199458",
+      "datasetReference": {
+        "datasetId": "testing_logs",
+        "projectId": "testing-project"
+      },
+      "id": "testing-project:testing_logs",
+      "kind": "bigquery#dataset",
+      "lastModifiedTime": "1583336199458",
+      "location": "US"
+    },
+    "location": "US"
+  },
+  "ancestors": [
+    "projects/1234567890",
+    "organizations/9876543210"
+  ],
+  "update_time": "2020-08-07T12:38:35.297162885Z"
+}
