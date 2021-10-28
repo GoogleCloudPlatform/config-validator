@@ -1,0 +1,20 @@
+{
+  "name": "//storage.googleapis.com/testing-bucket-public",
+  "asset_type": "storage.googleapis.com/Bucket",
+  "iam_policy": {
+    "etag": "BwWwnm3nO0A=",
+    "bindings": [
+      {
+        "role": "roles/storage.objectViewer",
+        "members": [
+          "allUsers"
+        ]
+      }
+    ]
+  },
+  "ancestors": [
+    "projects/1234567890",
+    "organizations/9876543210"
+  ],
+  "update_time": "2020-10-01T16:22:58.745152Z"
+}
