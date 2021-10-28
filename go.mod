@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go v0.60.0
 	cloud.google.com/go/storage v1.8.0
 	github.com/davecgh/go-spew v1.1.1
+	github.com/dvyukov/go-fuzz v0.0.0-20210914135545-4980593459a1 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/zapr v0.1.1 // indirect
 	github.com/go-openapi/spec v0.19.4
