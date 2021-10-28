@@ -7,7 +7,8 @@ Basic operation:
 ```sh
 $ cd ~
 $ go get -u github.com/dvyukov/go-fuzz/go-fuzz@latest
-$ go install github.com/mdempsky/go114-fuzz-build@latest
+$ go get -u github.com/dvyukov/go-fuzz/go-fuzz-build@latest
+$ go get -u github.com/dvyukov/go-fuzz/go-fuzz-dep@latest
 $ cd -
 $ cd internal/fuzz/{fuzzer}
 $ go-fuzz-build go114-fuzz-build github.com/GoogleCloudPlatform/config-validator/internal/fuzz/{fuzzer}
