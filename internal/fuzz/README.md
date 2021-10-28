@@ -8,10 +8,13 @@ Basic operation:
 $ cd ~
 $ go get -u github.com/dvyukov/go-fuzz/go-fuzz
 $ go get -u github.com/dvyukov/go-fuzz/go-fuzz-build
-$ go get -u github.com/dvyukov/go-fuzz/go-fuzz-dep
 $ cd -
 $ cd internal/fuzz/{fuzzer}
-$ go-fuzz-build go114-fuzz-build github.com/GoogleCloudPlatform/config-validator/internal/fuzz/{fuzzer}
+# See:
+# - https://github.com/dvyukov/go-fuzz/issues/294
+# - https://github.com/open-policy-agent/opa/pull/3243
+# Not sure why but homedir also complains during typechecking.
+$ go-fuzz-build -preserve github.com/OneOfOne/xxhash,k8s.io/client-go/util/homedir
 $ go-fuzz
 ```
 
