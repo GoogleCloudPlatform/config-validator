@@ -19,22 +19,36 @@ package fuzz
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv"
-	"github.com/gogo/protobuf/jsonpb"
-)
-
-const (
-	testRoot        = "../../test/cf"
-	localPolicyDir  = testRoot
-	localLibraryDir = testRoot + "/library"
+	"github.com/golang/protobuf/jsonpb"
 )
 
 var vdt *gcv.Validator
 
 // Initialize the validator only once, then reuse it across Fuzz invocations.
 func init() {
+	// Determine the init files directory at runtime, since it is different
+	// when running under OSS-Fuzz.
+	// See https://google.github.io/oss-fuzz/further-reading/fuzzer-environment/
+	binaryPath := os.Args[0]
+	var localPolicyDir string
+	if strings.HasPrefix(binaryPath, "/tmp/go-fuzz") {
+		// Running locally, use relative test/cf directory.
+		localPolicyDir = "../../test/cf"
+	} else {
+		// Running under OSS-Fuzz.
+		// The build script for it dumps the files under this directory.
+		binaryDir := filepath.Dir(binaryPath)
+		localPolicyDir = filepath.Join(binaryDir, "validatorfiles")
+	}
+
+	localLibraryDir := filepath.Join(localPolicyDir, "library")
+
 	var err error
 	vdt, err = gcv.NewValidator([]string{localPolicyDir}, localLibraryDir)
 	if err != nil {
@@ -47,7 +61,7 @@ func Fuzz(data []byte) (score int) {
 	// Try interpreting data as an Asset.
 	// Exit early if invalid.
 	assetJSON := string(data)
-	var asset *validator.Asset
+	asset := &validator.Asset{}
 	if err := jsonpb.UnmarshalString(assetJSON, asset); err != nil {
 		return 0
 	}

@@ -4,16 +4,11 @@
   "org_policy": [
     {
       "constraint": "constraints/storage.uniformBucketLevelAccess",
-      "update_time": {
-        "seconds": 1596670007,
-        "nanos": 833000000
-      },
       "boolean_policy": {}
     }
   ],
   "ancestors": [
     "projects/1234567890",
     "organizations/9876543210"
-  ],
-  "update_time": "2020-08-05T23:26:47.681Z"
+  ]
 }
