@@ -62,7 +62,7 @@ func Fuzz(data []byte) (score int) {
 	// Try interpreting data as an Asset.
 	// Exit early if invalid.
 	assetJSON := string(data)
-	var asset *validator.Asset
+	asset := &validator.Asset{}
 	if err := jsonpb.UnmarshalString(assetJSON, asset); err != nil {
 		return 0
 	}
