@@ -36,19 +36,18 @@ func init() {
 	// when running under OSS-Fuzz.
 	// See https://google.github.io/oss-fuzz/further-reading/fuzzer-environment/
 	binaryPath := os.Args[0]
-	var configRoot string
+	var localPolicyDir string
 	if strings.HasPrefix(binaryPath, "/tmp/go-fuzz") {
 		// Running locally, use relative test/cf directory.
-		configRoot = "../../test/cf"
+		localPolicyDir = "../../test/cf"
 	} else {
 		// Running under OSS-Fuzz.
 		// The build script for it dumps the files under this directory.
 		binaryDir := filepath.Dir(binaryPath)
-		configRoot = filepath.Join(binaryDir, "validatorfiles")
+		localPolicyDir = filepath.Join(binaryDir, "validatorfiles")
 	}
 
-	localPolicyDir := configRoot
-	localLibraryDir := filepath.Join(configRoot, "library")
+	localLibraryDir := filepath.Join(localPolicyDir, "library")
 
 	var err error
 	vdt, err = gcv.NewValidator([]string{localPolicyDir}, localLibraryDir)
