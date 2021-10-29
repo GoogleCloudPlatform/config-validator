@@ -19,22 +19,36 @@ package fuzz
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv"
 	"github.com/gogo/protobuf/jsonpb"
 )
 
-const (
-	testRoot        = "../../test/cf"
-	localPolicyDir  = testRoot
-	localLibraryDir = testRoot + "/library"
-)
-
 var vdt *gcv.Validator
 
 // Initialize the validator only once, then reuse it across Fuzz invocations.
 func init() {
+	// Determine the init files directory at runtime, since it is different
+	// when running under OSS-Fuzz.
+	// See https://google.github.io/oss-fuzz/further-reading/fuzzer-environment/
+	binaryPath := os.Args[0]
+	var configRoot string
+	if strings.HasPrefix(binaryPath, "/tmp/go-fuzz") {
+		// Running locally, use relative test/cf directory.
+		configRoot = "../../test/cf"
+	} else {
+		// Running under OSS-Fuzz.
+		// The build script for it dumps the files under this directory.
+		configRoot = filepath.Join(binaryPath, "validatorfiles")
+	}
+
+	localPolicyDir := configRoot
+	localLibraryDir := filepath.Join(configRoot, "library")
+
 	var err error
 	vdt, err = gcv.NewValidator([]string{localPolicyDir}, localLibraryDir)
 	if err != nil {
