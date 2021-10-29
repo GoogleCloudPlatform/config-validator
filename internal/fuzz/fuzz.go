@@ -43,7 +43,8 @@ func init() {
 	} else {
 		// Running under OSS-Fuzz.
 		// The build script for it dumps the files under this directory.
-		configRoot = filepath.Join(binaryPath, "validatorfiles")
+		binaryDir := filepath.Dir(binaryPath)
+		configRoot = filepath.Join(binaryDir, "validatorfiles")
 	}
 
 	localPolicyDir := configRoot
