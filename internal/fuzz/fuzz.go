@@ -25,7 +25,7 @@ import (
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv"
-	"github.com/gogo/protobuf/jsonpb"
+	"github.com/golang/protobuf/jsonpb"
 )
 
 var vdt *gcv.Validator
