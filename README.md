@@ -25,4 +25,3 @@ make format    reformat code
 
 ## Disclaimer
 This is not an officially supported Google product.
-
