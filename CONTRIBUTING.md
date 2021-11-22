@@ -26,3 +26,16 @@ information on using pull requests.
 
 This project follows
 [Google's Open Source Community Guidelines](https://opensource.google.com/conduct/).
+
+## Fuzzing Status
+
+This project is integrated with [OSS-Fuzz](https://google.github.io/oss-fuzz/).
+
+Links:
+
+* [Open issues discovered by fuzzing](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:config-validator)
+* [OSS-Fuzz integration configs](https://github.com/google/oss-fuzz/tree/master/projects/config-validator)
+* [OSS-Fuzz build status](https://oss-fuzz-build-logs.storage.googleapis.com/index.html#config-validator)
+* [Fuzzing statistics](https://oss-fuzz.com/fuzzer-stats?project=config-validator&fuzzer=libFuzzer_config-validator_fuzz_config_validator&job=libfuzzer_asan_config-validator&group_by=by-day)
+* [Crash statistics](https://oss-fuzz.com/crash-stats?project=config-validator)
+* [Test cases](https://oss-fuzz.com/testcases?project=config-validator)
