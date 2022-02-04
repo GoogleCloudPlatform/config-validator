@@ -103,7 +103,8 @@ func newCFClient(
 	templates []*cftemplates.ConstraintTemplate,
 	constraints []*unstructured.Unstructured,
 	opts ...Option) (
-	*cfclient.Client, error) {	
+	*cfclient.Client, error) {
+
 	options := &initOptions{
 		driverArgs: []local.Arg{local.Tracing(false)},
 		clientArgs: []cfclient.Opt{cfclient.Targets(targetHandler)},
