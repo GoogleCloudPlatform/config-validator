@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package terraformtarget is a constraint framework target for FCV to use for integrating with the opa constraint framework.
-package terraformtarget
+// Package tftarget is a constraint framework target for FCV to use for integrating with the opa constraint framework.
+package tftarget
 
 import (
 	"regexp"
@@ -27,42 +27,37 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// Name is the target name for TerraformTarget
+// Name is the target name for TFTarget
 const Name = "validation.terraform.forsetisecurity.org"
 
-// TerraformTarget is the constraint framework target for FCV
-type TerraformTarget struct {
+// TFTarget is the constraint framework target for FCV
+type TFTarget struct {
 }
 
-var _ client.TargetHandler = &TerraformTarget{}
+var _ client.TargetHandler = &TFTarget{}
 
-// New returns a new TerraformTarget
-func New() *TerraformTarget {
-	return &TerraformTarget{}
+// New returns a new TFTarget
+func New() *TFTarget {
+	return &TFTarget{}
 }
 
 // MatchSchema implements client.MatchSchemaProvider
-func (g *TerraformTarget) MatchSchema() apiextensions.JSONSchemaProps {
+func (g *TFTarget) MatchSchema() apiextensions.JSONSchemaProps {
 	return apiextensions.JSONSchemaProps{
 		Properties: map[string]apiextensions.JSONSchemaProps{
-			"resource_address": {
-				Type: "object",
-				Properties: map[string]apiextensions.JSONSchemaProps{
-					"include": {
-						Type: "array",
-						Items: &apiextensions.JSONSchemaPropsOrArray{
-							Schema: &apiextensions.JSONSchemaProps{
-								Type: "string",
-							},
-						},
+			"addresses": {
+				Type: "array",
+				Items: &apiextensions.JSONSchemaPropsOrArray{
+					Schema: &apiextensions.JSONSchemaProps{
+						Type: "string",
 					},
-					"exclude": {
-						Type: "array",
-						Items: &apiextensions.JSONSchemaPropsOrArray{
-							Schema: &apiextensions.JSONSchemaProps{
-								Type: "string",
-							},
-						},
+				},
+			},
+			"excludedAddresses": {
+				Type: "array",
+				Items: &apiextensions.JSONSchemaPropsOrArray{
+					Schema: &apiextensions.JSONSchemaProps{
+						Type: "string",
 					},
 				},
 			},
@@ -71,22 +66,22 @@ func (g *TerraformTarget) MatchSchema() apiextensions.JSONSchemaProps {
 }
 
 // GetName implements client.TargetHandler
-func (g *TerraformTarget) GetName() string {
+func (g *TFTarget) GetName() string {
 	return Name
 }
 
 // Library implements client.TargetHandler
-func (g *TerraformTarget) Library() *template.Template {
+func (g *TFTarget) Library() *template.Template {
 	return libraryTemplate
 }
 
 // ProcessData implements client.TargetHandler
-func (g *TerraformTarget) ProcessData(obj interface{}) (bool, string, interface{}, error) {
+func (g *TFTarget) ProcessData(obj interface{}) (bool, string, interface{}, error) {
 	return false, "", nil, errors.Errorf("Storing data for referential constraint eval is not supported at this time.")
 }
 
 // HandleReview implements client.TargetHandler
-func (g *TerraformTarget) HandleReview(obj interface{}) (bool, interface{}, error) {
+func (g *TFTarget) HandleReview(obj interface{}) (bool, interface{}, error) {
 	switch resource := obj.(type) {
 	case map[string]interface{}:
 		if _, found, err := unstructured.NestedString(resource, "name"); !found || err != nil {
@@ -101,16 +96,13 @@ func (g *TerraformTarget) HandleReview(obj interface{}) (bool, interface{}, erro
 		if _, found, err := unstructured.NestedString(resource, "type"); !found || err != nil {
 			return false, nil, err
 		}
-		if _, found, err := unstructured.NestedString(resource, "provider_name"); !found || err != nil {
-			return false, nil, err
-		}
 		return true, resource, nil
 	}
 	return false, nil, nil
 }
 
 // HandleViolation implements client.TargetHandler
-func (g *TerraformTarget) HandleViolation(result *types.Result) error {
+func (g *TFTarget) HandleViolation(result *types.Result) error {
 	result.Resource = result.Review
 	return nil
 }
@@ -144,8 +136,8 @@ func checkPathGlobs(rs []string) error {
 }
 
 // ValidateConstraint implements client.TargetHandler
-func (g *TerraformTarget) ValidateConstraint(constraint *unstructured.Unstructured) error {
-	includes, found, err := unstructured.NestedStringSlice(constraint.Object, "spec", "match", "resource_address", "include")
+func (g *TFTarget) ValidateConstraint(constraint *unstructured.Unstructured) error {
+	includes, found, err := unstructured.NestedStringSlice(constraint.Object, "spec", "match", "addresses")
 	if err != nil {
 		return errors.Errorf("invalid spec.match.target: %s", err)
 	}
@@ -154,7 +146,7 @@ func (g *TerraformTarget) ValidateConstraint(constraint *unstructured.Unstructur
 			return errors.Wrapf(err, "invalid glob in target")
 		}
 	}
-	excludes, found, err := unstructured.NestedStringSlice(constraint.Object, "spec", "match", "resource_address", "exclude")
+	excludes, found, err := unstructured.NestedStringSlice(constraint.Object, "spec", "match", "excludedAddresses")
 	if err != nil {
 		return errors.Errorf("invalid spec.match.exclude: %s", err)
 	}

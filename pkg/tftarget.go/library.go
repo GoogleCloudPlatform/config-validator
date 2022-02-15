@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package terraformtarget
+package tftarget
 
 import "text/template"
 
@@ -34,20 +34,21 @@ matching_constraints[constraint] {
 }
 
 check_provider(asset) {
-	providers := ["registry.terraform.io/hashicorp/google", "registry.terraform.io/hashicorp/google-beta"]
-	provider_match := {asset.provider_name | asset.provider_name == providers[_]}
-	count(provider_match) != 0
+	has_field(asset, "provider_name")
+	contains(asset.provider_name, "google")
+}
+
+check_provider(asset) {
+	not has_field(asset, "provider_name")
 }
 
 check_address(asset, match) {
-	address := get_default(match, "resource_address", {})
-
 	# Default matcher behavior is to match everything.
-	include := get_default(address, "include", ["**"])
+	include := get_default(match, "addresses", ["**"])
 	include_match := {asset.address | path_matches(asset.address, include[_])}
 	count(include_match) != 0
 
-	exclude := get_default(address, "exclude", [])
+	exclude := get_default(match, "excludedAddresses", [])
 	exclusion_match := {asset.address | path_matches(asset.address, exclude[_])}
 	count(exclusion_match) == 0
 }

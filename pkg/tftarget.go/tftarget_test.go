@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package terraformtarget
+package tftarget
 
 import (
 	"fmt"
@@ -42,21 +42,15 @@ func stringToInterface(s []string) []interface{} {
 
 // includeAddress populates the includeAddress field inside of the match block
 func includeAddress(val ...string) func(map[string]interface{}) {
-	temp := map[string]interface{}{
-		"include": stringToInterface(val),
-	}
 	return func(matchBlock map[string]interface{}) {
-		matchBlock["resource_address"] = temp
+		matchBlock["addresses"] = stringToInterface(val)
 	}
 }
 
 // excludeAddress populates the excludeAddress field inside of the match block
 func excludeAddress(val ...string) func(map[string]interface{}) {
-	temp := map[string]interface{}{
-		"exclude": stringToInterface(val),
-	}
 	return func(matchBlock map[string]interface{}) {
-		matchBlock["resource_address"] = temp
+		matchBlock["excludedAddresses"] = stringToInterface(val)
 	}
 }
 
@@ -68,6 +62,8 @@ type reviewTestData struct {
 	address             string
 	wantMatch           bool
 	wantConstraintError bool
+	providerName        string
+	removeProviderBlock bool
 }
 
 func (td *reviewTestData) jsonAssetTestcase() *ReviewTestcase {
@@ -81,15 +77,27 @@ func (td *reviewTestData) jsonAssetTestcase() *ReviewTestcase {
 		tc.Match = td.match
 	}
 
+	providerName := "registry.terraform.io/hashicorp/google"
+	if td.providerName != "" {
+		providerName = td.providerName
+	}
+
+	providerBlock := ""
+	if td.removeProviderBlock != true {
+		providerBlock = fmt.Sprintf(`
+			,"provider_name" : "%s"
+		`, providerName)
+	}
+
 	tc.Object = FromJSON(fmt.Sprintf(`
 {
   "name": "test-name",
   "type": "test-asset-type",
   "address": "%s",
-  "change": {},
-	"provider_name" : "registry.terraform.io/hashicorp/google"
+  "change": {}
+	%s
 }
-`, td.address))
+`, td.address, providerBlock))
 	return tc
 }
 
@@ -118,13 +126,7 @@ var testData = []reviewTestData{
 		wantMatch: true,
 	},
 	{
-		name:      "Does not match org for nested module",
-		match:     match(includeAddress("google_compute_global_forwarding_rule.test")),
-		address:   "module.abc.google_compute_global_forwarding_rule.test",
-		wantMatch: false,
-	},
-	{
-		name:      "Does not match org for nested module",
+		name:      "Does not match address for nested module",
 		match:     match(includeAddress("google_compute_global_forwarding_rule.test")),
 		address:   "module.abc.google_compute_global_forwarding_rule.test",
 		wantMatch: false,
@@ -161,12 +163,6 @@ var testData = []reviewTestData{
 		wantMatch: true,
 	},
 	{
-		name:      "exclude does not match org for nested module",
-		match:     match(excludeAddress("google_compute_global_forwarding_rule.test")),
-		address:   "module.abc.google_compute_global_forwarding_rule.test",
-		wantMatch: true,
-	},
-	{
 		name:      "exclude name wildcard match",
 		match:     match(excludeAddress("google_compute_global_forwarding_rule.*")),
 		address:   "google_compute_global_forwarding_rule.test",
@@ -192,15 +188,63 @@ var testData = []reviewTestData{
 		wantConstraintError: true,
 	},
 	{
-		name:                "exclud error - nested spaces",
+		name:                "exclude error - nested spaces",
 		match:               match(excludeAddress("**. * *.*")),
 		address:             "module.abc.google_compute_global_forwarding_rule.test",
 		wantConstraintError: true,
 	},
 	{
-		name:                "exclud error - nested special characters",
+		name:                "exclude error - nested special characters",
 		match:               match(excludeAddress("**$$")),
 		address:             "module.abc.google_compute_global_forwarding_rule.test",
+		wantConstraintError: true,
+	},
+	{
+		name:         "provider contains google",
+		address:      "google_compute_global_forwarding_rule.test",
+		wantMatch:    true,
+		providerName: "google",
+	},
+	{
+		name:         "provider doesn't contain google",
+		address:      "google_compute_global_forwarding_rule.test",
+		wantMatch:    false,
+		providerName: "moogle",
+	},
+
+	{
+		name:                "provider block missing",
+		address:             "google_compute_global_forwarding_rule.test",
+		wantMatch:           true,
+		removeProviderBlock: true,
+	},
+
+	{
+		name: "Bad target type",
+		match: map[string]interface{}{
+			"addresses": "%#*(*#$(#$)",
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "Bad target item type",
+		match: map[string]interface{}{
+			"addresses": []interface{}{1},
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "Bad exclude type",
+		match: map[string]interface{}{
+			"excludedAddresses": ")$(*#$)*$*&#x",
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "Bad exclude item type",
+		match: map[string]interface{}{
+			"excludedAddresses": []interface{}{1},
+		},
 		wantConstraintError: true,
 	},
 }
