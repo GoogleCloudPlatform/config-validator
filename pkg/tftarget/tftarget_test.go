@@ -22,7 +22,7 @@ import (
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client"
 )
 
-// match creates a match struct as would exist in a FCV constraint
+// match creates a match struct as would exist in a config-validator constraint
 func match(opts ...func(map[string]interface{})) map[string]interface{} {
 	var matchBlock = map[string]interface{}{}
 	matchBlock["resource_address"] = map[string]interface{}{}
