@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
-	gcptest "github.com/GoogleCloudPlatform/config-validator/pkg/gcptarget/testing"
+	gcptest "github.com/GoogleCloudPlatform/config-validator/pkg/targettesting"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client"
 	v1 "google.golang.org/genproto/googleapis/cloud/asset/v1"
 )

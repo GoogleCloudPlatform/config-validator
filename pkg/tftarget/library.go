@@ -24,32 +24,32 @@ it calls out the line number.
 const libraryTemplateSrc = `package target
 
 matching_constraints[constraint] {
-	asset := input.review
+	resource := input.review
 	constraint := {{.ConstraintsRoot}}[_][_]
 	spec := get_default(constraint, "spec", {})
 	match := get_default(spec, "match", {})
 
-	check_provider(asset)
-	check_address(asset, match)
+	check_provider(resource)
+	check_address(resource, match)
 }
 
-check_provider(asset) {
-	has_field(asset, "provider_name")
-	contains(asset.provider_name, "google")
+check_provider(resource) {
+	has_field(resource, "provider_name")
+	contains(resource.provider_name, "google")
 }
 
-check_provider(asset) {
-	not has_field(asset, "provider_name")
+check_provider(resource) {
+	not has_field(resource, "provider_name")
 }
 
-check_address(asset, match) {
+check_address(resource, match) {
 	# Default matcher behavior is to match everything.
 	include := get_default(match, "addresses", ["**"])
-	include_match := {asset.address | path_matches(asset.address, include[_])}
+	include_match := {resource.address | path_matches(resource.address, include[_])}
 	count(include_match) != 0
 
 	exclude := get_default(match, "excludedAddresses", [])
-	exclusion_match := {asset.address | path_matches(asset.address, exclude[_])}
+	exclusion_match := {resource.address | path_matches(resource.address, exclude[_])}
 	count(exclusion_match) == 0
 }
 

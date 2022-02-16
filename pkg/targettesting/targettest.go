@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tftarget
+package targettesting
 
 import (
 	"context"
@@ -70,27 +70,42 @@ func FromJSON(data string) func(t *testing.T) interface{} {
 	}
 }
 
+// TargetHandlerTest is a test harness for target handler
+type TargetHandlerTest struct {
+	// NewTargetHandler returns a new target handler.  This should call t.Helper()
+	// and t.Fatal() on any errors encountered during creation.
+	NewTargetHandler func(t *testing.T) client.TargetHandler
+
+	// ReviewTestcases are the testcases that will be run against client.Review.
+	ReviewTestcases []*ReviewTestcase
+}
+
 // Test runs all testcases in the TargetHandlerTest
-func (rt *ReviewTestcase) Test(t *testing.T) {
+func (tt *TargetHandlerTest) Test(t *testing.T) {
 	t.Helper()
 
+	targetName := tt.NewTargetHandler(t).GetName()
 	testBase := testcaseBase{
-		targetName: Name,
+		newTargetHandler: tt.NewTargetHandler,
+		targetName:       targetName,
 		constraintTemplate: newConstraintTemplate(
-			Name,
+			targetName,
 			templates.Names{Kind: testConstraintKind},
 			defaultConstraintTemplateRego,
 		),
 	}
 
 	t.Run("matching_constraints", func(t *testing.T) {
-		rt.testcaseBase = testBase
-		t.Run(rt.Name, rt.Run)
+		for _, tc := range tt.ReviewTestcases {
+			tc.testcaseBase = testBase
+			t.Run(tc.Name, tc.run)
+		}
 	})
 }
 
 // testcaseBase contains params that are populated by the top level test
 type testcaseBase struct {
+	newTargetHandler   func(t *testing.T) client.TargetHandler
 	targetName         string
 	constraintTemplate *templates.ConstraintTemplate
 }
@@ -109,13 +124,13 @@ type ReviewTestcase struct {
 
 // Run will set up the client with the TargetHandler and a test constraint template
 // and constraint then run review.
-func (tc *ReviewTestcase) Run(t *testing.T) {
+func (tc *ReviewTestcase) run(t *testing.T) {
 	// matching_constraints needs differing constraints for the match blocks,
 	// to get test coverage, this gets exercised on calls to client.Review
 	ctx := context.Background()
 
 	// create client
-	cfClient := createClient(t)
+	cfClient := createClient(t, tc.newTargetHandler)
 
 	// add template
 	resp, err := cfClient.AddTemplate(ctx, tc.constraintTemplate)
@@ -165,7 +180,6 @@ func (tc *ReviewTestcase) Run(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// t.Logf("%v", *resp)
 	review, ok := resp.ByTarget[tc.targetName]
 	if !ok {
 		t.Fatal("expected target name in reviews")
@@ -197,16 +211,18 @@ func unitTestTraceDump(t *testing.T, review *types.Response) {
 	}
 }
 
-func createClient(t *testing.T) *client.Client {
+func createClient(t *testing.T, newTargetHandler func(t *testing.T) client.TargetHandler) *client.Client {
 	t.Helper()
+	target := newTargetHandler(t)
+	if target == nil {
+		t.Fatalf("newTargetHandler returned nil")
+	}
 	driver := local.New(local.Tracing(true))
 	backend, err := client.NewBackend(client.Driver(driver))
 	if err != nil {
 		t.Fatalf("Could not initialize backend: %s", err)
 	}
-
-	opts := []client.Opt{client.Targets(New())}
-	cfClient, err := backend.NewClient(opts...)
+	cfClient, err := backend.NewClient(client.Targets(target))
 	if err != nil {
 		t.Fatalf("unable to set up OPA client: %s", err)
 	}

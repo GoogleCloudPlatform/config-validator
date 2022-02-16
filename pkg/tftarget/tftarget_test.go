@@ -17,6 +17,9 @@ package tftarget
 import (
 	"fmt"
 	"testing"
+
+	"github.com/GoogleCloudPlatform/config-validator/pkg/targettesting"
+	"github.com/open-policy-agent/frameworks/constraint/pkg/client"
 )
 
 // match creates a match struct as would exist in a FCV constraint
@@ -66,8 +69,8 @@ type reviewTestData struct {
 	removeProviderBlock bool
 }
 
-func (td *reviewTestData) jsonAssetTestcase() *ReviewTestcase {
-	tc := &ReviewTestcase{
+func (td *reviewTestData) jsonAssetTestcase() *targettesting.ReviewTestcase {
+	tc := &targettesting.ReviewTestcase{
 		Name:                td.name,
 		Match:               td.match,
 		WantMatch:           td.wantMatch,
@@ -89,7 +92,7 @@ func (td *reviewTestData) jsonAssetTestcase() *ReviewTestcase {
 		`, providerName)
 	}
 
-	tc.Object = FromJSON(fmt.Sprintf(`
+	tc.Object = targettesting.FromJSON(fmt.Sprintf(`
 {
   "name": "test-name",
   "type": "test-asset-type",
@@ -250,8 +253,18 @@ var testData = []reviewTestData{
 }
 
 func TestTargetHandler(t *testing.T) {
-	for _, testData := range testData {
-		testcase := testData.jsonAssetTestcase()
-		testcase.Test(t)
+	var targetHandlerTest = targettesting.TargetHandlerTest{
+		NewTargetHandler: func(t *testing.T) client.TargetHandler {
+			return New()
+		},
 	}
+
+	for _, tc := range testData {
+		targetHandlerTest.ReviewTestcases = append(
+			targetHandlerTest.ReviewTestcases,
+			tc.jsonAssetTestcase(),
+		)
+	}
+	targetHandlerTest.Test(t)
+
 }
