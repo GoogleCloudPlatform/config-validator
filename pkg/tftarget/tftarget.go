@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package tftarget is a constraint framework target for FCV to use for integrating with the opa constraint framework.
+// Package tftarget is a constraint framework target for config-validator to use for integrating with the opa constraint framework.
 package tftarget
 
 import (
@@ -30,7 +30,7 @@ import (
 // Name is the target name for TFTarget
 const Name = "validation.terraform.forsetisecurity.org"
 
-// TFTarget is the constraint framework target for FCV
+// TFTarget is the constraint framework target for config-validator
 type TFTarget struct {
 }
 
