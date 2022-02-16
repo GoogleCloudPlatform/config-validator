@@ -57,6 +57,25 @@ func newConstraintTemplate(targetName string, crdNames templates.Names, rego str
 	return ct
 }
 
+func CreateTargetHandler(t *testing.T, target client.TargetHandler, tcs []*ReviewTestcase) *TargetHandlerTest {
+	var targetHandlerTest = TargetHandlerTest{
+		NewTargetHandler: func(t *testing.T) client.TargetHandler {
+			return target
+		},
+	}
+	targetHandlerTest.ReviewTestcases = tcs
+
+	return &targetHandlerTest
+}
+
+func StringToInterface(s []string) []interface{} {
+	iface := make([]interface{}, len(s))
+	for i := range s {
+		iface[i] = s[i]
+	}
+	return iface
+}
+
 // FromJSON returns a function that will unmarshal the JSON string and handle
 // errors appropriately.
 func FromJSON(data string) func(t *testing.T) interface{} {

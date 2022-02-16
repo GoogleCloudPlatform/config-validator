@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/targettesting"
-	"github.com/open-policy-agent/frameworks/constraint/pkg/client"
 )
 
 // match creates a match struct as would exist in a FCV constraint
@@ -31,29 +30,20 @@ func match(opts ...func(map[string]interface{})) map[string]interface{} {
 		opt(matchBlock)
 	}
 
-	var destructured interface{} = matchBlock
-	return destructured.(map[string]interface{})
-}
-
-func stringToInterface(s []string) []interface{} {
-	iface := make([]interface{}, len(s))
-	for i := range s {
-		iface[i] = s[i]
-	}
-	return iface
+	return matchBlock
 }
 
 // includeAddress populates the includeAddress field inside of the match block
 func includeAddress(val ...string) func(map[string]interface{}) {
 	return func(matchBlock map[string]interface{}) {
-		matchBlock["addresses"] = stringToInterface(val)
+		matchBlock["addresses"] = targettesting.StringToInterface(val)
 	}
 }
 
 // excludeAddress populates the excludeAddress field inside of the match block
 func excludeAddress(val ...string) func(map[string]interface{}) {
 	return func(matchBlock map[string]interface{}) {
-		matchBlock["excludedAddresses"] = stringToInterface(val)
+		matchBlock["excludedAddresses"] = targettesting.StringToInterface(val)
 	}
 }
 
@@ -75,9 +65,6 @@ func (td *reviewTestData) jsonAssetTestcase() *targettesting.ReviewTestcase {
 		Match:               td.match,
 		WantMatch:           td.wantMatch,
 		WantConstraintError: td.wantConstraintError,
-	}
-	if td.match != nil {
-		tc.Match = td.match
 	}
 
 	providerName := "registry.terraform.io/hashicorp/google"
@@ -145,6 +132,18 @@ var testData = []reviewTestData{
 		match:     match(includeAddress("**.google_compute_global_forwarding_rule.*")),
 		address:   "module.abc.google_compute_global_forwarding_rule.test",
 		wantMatch: true,
+	},
+	{
+		name:      "root wildcard match",
+		match:     match(includeAddress("**.google_compute_global_forwarding_rule.*")),
+		address:   "root.google_compute_global_forwarding_rule.test",
+		wantMatch: true,
+	},
+	{
+		name:      "root doesn't match module",
+		match:     match(includeAddress("module.one.google_compute_global_forwarding_rule.*")),
+		address:   "root.google_compute_global_forwarding_rule.test",
+		wantMatch: false,
 	},
 	// exlude tests
 	{
@@ -253,18 +252,13 @@ var testData = []reviewTestData{
 }
 
 func TestTargetHandler(t *testing.T) {
-	var targetHandlerTest = targettesting.TargetHandlerTest{
-		NewTargetHandler: func(t *testing.T) client.TargetHandler {
-			return New()
-		},
-	}
-
+	var testcases []*targettesting.ReviewTestcase
 	for _, tc := range testData {
-		targetHandlerTest.ReviewTestcases = append(
-			targetHandlerTest.ReviewTestcases,
+		testcases = append(
+			testcases,
 			tc.jsonAssetTestcase(),
 		)
 	}
-	targetHandlerTest.Test(t)
 
+	targettesting.CreateTargetHandler(t, New(), testcases).Test(t)
 }

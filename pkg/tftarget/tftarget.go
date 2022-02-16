@@ -139,7 +139,7 @@ func checkPathGlobs(rs []string) error {
 func (g *TFTarget) ValidateConstraint(constraint *unstructured.Unstructured) error {
 	includes, found, err := unstructured.NestedStringSlice(constraint.Object, "spec", "match", "addresses")
 	if err != nil {
-		return errors.Errorf("invalid spec.match.target: %s", err)
+		return errors.Errorf("invalid spec.match.addresses: %s", err)
 	}
 	if found {
 		if err := checkPathGlobs(includes); err != nil {
@@ -148,7 +148,7 @@ func (g *TFTarget) ValidateConstraint(constraint *unstructured.Unstructured) err
 	}
 	excludes, found, err := unstructured.NestedStringSlice(constraint.Object, "spec", "match", "excludedAddresses")
 	if err != nil {
-		return errors.Errorf("invalid spec.match.exclude: %s", err)
+		return errors.Errorf("invalid spec.match.excludedAddresses: %s", err)
 	}
 	if found {
 		if err := checkPathGlobs(excludes); err != nil {
