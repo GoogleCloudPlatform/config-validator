@@ -30,7 +30,7 @@ import (
 // Name is the target name for TFTarget
 const Name = "validation.terraform.forsetisecurity.org"
 
-// TFTarget is the constraint framework target for FCV
+// TFTarget is the constraint framework target for config-validator
 type TFTarget struct {
 }
 
