@@ -19,8 +19,8 @@ import (
 	"testing"
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
-	gcptest "github.com/GoogleCloudPlatform/config-validator/pkg/gcptarget/testing"
-	"github.com/open-policy-agent/frameworks/constraint/pkg/client"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/targettesting"
+	targetHandlerTest "github.com/GoogleCloudPlatform/config-validator/pkg/targettesting"
 	v1 "google.golang.org/genproto/googleapis/cloud/asset/v1"
 )
 
@@ -33,25 +33,17 @@ func match(opts ...func(map[string]interface{})) map[string]interface{} {
 	return matchBlock
 }
 
-func stringToInterface(s []string) []interface{} {
-	iface := make([]interface{}, len(s))
-	for i := range s {
-		iface[i] = s[i]
-	}
-	return iface
-}
-
 // target populates the targets field inside of the match block
 func target(targets ...string) func(map[string]interface{}) {
 	return func(matchBlock map[string]interface{}) {
-		matchBlock["target"] = stringToInterface(targets)
+		matchBlock["target"] = targettesting.StringToInterface(targets)
 	}
 }
 
 // exclude populates the exclude field inside of the match block
 func exclude(excludes ...string) func(map[string]interface{}) {
 	return func(matchBlock map[string]interface{}) {
-		matchBlock["exclude"] = stringToInterface(excludes)
+		matchBlock["exclude"] = targettesting.StringToInterface(excludes)
 	}
 }
 
@@ -75,22 +67,19 @@ type reviewTestData struct {
 	wantConstraintError bool
 }
 
-func (td *reviewTestData) assetTest(nameMod string) *gcptest.ReviewTestcase {
-	tc := &gcptest.ReviewTestcase{
+func (td *reviewTestData) assetTest(nameMod string) *targetHandlerTest.ReviewTestcase {
+	tc := &targetHandlerTest.ReviewTestcase{
 		Name:                nameMod + " " + td.name,
 		Match:               td.match,
 		WantMatch:           td.wantMatch,
 		WantConstraintError: td.wantConstraintError,
 	}
-	if td.match != nil {
-		tc.Match = td.match
-	}
 	return tc
 }
 
-func (td *reviewTestData) jsonAssetTestcase() *gcptest.ReviewTestcase {
+func (td *reviewTestData) jsonAssetTestcase() *targetHandlerTest.ReviewTestcase {
 	assetTest := td.assetTest("json")
-	assetTest.Object = gcptest.FromJSON(fmt.Sprintf(`
+	assetTest.Object = targetHandlerTest.FromJSON(fmt.Sprintf(`
 {
   "name": "test-name",
   "asset_type": "test-asset-type",
@@ -101,7 +90,7 @@ func (td *reviewTestData) jsonAssetTestcase() *gcptest.ReviewTestcase {
 	return assetTest
 }
 
-func (td *reviewTestData) forsetiAssetTestcase() *gcptest.ReviewTestcase {
+func (td *reviewTestData) forsetiAssetTestcase() *targetHandlerTest.ReviewTestcase {
 	assetTest := td.assetTest("forseti")
 	assetTest.Object = forsetiAsset(td.ancestryPath)
 	return assetTest
@@ -307,18 +296,14 @@ var testData = []reviewTestData{
 }
 
 func TestTargetHandler(t *testing.T) {
-	var targetHandlerTest = gcptest.TargetHandlerTest{
-		NewTargetHandler: func(t *testing.T) client.TargetHandler {
-			return New()
-		},
-	}
-
+	var testcases []*targettesting.ReviewTestcase
 	for _, tc := range testData {
-		targetHandlerTest.ReviewTestcases = append(
-			targetHandlerTest.ReviewTestcases,
+		testcases = append(
+			testcases,
 			tc.jsonAssetTestcase(),
 			tc.forsetiAssetTestcase(),
 		)
 	}
-	targetHandlerTest.Test(t)
+
+	targettesting.CreateTargetHandler(t, New(), testcases).Test(t)
 }

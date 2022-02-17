@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package testing
+package targettesting
 
 import (
 	"context"
@@ -57,6 +57,25 @@ func newConstraintTemplate(targetName string, crdNames templates.Names, rego str
 	return ct
 }
 
+func CreateTargetHandler(t *testing.T, target client.TargetHandler, tcs []*ReviewTestcase) *TargetHandlerTest {
+	var targetHandlerTest = TargetHandlerTest{
+		NewTargetHandler: func(t *testing.T) client.TargetHandler {
+			return target
+		},
+	}
+	targetHandlerTest.ReviewTestcases = tcs
+
+	return &targetHandlerTest
+}
+
+func StringToInterface(s []string) []interface{} {
+	iface := make([]interface{}, len(s))
+	for i := range s {
+		iface[i] = s[i]
+	}
+	return iface
+}
+
 // FromJSON returns a function that will unmarshal the JSON string and handle
 // errors appropriately.
 func FromJSON(data string) func(t *testing.T) interface{} {
@@ -98,7 +117,7 @@ func (tt *TargetHandlerTest) Test(t *testing.T) {
 	t.Run("matching_constraints", func(t *testing.T) {
 		for _, tc := range tt.ReviewTestcases {
 			tc.testcaseBase = testBase
-			t.Run(tc.Name, tc.Run)
+			t.Run(tc.Name, tc.run)
 		}
 	})
 }
@@ -124,7 +143,7 @@ type ReviewTestcase struct {
 
 // Run will set up the client with the TargetHandler and a test constraint template
 // and constraint then run review.
-func (tc *ReviewTestcase) Run(t *testing.T) {
+func (tc *ReviewTestcase) run(t *testing.T) {
 	// matching_constraints needs differing constraints for the match blocks,
 	// to get test coverage, this gets exercised on calls to client.Review
 	ctx := context.Background()
