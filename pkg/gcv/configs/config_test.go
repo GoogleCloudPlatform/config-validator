@@ -89,12 +89,12 @@ func TestNewConfiguration(t *testing.T) {
 		t.Errorf("len(K8SConstraints) got %d, want %d", got, want)
 	}
 
-	got = len(config.K8STemplates)
+	got = len(config.TFTemplates)
 	want = 1
 	if want != got {
 		t.Errorf("len(TFTemplates) got %d, want %d", got, want)
 	}
-	got = len(config.K8SConstraints)
+	got = len(config.TFConstraints)
 	want = 1
 	if want != got {
 		t.Errorf("len(TFConstraints) got %d, want %d", got, want)
