@@ -24,6 +24,7 @@ import (
 	"github.com/GoogleCloudPlatform/config-validator/pkg/gcptarget"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv/configs"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/multierror"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/tftarget"
 	"github.com/golang/glog"
 	cfclient "github.com/open-policy-agent/frameworks/constraint/pkg/client"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers/local"
@@ -67,6 +68,7 @@ type Validator struct {
 	policyLibraryDir string
 	gcpCFClient      *cfclient.Client
 	k8sCFClient      *cfclient.Client
+	tfCFCClient      *cfclient.Client
 }
 
 // Stores functional options for CF client
@@ -160,9 +162,15 @@ func NewValidatorFromConfig(config *configs.Configuration, opts ...Option) (*Val
 		return nil, errors.Wrap(err, "unable to set up K8S Constraint Framework client")
 	}
 
+	tfCFCClient, err := newCFClient(tftarget.New(), config.TFTemplates, config.TFConstraints, opts...)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to set up tf Constraint Framework client")
+	}
+
 	ret := &Validator{
 		gcpCFClient: gcpCFClient,
 		k8sCFClient: k8sCFClient,
+		tfCFCClient: tfCFCClient,
 	}
 	return ret, nil
 }
@@ -261,6 +269,15 @@ func (v *Validator) ReviewUnmarshalledJSON(ctx context.Context, asset map[string
 		return v.reviewK8SResource(ctx, asset)
 	}
 	return v.reviewGCPResource(ctx, asset)
+}
+
+// ReviewJSON evaluates a single terraform resource without any threading in the background.
+func (v *Validator) ReviewTFResource(ctx context.Context, resource map[string]interface{}) (*Result, error) {
+	responses, err := v.tfCFCClient.Review(ctx, resource)
+	if err != nil {
+		return nil, errors.Wrapf(err, "TF target Constraint Framework review call failed")
+	}
+	return NewResult(tftarget.Name, nil, resource, responses)
 }
 
 // reviewK8SResource will unwrap k8s resources then pass them to the cf client with the gatekeeper target.

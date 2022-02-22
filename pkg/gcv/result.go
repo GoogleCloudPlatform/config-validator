@@ -46,6 +46,19 @@ type Result struct {
 	ConstraintViolations []ConstraintViolation
 }
 
+func GetNameFromObject(obj map[string]interface{}) (string, error) {
+	nameRaw, found := obj["name"]
+	if !found {
+		return "", errors.Errorf("result missing name field")
+	}
+	name, ok := nameRaw.(string)
+	if !ok {
+		return "", errors.Errorf("failed to convert resource name to string %v", name)
+	}
+
+	return name, nil
+}
+
 // NewResult creates a Result from the provided CF Response.
 func NewResult(
 	target string,
@@ -57,13 +70,15 @@ func NewResult(
 		return nil, errors.Errorf("No response for target %s", target)
 	}
 
-	resNameIface, found := caiResource["name"]
-	if !found {
-		return nil, errors.Errorf("result missing name field")
+	var name string
+	var err error
+	if caiResource != nil {
+		name, err = GetNameFromObject(caiResource)
+	} else {
+		name, err = GetNameFromObject(reviewResource)
 	}
-	name, ok := resNameIface.(string)
-	if !ok {
-		return nil, errors.Errorf("failed to convert resource name to string %v", resNameIface)
+	if err != nil {
+		return nil, err
 	}
 
 	result := &Result{

@@ -90,7 +90,7 @@ func (g *TFTarget) HandleReview(obj interface{}) (bool, interface{}, error) {
 		if _, found, err := unstructured.NestedString(resource, "address"); !found || err != nil {
 			return false, nil, err
 		}
-		if _, found, err := unstructured.NestedStringMap(resource, "change"); !found || err != nil {
+		if _, found, err := unstructured.NestedMap(resource, "change"); !found || err != nil {
 			return false, nil, err
 		}
 		if _, found, err := unstructured.NestedString(resource, "type"); !found || err != nil {

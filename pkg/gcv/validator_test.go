@@ -17,6 +17,7 @@ package gcv
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -107,6 +108,12 @@ type reviewAssetTestcase struct {
 	wantViolations int
 }
 
+type reviewTFResourceTestcase struct {
+	name          string
+	resource      map[string]interface{}
+	wantViolation bool
+}
+
 func TestReviewAsset(t *testing.T) {
 	var testCases = []reviewAssetTestcase{
 		{
@@ -170,6 +177,50 @@ func TestReviewAsset(t *testing.T) {
 			if got != tc.wantViolations {
 				t.Errorf("wanted %d violations, got %d", tc.wantViolations, got)
 			}
+		})
+	}
+}
+
+func TestReviewTFResource(t *testing.T) {
+	var testCases = []reviewTFResourceTestcase{
+		{
+			name:          "test base valid scenario",
+			resource:      getFirstResourceChange(retrieveTFPlanResourceChangesWith("e2-medium", true), t),
+			wantViolation: false,
+		},
+		{
+			name:          "test base invalid machine_type",
+			resource:      getFirstResourceChange(retrieveTFPlanResourceChangesWith("e2-high", true), t),
+			wantViolation: true,
+		},
+		{
+			name:          "test base invalid resource_type",
+			resource:      getFirstResourceChange(retrieveTFPlanResourceChangesWith("e2-medium", false), t),
+			wantViolation: true,
+		},
+		{
+			name:          "test with no machine type",
+			resource:      getFirstResourceChange(retrieveTFPlanResourceChangesWith("", true), t),
+			wantViolation: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v, err := NewValidator(testOptions())
+			if err != nil {
+				t.Fatal("unexpected error", err)
+			}
+
+			result, err := v.ReviewTFResource(context.Background(), tc.resource)
+			if err != nil {
+				t.Fatal("unexpected error", err)
+			}
+			got := len(result.ConstraintViolations) > 0
+			if got != tc.wantViolation {
+				t.Errorf("wanted violation to be %v, got %v", tc.wantViolation, got)
+			}
+
 		})
 	}
 }
@@ -473,4 +524,170 @@ func BenchmarkReviewAsset(b *testing.B) {
 			}
 		})
 	}
+}
+
+func getFirstResourceChange(tfplan string, t *testing.T) map[string]interface{} {
+	var tfplanParsed = map[string]interface{}{}
+	var resourceChanges []interface{}
+	json.Unmarshal([]byte(tfplan), &tfplanParsed)
+	resourceChangesRaw, ok := tfplanParsed["resource_changes"]
+	if !ok {
+		t.Logf(tfplan)
+		t.Fatal("unable to parse tf plan given")
+	}
+
+	resourceChanges = resourceChangesRaw.([]interface{})
+	resource, ok := resourceChanges[0].(map[string]interface{})
+	if !ok {
+		t.Logf(tfplan)
+		t.Fatal("unable to get resource from array")
+	}
+
+	return resource
+}
+
+func retrieveTFPlanResourceChangesWith(machineType string, isComputeInstance bool) string {
+	var resourceType = "google_compute_instance"
+	if !isComputeInstance {
+		resourceType = "google_banana_instance"
+	}
+
+	machineTypeBlock := ""
+	if machineType != "" {
+		machineTypeBlock = fmt.Sprintf(`"machine_type": "%s",`, machineType)
+
+	}
+
+	return fmt.Sprintf(`{
+  "format_version": "0.1",
+  "terraform_version": "0.13.7",
+  "planned_values": {},
+  "resource_changes": [
+    {
+      "address": "%s.foobar",
+      "mode": "managed",
+      "type": "%s",
+      "name": "foobar",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "advanced_machine_features": [],
+          "allow_stopping_for_update": null,
+          "attached_disk": [],
+          "boot_disk": [
+            {
+              "auto_delete": true,
+              "disk_encryption_key_raw": null,
+              "initialize_params": [
+                {
+                  "image": "https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images/debian-9-stretch-v20220118"
+                }
+              ],
+              "mode": "READ_WRITE"
+            }
+          ],
+          "can_ip_forward": false,
+          "deletion_protection": false,
+          "description": null,
+          "desired_status": null,
+          "enable_display": null,
+          "hostname": null,
+          "labels": {
+            "my_key": "my_value",
+            "my_other_key": "my_other_value"
+          },
+          %s
+          "metadata": {
+            "baz": "qux",
+            "foo": "bar",
+            "startup-script": "echo Hello"
+          },
+          "metadata_startup_script": null,
+          "name": "meep-merp",
+          "network_interface": [
+            {
+              "access_config": [],
+              "alias_ip_range": [],
+              "ipv6_access_config": [],
+              "network": "default",
+              "nic_type": null,
+              "queue_count": null
+            }
+          ],
+          "resource_policies": null,
+          "scratch_disk": [],
+          "service_account": [],
+          "shielded_instance_config": [],
+          "tags": [
+            "bar",
+            "foo"
+          ],
+          "timeouts": null,
+          "zone": "us-central1-a"
+        },
+        "after_unknown": {
+          "advanced_machine_features": [],
+          "attached_disk": [],
+          "boot_disk": [
+            {
+              "device_name": true,
+              "disk_encryption_key_sha256": true,
+              "initialize_params": [
+                {
+                  "labels": true,
+                  "size": true,
+                  "type": true
+                }
+              ],
+              "kms_key_self_link": true,
+              "source": true
+            }
+          ],
+          "confidential_instance_config": true,
+          "cpu_platform": true,
+          "current_status": true,
+          "guest_accelerator": true,
+          "id": true,
+          "instance_id": true,
+          "label_fingerprint": true,
+          "labels": {},
+          "metadata": {},
+          "metadata_fingerprint": true,
+          "min_cpu_platform": true,
+          "network_interface": [
+            {
+              "access_config": [],
+              "alias_ip_range": [],
+              "ipv6_access_config": [],
+              "ipv6_access_type": true,
+              "name": true,
+              "network_ip": true,
+              "stack_type": true,
+              "subnetwork": true,
+              "subnetwork_project": true
+            }
+          ],
+          "project": true,
+          "reservation_affinity": true,
+          "scheduling": true,
+          "scratch_disk": [],
+          "self_link": true,
+          "service_account": [],
+          "shielded_instance_config": [],
+          "tags": [
+            false,
+            false
+          ],
+          "tags_fingerprint": true
+        }
+      }
+    }
+  ],
+  "prior_state": {},
+  "configuration": {}
+}`, resourceType, resourceType, machineTypeBlock)
 }

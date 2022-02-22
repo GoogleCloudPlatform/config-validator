@@ -59,6 +59,7 @@ const (
 const (
 	gcpConstraint = "gcp"
 	k8sConstraint = "k8s"
+	tfConstraint  = "terraform"
 )
 
 var (
@@ -316,6 +317,8 @@ type Configuration struct {
 	GCPConstraints []*unstructured.Unstructured      // Constraints for GCP
 	K8STemplates   []*cftemplates.ConstraintTemplate // Constraint Templates for GKE
 	K8SConstraints []*unstructured.Unstructured      // Constraints for GKE
+	TFTemplates    []*cftemplates.ConstraintTemplate // Constraint Templates for TF
+	TFConstraints  []*unstructured.Unstructured      // Constraints for TF
 
 	// regoLib contains the set of rego libraries, it is only used during construction of Configuration
 	regoLib []string
@@ -406,6 +409,9 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 			// TODO: Using consant from gcptarget package causes circular reference.  Fix circular reference and use gcptarget.Name
 			case "validation.gcp.forsetisecurity.org":
 				c.GCPTemplates = append(c.GCPTemplates, &ct)
+			// TODO: Using consant from gcptarget package causes circular reference.  Fix circular reference and use terraformtarget.Name
+			case "validation.terraform.forsetisecurity.org":
+				c.TFTemplates = append(c.TFTemplates, &ct)
 			case K8STargetName:
 				c.K8STemplates = append(c.K8STemplates, &ct)
 			default:
@@ -430,6 +436,9 @@ func (c *Configuration) finishLoad() error {
 	for _, t := range c.GCPTemplates {
 		templates[t.Spec.CRD.Spec.Names.Kind] = gcpConstraint
 	}
+	for _, t := range c.TFTemplates {
+		templates[t.Spec.CRD.Spec.Names.Kind] = tfConstraint
+	}
 	for _, t := range c.K8STemplates {
 		templates[t.Spec.CRD.Spec.Names.Kind] = k8sConstraint
 	}
@@ -439,7 +448,7 @@ func (c *Configuration) finishLoad() error {
 	c.allConstraints = nil
 	for _, constraint := range allConstraints {
 		gvk := constraint.GroupVersionKind()
-		if gvk.Version == "v1alpha1" {
+		if gvk.Version == "v1alpha1" && templates[constraint.GetKind()] != tfConstraint {
 			if err := convertLegacyConstraint(constraint); err != nil {
 				return errors.Wrapf(err, "failed to convert constraint")
 			}
@@ -459,6 +468,8 @@ func (c *Configuration) finishLoad() error {
 		switch templates[gvk.Kind] {
 		case gcpConstraint:
 			c.GCPConstraints = append(c.GCPConstraints, constraint)
+		case tfConstraint:
+			c.TFConstraints = append(c.TFConstraints, constraint)
 		case k8sConstraint:
 			c.K8SConstraints = append(c.K8SConstraints, constraint)
 		default:

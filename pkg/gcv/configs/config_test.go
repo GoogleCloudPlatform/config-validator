@@ -88,6 +88,17 @@ func TestNewConfiguration(t *testing.T) {
 	if want != got {
 		t.Errorf("len(K8SConstraints) got %d, want %d", got, want)
 	}
+
+	got = len(config.K8STemplates)
+	want = 1
+	if want != got {
+		t.Errorf("len(TFTemplates) got %d, want %d", got, want)
+	}
+	got = len(config.K8SConstraints)
+	want = 1
+	if want != got {
+		t.Errorf("len(TFConstraints) got %d, want %d", got, want)
+	}
 }
 
 func TestLegacyTemplateConversion(t *testing.T) {
