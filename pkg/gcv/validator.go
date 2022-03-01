@@ -68,7 +68,7 @@ type Validator struct {
 	policyLibraryDir string
 	gcpCFClient      *cfclient.Client
 	k8sCFClient      *cfclient.Client
-	tfCFCClient      *cfclient.Client
+	tfCFClient       *cfclient.Client
 }
 
 // Stores functional options for CF client
@@ -162,7 +162,7 @@ func NewValidatorFromConfig(config *configs.Configuration, opts ...Option) (*Val
 		return nil, errors.Wrap(err, "unable to set up K8S Constraint Framework client")
 	}
 
-	tfCFCClient, err := newCFClient(tftarget.New(), config.TFTemplates, config.TFConstraints, opts...)
+	tfCFClient, err := newCFClient(tftarget.New(), config.TFTemplates, config.TFConstraints, opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to set up tf Constraint Framework client")
 	}
@@ -170,7 +170,7 @@ func NewValidatorFromConfig(config *configs.Configuration, opts ...Option) (*Val
 	ret := &Validator{
 		gcpCFClient: gcpCFClient,
 		k8sCFClient: k8sCFClient,
-		tfCFCClient: tfCFCClient,
+		tfCFClient:  tfCFClient,
 	}
 	return ret, nil
 }
@@ -272,8 +272,8 @@ func (v *Validator) ReviewUnmarshalledJSON(ctx context.Context, asset map[string
 }
 
 // ReviewJSON evaluates a single terraform resource without any threading in the background.
-func (v *Validator) ReviewTFResource(ctx context.Context, resource map[string]interface{}) (*Result, error) {
-	responses, err := v.tfCFCClient.Review(ctx, resource)
+func (v *Validator) ReviewTFResourceChange(ctx context.Context, resource map[string]interface{}) (*Result, error) {
+	responses, err := v.tfCFClient.Review(ctx, resource)
 	if err != nil {
 		return nil, errors.Wrapf(err, "TF target Constraint Framework review call failed")
 	}

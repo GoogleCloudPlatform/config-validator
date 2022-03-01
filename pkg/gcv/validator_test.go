@@ -108,10 +108,10 @@ type reviewAssetTestcase struct {
 	wantViolations int
 }
 
-type reviewTFResourceTestcase struct {
-	name          string
-	resource      map[string]interface{}
-	wantViolation bool
+type reviewTFResourceChangeTestcase struct {
+	name           string
+	resourceChange map[string]interface{}
+	wantViolation  bool
 }
 
 func TestReviewAsset(t *testing.T) {
@@ -181,27 +181,27 @@ func TestReviewAsset(t *testing.T) {
 	}
 }
 
-func TestReviewTFResource(t *testing.T) {
-	var testCases = []reviewTFResourceTestcase{
+func TestReviewTFResourceChange(t *testing.T) {
+	var testCases = []reviewTFResourceChangeTestcase{
 		{
-			name:          "test base valid scenario",
-			resource:      getFirstResourceChange(retrieveTFPlanResourceChangesWith("e2-medium", true), t),
-			wantViolation: false,
+			name:           "test base valid scenario",
+			resourceChange: getFirstResourceChange(retrieveTFPlanResourceChangesWith("e2-medium", true), t),
+			wantViolation:  false,
 		},
 		{
-			name:          "test base invalid machine_type",
-			resource:      getFirstResourceChange(retrieveTFPlanResourceChangesWith("e2-high", true), t),
-			wantViolation: true,
+			name:           "test base invalid machine_type",
+			resourceChange: getFirstResourceChange(retrieveTFPlanResourceChangesWith("e2-high", true), t),
+			wantViolation:  true,
 		},
 		{
-			name:          "test base invalid resource_type",
-			resource:      getFirstResourceChange(retrieveTFPlanResourceChangesWith("e2-medium", false), t),
-			wantViolation: true,
+			name:           "test base invalid resource_type",
+			resourceChange: getFirstResourceChange(retrieveTFPlanResourceChangesWith("e2-medium", false), t),
+			wantViolation:  true,
 		},
 		{
-			name:          "test with no machine type",
-			resource:      getFirstResourceChange(retrieveTFPlanResourceChangesWith("", true), t),
-			wantViolation: true,
+			name:           "test with no machine type",
+			resourceChange: getFirstResourceChange(retrieveTFPlanResourceChangesWith("", true), t),
+			wantViolation:  true,
 		},
 	}
 
@@ -212,7 +212,7 @@ func TestReviewTFResource(t *testing.T) {
 				t.Fatal("unexpected error", err)
 			}
 
-			result, err := v.ReviewTFResource(context.Background(), tc.resource)
+			result, err := v.ReviewTFResourceChange(context.Background(), tc.resourceChange)
 			if err != nil {
 				t.Fatal("unexpected error", err)
 			}
@@ -537,13 +537,13 @@ func getFirstResourceChange(tfplan string, t *testing.T) map[string]interface{} 
 	}
 
 	resourceChanges = resourceChangesRaw.([]interface{})
-	resource, ok := resourceChanges[0].(map[string]interface{})
+	resourceChange, ok := resourceChanges[0].(map[string]interface{})
 	if !ok {
 		t.Logf(tfplan)
-		t.Fatal("unable to get resource from array")
+		t.Fatal("unable to get resource change from array")
 	}
 
-	return resource
+	return resourceChange
 }
 
 func retrieveTFPlanResourceChangesWith(machineType string, isComputeInstance bool) string {

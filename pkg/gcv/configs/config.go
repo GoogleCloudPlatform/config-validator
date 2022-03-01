@@ -45,15 +45,17 @@ func init() {
 	utilruntime.Must(apiextensionsv1beta1.AddToScheme(scheme.Scheme))
 }
 
+// TODO: Using constant from gcptarget/tftarget packages causes circular reference.  Fix circular reference and use <package>.Name
 const (
 	K8STargetName = "admission.k8s.gatekeeper.sh"
+	GCPTargetName = "validation.gcp.forsetisecurity.org"
+	TFTargetName  = "validation.plan.terraform.google.com"
 )
 
 const (
 	constraintGroup = "constraints.gatekeeper.sh"
-	expectedTarget  = "validation.gcp.forsetisecurity.org"
-	yamlPath        = expectedTarget + "/yamlpath"
-	OriginalName    = expectedTarget + "/originalName"
+	yamlPath        = GCPTargetName + "/yamlpath"
+	OriginalName    = GCPTargetName + "/originalName"
 )
 
 const (
@@ -406,11 +408,11 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 
 		for _, target := range ct.Spec.Targets {
 			switch target.Target {
-			// TODO: Using consant from gcptarget package causes circular reference.  Fix circular reference and use gcptarget.Name
-			case "validation.gcp.forsetisecurity.org":
+
+			case GCPTargetName:
 				c.GCPTemplates = append(c.GCPTemplates, &ct)
 			// TODO: Using consant from gcptarget package causes circular reference.  Fix circular reference and use terraformtarget.Name
-			case "validation.terraform.forsetisecurity.org":
+			case TFTargetName:
 				c.TFTemplates = append(c.TFTemplates, &ct)
 			case K8STargetName:
 				c.K8STemplates = append(c.K8STemplates, &ct)
