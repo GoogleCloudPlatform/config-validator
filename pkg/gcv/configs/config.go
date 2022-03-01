@@ -411,7 +411,6 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 
 			case GCPTargetName:
 				c.GCPTemplates = append(c.GCPTemplates, &ct)
-			// TODO: Using consant from gcptarget package causes circular reference.  Fix circular reference and use terraformtarget.Name
 			case TFTargetName:
 				c.TFTemplates = append(c.TFTemplates, &ct)
 			case K8STargetName:
