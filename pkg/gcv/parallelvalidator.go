@@ -20,7 +20,7 @@ import (
 	"runtime"
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
-	"github.com/hashicorp/go-multierror"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/multierror"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 )
@@ -110,18 +110,18 @@ func (v *ParallelValidator) Review(ctx context.Context, request *validator.Revie
 	}()
 
 	response := &validator.ReviewResponse{}
-	var errs error
+	var errs multierror.Errors
 	for i := 0; i < assetCount; i++ {
 		result := <-resultChan
 		if result.err != nil {
-			multierror.Append(errs, result.err)
+			errs.Add(result.err)
 			continue
 		}
 		response.Violations = append(response.Violations, result.violations...)
 	}
 
-	if errs != nil {
-		return response, errs
+	if !errs.Empty() {
+		return response, errs.ToError()
 	}
 	return response, nil
 }

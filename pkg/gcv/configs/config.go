@@ -24,7 +24,7 @@ import (
 
 	"github.com/golang/glog"
 
-	"github.com/hashicorp/go-multierror"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/multierror"
 	cfapis "github.com/open-policy-agent/frameworks/constraint/pkg/apis"
 	cfv1alpha1 "github.com/open-policy-agent/frameworks/constraint/pkg/apis/templates/v1alpha1"
 	cftemplates "github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
@@ -501,21 +501,21 @@ func NewConfiguration(dirs []string, libDir string) (*Configuration, error) {
 func NewConfigurationFromContents(unstructuredObjects []*unstructured.Unstructured, regoLib []string) (*Configuration, error) {
 	configuration := newConfiguration()
 	configuration.regoLib = regoLib
-	var errs error
+	var errs multierror.Errors
 	for _, u := range unstructuredObjects {
 		if err := configuration.loadUnstructured(u); err != nil {
 			yamlPath := u.GetAnnotations()[yamlPath]
 			name := u.GetName()
-			multierror.Append(errs, fmt.Errorf("failed to load resource %s %s: %w", yamlPath, name, err))
+			errs.Add(errors.Wrapf(err, "failed to load resource %s %s", yamlPath, name))
 		}
 	}
-	if errs != nil {
-		return nil, errs
+	if !errs.Empty() {
+		return nil, errs.ToError()
 
 	}
 
 	if err := configuration.finishLoad(); err != nil {
-		return nil, fmt.Errorf("config error: %w", err)
+		return nil, errors.Wrapf(err, "config error")
 	}
 
 	return configuration, nil

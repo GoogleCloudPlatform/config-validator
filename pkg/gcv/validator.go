@@ -18,13 +18,12 @@ package gcv
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	asset2 "github.com/GoogleCloudPlatform/config-validator/pkg/asset"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/gcptarget"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv/configs"
-	"github.com/hashicorp/go-multierror"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/multierror"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/tftarget"
 	"github.com/golang/glog"
 	cfclient "github.com/open-policy-agent/frameworks/constraint/pkg/client"
@@ -130,23 +129,23 @@ func newCFClient(
 	}
 
 	ctx := context.Background()
-	var errs error
+	var errs multierror.Errors
 	for _, template := range templates {
 		if _, err := cfClient.AddTemplate(ctx, template); err != nil {
-			multierror.Append(errs, fmt.Errorf("failed to add template %v: %w", template, err))
+			errs.Add(errors.Wrapf(err, "failed to add template %v", template))
 		}
 	}
-	if errs != nil {
-		return nil, errs
+	if !errs.Empty() {
+		return nil, errs.ToError()
 	}
 
 	for _, constraint := range constraints {
 		if _, err := cfClient.AddConstraint(ctx, constraint); err != nil {
-			multierror.Append(errs, fmt.Errorf("failed to add constraint %s: %w", constraint, err))
+			errs.Add(errors.Wrapf(err, "failed to add constraint %s", constraint))
 		}
 	}
-	if errs != nil {
-		return nil, errs
+	if !errs.Empty() {
+		return nil, errs.ToError()
 	}
 	return cfClient, nil
 }
