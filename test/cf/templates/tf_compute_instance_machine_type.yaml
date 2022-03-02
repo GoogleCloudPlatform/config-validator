@@ -50,9 +50,7 @@ spec:
             # limitations under the License.
             #
 
-            package templates.gcp.TFComputeInstanceMachineTypeWhitelistConstraintV1
-
-            import data.validator.gcp.lib as lib
+            package templates.terraform.TFComputeInstanceMachineTypeWhitelistConstraintV1
 
             deny[{
             	"msg": message,
@@ -68,7 +66,7 @@ spec:
 
               instance := resource.change.after
 
-              whitelist := lib.get_default(input.constraint.parameters, "whitelist", [])
+              whitelist := object.get(input.constraint.spec.parameters, "whitelist", [])
               allowed_machine_types := {n | n = whitelist[_]}
 
               machine_type := instance.machine_type
