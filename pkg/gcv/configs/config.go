@@ -49,7 +49,7 @@ func init() {
 const (
 	K8STargetName = "admission.k8s.gatekeeper.sh"
 	GCPTargetName = "validation.gcp.forsetisecurity.org"
-	TFTargetName  = "validation.plan.terraform.google.com"
+	TFTargetName  = "validation.resourcechange.terraform.google.com"
 )
 
 const (
@@ -449,9 +449,9 @@ func (c *Configuration) finishLoad() error {
 	c.allConstraints = nil
 	for _, constraint := range allConstraints {
 		gvk := constraint.GroupVersionKind()
-		if gvk.Version == "v1alpha1" && templates[constraint.GetKind()] != tfConstraint {
+		if gvk.Version == "v1alpha1" && templates[gvk.Kind] != tfConstraint {
 			if err := convertLegacyConstraint(constraint); err != nil {
-				return errors.Wrapf(err, "failed to convert constraint")
+				return fmt.Errorf("failed to convert constraint: %w", err)
 			}
 		}
 
