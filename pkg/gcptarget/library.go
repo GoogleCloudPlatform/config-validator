@@ -26,14 +26,14 @@ const libraryTemplateSrc = `package target
 matching_constraints[constraint] {
 	asset := input.review
 	constraint := {{.ConstraintsRoot}}[_][_]
-	spec := get_default(constraint, "spec", {})
-	match := get_default(spec, "match", {})
+	spec := _get_default(constraint, "spec", {})
+	match := _get_default(spec, "match", {})
 
 	# Default matcher behavior is to match everything.
-	target := get_default(match, "target", ["**"])
+	target := _get_default(match, "target", ["**"])
 	target_match := {asset.ancestry_path | path_matches(asset.ancestry_path, target[_])}
 	count(target_match) != 0
-	exclude := get_default(match, "exclude", [])
+	exclude := _get_default(match, "exclude", [])
 	exclusion_match := {asset.ancestry_path | path_matches(asset.ancestry_path, exclude[_])}
 	count(exclusion_match) == 0
 }
@@ -63,29 +63,33 @@ path_matches(path, pattern) {
 ########
 # Util #
 ########
-# get_default returns the value of an object's field or the provided default value.
+# The following functions are prefixed with underscores, because their names
+# conflict with the existing functions in policy library. We want to separate
+# them here to ensure that there is no dependency or confusion.
+
+# _get_default returns the value of an object's field or the provided default value.
 # It avoids creating an undefined state when trying to access an object attribute that does
 # not exist
-get_default(object, field, _default) = output {
-  has_field(object, field)
+_get_default(object, field, _default) = output {
+  _has_field(object, field)
   output = object[field]
 }
 
-get_default(object, field, _default) = output {
-  has_field(object, field) == false
+_get_default(object, field, _default) = output {
+  _has_field(object, field) == false
   output = _default
 }
 
-# has_field returns whether an object has a field
-has_field(object, field) = true {
+# _has_field returns whether an object has a field
+_has_field(object, field) = true {
   object[field]
 }
 # False is a tricky special case, as false responses would create an undefined document unless
 # they are explicitly tested for
-has_field(object, field) = true {
+_has_field(object, field) = true {
   object[field] == false
 }
-has_field(object, field) = false {
+_has_field(object, field) = false {
   not object[field]
   not object[field] == false
 }
