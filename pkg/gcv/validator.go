@@ -164,7 +164,7 @@ func NewValidatorFromConfig(config *configs.Configuration, opts ...Option) (*Val
 
 	tfCFClient, err := newCFClient(tftarget.New(), config.TFTemplates, config.TFConstraints, opts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to set up tf Constraint Framework client")
+		return nil, errors.Wrap(err, "unable to set up TF Constraint Framework client")
 	}
 
 	ret := &Validator{
