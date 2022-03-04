@@ -163,6 +163,9 @@ func injectRegoAdapter(rego string) string {
 
 // convertLegacyConstraintTemplate handles converting a legacy forseti v1alpha1 ConstraintTemplate
 // to a constraint framework v1alpha1 ConstraintTemplate.
+// Legacy constraint templates use `deny` as an entrypoint and the expected inputs are:
+// - `input.asset`: the CAI asset being reviewed (new templates use `input.review`)
+// - `input.constraint.spec.parameters`: the parameters from the constraint template (new templates use `input.parameters`)
 func convertLegacyConstraintTemplate(u *unstructured.Unstructured, regoLib []string) error {
 	targetMap, found, err := unstructured.NestedMap(u.Object, "spec", "targets")
 	if err != nil && !found {

@@ -56,8 +56,7 @@ spec:
             	"msg": message,
             	"details": metadata,
             }] {
-
-              resource := input.review
+              resource := input.asset
               resource.type == "google_compute_instance"
 
               action_types := {x | x := resource.change.actions[_]}
@@ -75,7 +74,7 @@ spec:
 
               is_machine_type_whitelisted == false
 
-              message := sprintf("Compute instance %v has interface has invalid machine_type: ", [resource])
+              message := sprintf("Compute instance %s has interface has invalid machine_type: %s", [resource.address, machine_type])
               metadata := {"resource": resource.name}
 
             }
