@@ -26,7 +26,6 @@ import (
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/multierror"
 	cfapis "github.com/open-policy-agent/frameworks/constraint/pkg/apis"
-	cfv1alpha1 "github.com/open-policy-agent/frameworks/constraint/pkg/apis/templates/v1alpha1"
 	cftemplates "github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/regorewriter"
 	"github.com/pkg/errors"
@@ -54,19 +53,16 @@ const (
 
 const (
 	constraintGroup = "constraints.gatekeeper.sh"
-	yamlPath        = GCPTargetName + "/yamlpath"
-	OriginalName    = GCPTargetName + "/originalName"
+	// From github.com/open-policy-agent/frameworks/constraint/pkg/apis/templates/v1alpha1 SchemeGroupVersion.Group
+	alphaConstraintGroup = "templates.gatekeeper.sh"
+	yamlPath             = GCPTargetName + "/yamlpath"
+	OriginalName         = GCPTargetName + "/originalName"
 )
 
 const (
 	gcpConstraint = "gcp"
 	k8sConstraint = "k8s"
 	tfConstraint  = "terraform"
-)
-
-var (
-	// templateGK is the GroupKind for ConstraintTemplate types.
-	TemplateGK = schema.GroupKind{Group: cfv1alpha1.SchemeGroupVersion.Group, Kind: "ConstraintTemplate"}
 )
 
 func arrayFilterSuffix(arr []string, suffix string) []string {
@@ -363,8 +359,15 @@ func LoadRegoFiles(dir string) ([]string, error) {
 }
 
 func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
-	switch {
-	case u.GroupVersionKind().GroupKind() == TemplateGK:
+	switch u.GroupVersionKind().Group {
+	case constraintGroup:
+		c.allConstraints = append(c.allConstraints, u)
+
+	case alphaConstraintGroup:
+		if u.GroupVersionKind().Kind != "ConstraintTemplate" {
+			return errors.Errorf("unexpected data type %s in group %s", u.GroupVersionKind(), alphaConstraintGroup)
+		}
+
 		switch u.GroupVersionKind().Version {
 		case "v1alpha1":
 			openAPIResult := configValidatorV1Alpha1SchemaValidator.Validate(u.Object)
@@ -423,12 +426,6 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 			}
 		}
 
-	case u.GroupVersionKind().Group == constraintGroup:
-		c.allConstraints = append(c.allConstraints, u)
-
-	case u.GroupVersionKind().Group == cfv1alpha1.SchemeGroupVersion.Group:
-		return errors.Errorf("unexpected data type %s in group %s", u.GroupVersionKind(), cfv1alpha1.SchemeGroupVersion.Group)
-
 	default:
 		glog.V(1).Infof("Ignoring %s %s", u.GroupVersionKind(), u.GetName())
 	}
@@ -452,7 +449,7 @@ func (c *Configuration) finishLoad() error {
 	c.allConstraints = nil
 	for _, constraint := range allConstraints {
 		gvk := constraint.GroupVersionKind()
-		if gvk.Version == "v1alpha1" && templates[gvk.Kind] != tfConstraint {
+		if gvk.Version == "v1alpha1" {
 			if err := convertLegacyConstraint(constraint); err != nil {
 				return fmt.Errorf("failed to convert constraint: %w", err)
 			}
