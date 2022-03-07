@@ -19,7 +19,7 @@ metadata:
 spec:
   severity: medium
   match:
-    target: ["**"]
+    addresses: ["**"]
   parameters:
     whitelist:
       - e2-medium

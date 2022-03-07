@@ -271,7 +271,7 @@ func (v *Validator) ReviewUnmarshalledJSON(ctx context.Context, asset map[string
 	return v.reviewGCPResource(ctx, asset)
 }
 
-// ReviewJSON evaluates a single terraform resource without any threading in the background.
+// ReviewTFResourceChange evaluates a single terraform resource change without any threading in the background.
 func (v *Validator) ReviewTFResourceChange(ctx context.Context, resource map[string]interface{}) (*Result, error) {
 	responses, err := v.tfCFClient.Review(ctx, resource)
 	if err != nil {
