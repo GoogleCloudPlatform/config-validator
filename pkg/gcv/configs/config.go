@@ -53,8 +53,7 @@ const (
 
 const (
 	constraintGroup = "constraints.gatekeeper.sh"
-	// From github.com/open-policy-agent/frameworks/constraint/pkg/apis/templates/v1alpha1 SchemeGroupVersion.Group
-	alphaConstraintGroup = "templates.gatekeeper.sh"
+	templateGroup = "templates.gatekeeper.sh"
 	yamlPath             = GCPTargetName + "/yamlpath"
 	OriginalName         = GCPTargetName + "/originalName"
 )
@@ -363,9 +362,9 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 	case constraintGroup:
 		c.allConstraints = append(c.allConstraints, u)
 
-	case alphaConstraintGroup:
+	case templateGroup:
 		if u.GroupVersionKind().Kind != "ConstraintTemplate" {
-			return errors.Errorf("unexpected data type %s in group %s", u.GroupVersionKind(), alphaConstraintGroup)
+			return errors.Errorf("unexpected data type %s in group %s", u.GroupVersionKind(), templateGroup)
 		}
 
 		switch u.GroupVersionKind().Version {
@@ -418,6 +417,9 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 			case GCPTargetName:
 				c.GCPTemplates = append(c.GCPTemplates, &ct)
 			case TFTargetName:
+				if u.GroupVersionKind().Version == "v1alpha1" {
+					return errors.Errorf("v1alpha1 templates are not supported for terraform templates. Please upgrade.")
+				}
 				c.TFTemplates = append(c.TFTemplates, &ct)
 			case K8STargetName:
 				c.K8STemplates = append(c.K8STemplates, &ct)
