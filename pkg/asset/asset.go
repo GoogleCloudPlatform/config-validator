@@ -101,8 +101,8 @@ func AncestryPath(ancestors []string) string {
 	return strings.Join(revAncestors, "/")
 }
 
-// UnwrapCAIResource will unwrap a K8S resource from the CAI payload and populate any omitted fields.
-func UnwrapCAIResource(asset map[string]interface{}) (*unstructured.Unstructured, error) {
+// ConvertCAIToK8s will convert a supported CAI Asset to a K8S resource and populate any omitted fields.
+func ConvertCAIToK8s(asset map[string]interface{}) (*unstructured.Unstructured, error) {
 	groupKind, found, err := unstructured.NestedString(asset, "asset_type")
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to access asset_type field")
@@ -168,7 +168,7 @@ func UnwrapCAIResource(asset map[string]interface{}) (*unstructured.Unstructured
 // ConvertToAdmissionRequest converts a CAI asset containing a K8S type to an AdmissionRequest which is the format that
 // the Gatekeeper Constraint Framework target expects.
 func ConvertToAdmissionRequest(asset map[string]interface{}) (*admissionv1beta1.AdmissionRequest, error) {
-	resource, err := UnwrapCAIResource(asset)
+	resource, err := ConvertCAIToK8s(asset)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unwrap k8s resource from CAI asset")
 	}

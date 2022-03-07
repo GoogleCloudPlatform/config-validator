@@ -233,6 +233,20 @@ func (v *Validator) ReviewAsset(ctx context.Context, asset *validator.Asset) ([]
 	return result.ToViolations()
 }
 
+// ReviewTFResourceChange evaluates a single terraform resource change without any threading in the background.
+func (v *Validator) ReviewTFResourceChange(ctx context.Context, inputResource map[string]interface{}) ([]*validator.Violation, error) {
+	responses, err := v.tfCFClient.Review(ctx, inputResource)
+	if err != nil {
+		return nil, errors.Wrapf(err, "TF target Constraint Framework review call failed")
+	}
+	result, err := NewResult(tftarget.Name, inputResource["address"].(string), inputResource, inputResource, responses)
+	if err != nil {
+		return nil, err
+	}
+
+	return result.ToViolations()
+}
+
 // fixAncestry will try to use the ancestors array to create the ancestorPath
 // value if it is not present.
 func (v *Validator) fixAncestry(input map[string]interface{}) error {
@@ -271,18 +285,9 @@ func (v *Validator) ReviewUnmarshalledJSON(ctx context.Context, asset map[string
 	return v.reviewGCPResource(ctx, asset)
 }
 
-// ReviewTFResourceChange evaluates a single terraform resource change without any threading in the background.
-func (v *Validator) ReviewTFResourceChange(ctx context.Context, resource map[string]interface{}) (*Result, error) {
-	responses, err := v.tfCFClient.Review(ctx, resource)
-	if err != nil {
-		return nil, errors.Wrapf(err, "TF target Constraint Framework review call failed")
-	}
-	return NewResult(tftarget.Name, nil, resource, responses)
-}
-
 // reviewK8SResource will unwrap k8s resources then pass them to the cf client with the gatekeeper target.
 func (v *Validator) reviewK8SResource(ctx context.Context, asset map[string]interface{}) (*Result, error) {
-	k8sResource, err := asset2.UnwrapCAIResource(asset)
+	k8sResource, err := asset2.ConvertCAIToK8s(asset)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to convert asset to admission request")
 	}
@@ -290,7 +295,7 @@ func (v *Validator) reviewK8SResource(ctx context.Context, asset map[string]inte
 	if err != nil {
 		return nil, errors.Wrapf(err, "K8S target Constraint Framework review call failed")
 	}
-	return NewResult(configs.K8STargetName, asset, k8sResource.Object, responses)
+	return NewResult(configs.K8STargetName, asset["name"].(string), asset, k8sResource.Object, responses)
 }
 
 // reviewGCPResource will unwrap k8s resources then pass them to the cf client with the gatekeeper target.
@@ -299,5 +304,5 @@ func (v *Validator) reviewGCPResource(ctx context.Context, asset map[string]inte
 	if err != nil {
 		return nil, errors.Wrapf(err, "GCP target Constraint Framework review call failed")
 	}
-	return NewResult(gcptarget.Name, asset, asset, responses)
+	return NewResult(gcptarget.Name, asset["name"].(string), asset, asset, responses)
 }

@@ -422,7 +422,6 @@ func mustMakeAsset(assetJSON string) *validator.Asset {
 	return data
 }
 
-
 var defaultReviewTestAssets = []*validator.Asset{
 	storageAssetNoLogging(),
 	storageAssetWithLogging(),
@@ -512,11 +511,11 @@ func TestReviewTFResourceChange(t *testing.T) {
 				t.Fatal("unexpected error", err)
 			}
 
-			result, err := v.ReviewTFResourceChange(context.Background(), tc.resourceChange)
+			violations, err := v.ReviewTFResourceChange(context.Background(), tc.resourceChange)
 			if err != nil {
 				t.Fatal("unexpected error", err)
 			}
-			got := len(result.ConstraintViolations)
+			got := len(violations)
 			if got != tc.wantViolations {
 				t.Errorf("wanted %d violations, got %d", tc.wantViolations, got)
 			}
@@ -749,7 +748,6 @@ var computeInstanceResourceChangeWithoutMachineTypeJSON = `{
 func computeInstanceResourceChangeWithoutMachineType() map[string]interface{} {
 	return mustMakeResourceChange(computeInstanceResourceChangeWithoutMachineTypeJSON)
 }
-
 
 var kmsKeyRingResourceChangeJSON = `{
   "address": "google_kms_key_ring.test",
