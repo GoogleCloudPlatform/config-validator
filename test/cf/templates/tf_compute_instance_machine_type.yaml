@@ -14,10 +14,10 @@
 #
 # Checks network interfaces on a compute instance against a provided whitelist of networks
 
-apiVersion: templates.gatekeeper.sh/v1alpha1
+apiVersion: templates.gatekeeper.sh/v1beta1
 kind: ConstraintTemplate
 metadata:
-  name: tf-compute-instance-machine-type-whitelist-v1
+  name: tfcomputeinstancemachinetypewhitelistconstraintv1
 spec:
   crd:
     spec:
@@ -32,7 +32,7 @@ spec:
               items:
                 type: string
   targets:
-    validation.resourcechange.terraform.google.com:
+    - target: validation.resourcechange.terraform.google.com
       rego: |
             #
             # Copyright 2019 Google LLC
@@ -52,11 +52,11 @@ spec:
 
             package templates.terraform.TFComputeInstanceMachineTypeWhitelistConstraintV1
 
-            deny[{
+            violation[{
             	"msg": message,
             	"details": metadata,
             }] {
-              resource := input.asset
+              resource := input.review
               resource.type == "google_compute_instance"
 
               action_types := {x | x := resource.change.actions[_]}
@@ -65,7 +65,7 @@ spec:
 
               instance := resource.change.after
 
-              whitelist := object.get(input.constraint.spec.parameters, "whitelist", [])
+              whitelist := object.get(input.parameters, "whitelist", [])
               allowed_machine_types := {n | n = whitelist[_]}
 
               machine_type := instance.machine_type
