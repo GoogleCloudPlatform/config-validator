@@ -53,9 +53,9 @@ const (
 
 const (
 	constraintGroup = "constraints.gatekeeper.sh"
-	templateGroup = "templates.gatekeeper.sh"
-	yamlPath             = GCPTargetName + "/yamlpath"
-	OriginalName         = GCPTargetName + "/originalName"
+	templateGroup   = "templates.gatekeeper.sh"
+	yamlPath        = GCPTargetName + "/yamlpath"
+	OriginalName    = GCPTargetName + "/originalName"
 )
 
 const (
