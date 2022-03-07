@@ -170,12 +170,12 @@ func ConvertCAIToK8s(asset map[string]interface{}) (*unstructured.Unstructured, 
 func ConvertToAdmissionRequest(asset map[string]interface{}) (*admissionv1beta1.AdmissionRequest, error) {
 	resource, err := ConvertCAIToK8s(asset)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to unwrap k8s resource from CAI asset")
+		return nil, errors.Wrapf(err, "failed to convert CAI asset to k8s resource")
 	}
 
 	resourceJSON, err := json.Marshal(resource.Object)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to convert unwrapped resource to JSON")
+		return nil, errors.Wrapf(err, "failed to convert k8s resource to JSON")
 	}
 
 	gvk := resource.GroupVersionKind()

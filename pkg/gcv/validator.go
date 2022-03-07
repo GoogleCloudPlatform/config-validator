@@ -285,7 +285,7 @@ func (v *Validator) ReviewUnmarshalledJSON(ctx context.Context, asset map[string
 	return v.reviewGCPResource(ctx, asset)
 }
 
-// reviewK8SResource will unwrap k8s resources then pass them to the cf client with the gatekeeper target.
+// reviewK8SResource will convert CAI assets to k8s resources then pass them to the cf client with the gatekeeper target.
 func (v *Validator) reviewK8SResource(ctx context.Context, asset map[string]interface{}) (*Result, error) {
 	k8sResource, err := asset2.ConvertCAIToK8s(asset)
 	if err != nil {
@@ -298,7 +298,7 @@ func (v *Validator) reviewK8SResource(ctx context.Context, asset map[string]inte
 	return NewResult(configs.K8STargetName, asset["name"].(string), asset, k8sResource.Object, responses)
 }
 
-// reviewGCPResource will unwrap k8s resources then pass them to the cf client with the gatekeeper target.
+// reviewGCPResource will pass CAI assets to the cf client with the GCP target.
 func (v *Validator) reviewGCPResource(ctx context.Context, asset map[string]interface{}) (*Result, error) {
 	responses, err := v.gcpCFClient.Review(ctx, asset)
 	if err != nil {
