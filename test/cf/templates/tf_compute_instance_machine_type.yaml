@@ -12,21 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Checks network interfaces on a compute instance against a provided whitelist of networks
+# Checks network interfaces on a compute instance against a provided allowlist of networks
 
 apiVersion: templates.gatekeeper.sh/v1beta1
 kind: ConstraintTemplate
 metadata:
-  name: tfcomputeinstancemachinetypewhitelistconstraintv1
+  name: tfcomputeinstancemachinetypeallowlistconstraintv1
 spec:
   crd:
     spec:
       names:
-        kind: TFComputeInstanceMachineTypeWhitelistConstraintV1
+        kind: TFComputeInstanceMachineTypeAllowlistConstraintV1
       validation:
         openAPIV3Schema:
           properties:
-            whitelist:
+            allowlist:
               description: "A list of machine_types allowed, for example: ['e2-medium']"
               type: array
               items:
@@ -50,7 +50,7 @@ spec:
             # limitations under the License.
             #
 
-            package templates.terraform.TFComputeInstanceMachineTypeWhitelistConstraintV1
+            package templates.terraform.TFComputeInstanceMachineTypeAllowlistConstraintV1
 
             violation[{
             	"msg": message,
@@ -65,14 +65,14 @@ spec:
 
               instance := resource.change.after
 
-              whitelist := object.get(input.parameters, "whitelist", [])
-              allowed_machine_types := {n | n = whitelist[_]}
+              allowlist := object.get(input.parameters, "allowlist", [])
+              allowed_machine_types := {n | n = allowlist[_]}
 
               machine_type := instance.machine_type
 
-              is_machine_type_whitelisted := count({machine_type} - allowed_machine_types) == 0
+              is_machine_type_allowlisted := count({machine_type} - allowed_machine_types) == 0
 
-              is_machine_type_whitelisted == false
+              is_machine_type_allowlisted == false
 
               message := sprintf("Compute instance %s has interface has invalid machine_type: %s", [resource.address, machine_type])
               metadata := {"resource": resource.name}

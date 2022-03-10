@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: TFComputeInstanceMachineTypeWhitelistConstraintV1
+kind: TFComputeInstanceMachineTypeAllowlistConstraintV1
 metadata:
   name: must-have-machine-type-e2-medium
 spec:
@@ -21,6 +21,6 @@ spec:
   match:
     addresses: ["**"]
   parameters:
-    whitelist:
+    allowlist:
       - e2-medium
 
