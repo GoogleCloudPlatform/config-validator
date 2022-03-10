@@ -28,7 +28,7 @@ import (
 )
 
 // Name is the target name for TFTarget
-const Name = "validation.resourcechange.terraform.google.com"
+const Name = "validation.resourcechange.terraform.cloud.google.com"
 
 // TFTarget is the constraint framework target for config-validator
 type TFTarget struct {

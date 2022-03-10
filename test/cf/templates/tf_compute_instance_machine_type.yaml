@@ -32,7 +32,7 @@ spec:
               items:
                 type: string
   targets:
-    - target: validation.resourcechange.terraform.google.com
+    - target: validation.resourcechange.terraform.cloud.google.com
       rego: |
             #
             # Copyright 2019 Google LLC

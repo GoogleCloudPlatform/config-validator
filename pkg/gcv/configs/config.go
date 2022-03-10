@@ -48,7 +48,7 @@ func init() {
 const (
 	K8STargetName = "admission.k8s.gatekeeper.sh"
 	GCPTargetName = "validation.gcp.forsetisecurity.org"
-	TFTargetName  = "validation.resourcechange.terraform.google.com"
+	TFTargetName  = "validation.resourcechange.terraform.cloud.google.com"
 )
 
 const (
