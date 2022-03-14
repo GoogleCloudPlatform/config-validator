@@ -175,7 +175,7 @@ func ConvertToAdmissionRequest(asset map[string]interface{}) (*admissionv1beta1.
 
 	resourceJSON, err := json.Marshal(resource.Object)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to convert k8s resource to JSON")
+		return nil, errors.Wrapf(err, "failed to marshal k8s resource (converted from CAI asset) to JSON")
 	}
 
 	gvk := resource.GroupVersionKind()
