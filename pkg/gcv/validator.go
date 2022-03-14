@@ -18,6 +18,7 @@ package gcv
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	asset2 "github.com/GoogleCloudPlatform/config-validator/pkg/asset"
@@ -235,9 +236,14 @@ func (v *Validator) ReviewAsset(ctx context.Context, asset *validator.Asset) ([]
 
 // ReviewTFResourceChange evaluates a single terraform resource change without any threading in the background.
 func (v *Validator) ReviewTFResourceChange(ctx context.Context, inputResource map[string]interface{}) ([]*validator.Violation, error) {
+	target := tftarget.New()
+	handled, _, err := target.HandleReview(inputResource)
+	if !handled {
+		return nil, fmt.Errorf("Unhandled resource: %w", err)
+	}
 	responses, err := v.tfCFClient.Review(ctx, inputResource)
 	if err != nil {
-		return nil, errors.Wrapf(err, "TF target Constraint Framework review call failed")
+		return nil, fmt.Errorf("TF target Constraint Framework review call failed: %w", err)
 	}
 	result, err := NewResult(tftarget.Name, inputResource["address"].(string), inputResource, inputResource, responses)
 	if err != nil {

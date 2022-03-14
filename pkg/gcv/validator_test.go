@@ -474,6 +474,70 @@ func BenchmarkReviewAsset(b *testing.B) {
 	}
 }
 
+type reviewTFResourceChangeBadInputTestcase struct {
+	name           string
+	resourceChange map[string]interface{}
+	wantError      bool
+}
+
+func TestReviewTFResourceChangeBadInput(t *testing.T) {
+	missingNameResourceChange := computeInstanceResourceChange()
+	delete(missingNameResourceChange, "name")
+
+	missingAddressResourceChange := computeInstanceResourceChange()
+	delete(missingAddressResourceChange, "address")
+
+	missingTypeResourceChange := computeInstanceResourceChange()
+	delete(missingTypeResourceChange, "type")
+
+	missingChangeResourceChange := computeInstanceResourceChange()
+	delete(missingChangeResourceChange, "change")
+	var testCases = []reviewTFResourceChangeBadInputTestcase{
+		{
+			name:           "base valid scenario",
+			resourceChange: computeInstanceResourceChange(),
+			wantError:      false,
+		},
+		{
+			name:           "missing name",
+			resourceChange: missingNameResourceChange,
+			wantError:      true,
+		},
+		{
+			name:           "missing address",
+			resourceChange: missingAddressResourceChange,
+			wantError:      true,
+		},
+		{
+			name:           "missing change",
+			resourceChange: missingChangeResourceChange,
+			wantError:      true,
+		},
+		{
+			name:           "missing type",
+			resourceChange: missingTypeResourceChange,
+			wantError:      true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v, err := NewValidator(testOptions())
+			if err != nil {
+				t.Fatal("unexpected error", err)
+			}
+
+			violations, err := v.ReviewTFResourceChange(context.Background(), tc.resourceChange)
+			if tc.wantError && err == nil {
+				t.Errorf("wanted error but got %d violations", len(violations))
+			}
+			if !tc.wantError && err != nil {
+				t.Errorf("wanted no error but got %s", err)
+			}
+		})
+	}
+}
+
 type reviewTFResourceChangeTestcase struct {
 	name           string
 	resourceChange map[string]interface{}
