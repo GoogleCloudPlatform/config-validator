@@ -34,13 +34,13 @@ const (
 
 // Result is the result of reviewing an individual resource
 type Result struct {
-	// The name of the resource as given by CAI
+	// The name of the resource as given to Config Validator
 	Name string
-	// CAIResource is the resource as given by CAI
-	CAIResource map[string]interface{}
+	// InputResource is the resource as given to Config Validator. This may be a
+	// CAI Asset or a Terraform Resource Change.
+	InputResource map[string]interface{}
 	// ReviewResource is the resource sent to Constraint Framework for review.
-	// For GCP types this is the unmodified resource from CAI, for K8S types, this is the unwrapped
-	// resource.
+	// This may be a CAI Asset, K8S resource, or Terraform Resource Change.
 	ReviewResource map[string]interface{}
 	// ConstraintViolations are the constraints that were not satisfied during review.
 	ConstraintViolations []ConstraintViolation
@@ -48,8 +48,8 @@ type Result struct {
 
 // NewResult creates a Result from the provided CF Response.
 func NewResult(
-	target string,
-	caiResource map[string]interface{},
+	target, name string,
+	inputResource map[string]interface{},
 	reviewResource map[string]interface{},
 	responses *cftypes.Responses) (*Result, error) {
 	cfResponse, found := responses.ByTarget[target]
@@ -57,18 +57,9 @@ func NewResult(
 		return nil, errors.Errorf("No response for target %s", target)
 	}
 
-	resNameIface, found := caiResource["name"]
-	if !found {
-		return nil, errors.Errorf("result missing name field")
-	}
-	name, ok := resNameIface.(string)
-	if !ok {
-		return nil, errors.Errorf("failed to convert resource name to string %v", resNameIface)
-	}
-
 	result := &Result{
 		Name:                 name,
-		CAIResource:          caiResource,
+		InputResource:        inputResource,
 		ReviewResource:       reviewResource,
 		ConstraintViolations: make([]ConstraintViolation, len(cfResponse.Results)),
 	}
@@ -117,7 +108,7 @@ func (r *Result) ToInsights() []*Insight {
 			TargetResources: []string{r.Name},
 			InsightSubtype:  cv.name(),
 			Content: map[string]interface{}{
-				"resource": r.CAIResource,
+				"resource": r.InputResource,
 				"metadata": cv.metadata(nil),
 			},
 			Category: "SECURITY",
@@ -128,18 +119,18 @@ func (r *Result) ToInsights() []*Insight {
 }
 
 func (r *Result) ToViolations() ([]*validator.Violation, error) {
-	ancestryPath, found, err := unstructured.NestedString(r.CAIResource, ancestryPathKey)
+	auxMetadata := map[string]interface{}{}
+	ancestryPath, found, err := unstructured.NestedString(r.InputResource, ancestryPathKey)
 	if err != nil {
-
-		return nil, errors.Wrapf(err, "error getting ancestry path from %v", r.CAIResource)
+		return nil, errors.Wrapf(err, "error getting ancestry path from %v", r.InputResource)
 	}
-	if !found {
-		return nil, errors.Errorf("ancestry path not found in %v", r.CAIResource)
+	if found {
+		auxMetadata[ancestryPathKey] = ancestryPath
 	}
 
 	var violations []*validator.Violation
 	for _, rv := range r.ConstraintViolations {
-		violation, err := rv.toViolation(r.Name, ancestryPath)
+		violation, err := rv.toViolation(r.Name, auxMetadata)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to convert result")
 		}
@@ -196,8 +187,8 @@ func (cv *ConstraintViolation) name() string {
 }
 
 // toViolation converts the constriant to a violation.
-func (cv *ConstraintViolation) toViolation(name string, ancestryPath string) (*validator.Violation, error) {
-	metadataJson, err := json.Marshal(cv.metadata(map[string]interface{}{ancestryPathKey: ancestryPath}))
+func (cv *ConstraintViolation) toViolation(name string, auxMetadata map[string]interface{}) (*validator.Violation, error) {
+	metadataJson, err := json.Marshal(cv.metadata(auxMetadata))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to marshal result metadata %v to json", cv.Metadata)
 	}

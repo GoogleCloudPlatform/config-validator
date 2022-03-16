@@ -44,7 +44,6 @@ spec:
         #
 
         package templates.gcp.GCPStorageLoggingConstraint
-        import data.validator.gcp.lib as lib
 
         deny[{
         	"msg": message,
@@ -69,6 +68,6 @@ spec:
         # Rule Utilities
         ###########################
         destination_bucket(bucket) = destination_bucket {
-        	destination := lib.get_default(bucket, "logging", "default")
-        	destination_bucket := lib.get_default(destination, "logBucket", "")
+        	destination := object.get(bucket, "logging", "default")
+        	destination_bucket := object.get(destination, "logBucket", "")
         }

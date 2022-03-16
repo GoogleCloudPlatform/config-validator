@@ -26,14 +26,14 @@ const libraryTemplateSrc = `package target
 matching_constraints[constraint] {
 	asset := input.review
 	constraint := {{.ConstraintsRoot}}[_][_]
-	spec := get_default(constraint, "spec", {})
-	match := get_default(spec, "match", {})
+	spec := object.get(constraint, "spec", {})
+	match := object.get(spec, "match", {})
 
 	# Default matcher behavior is to match everything.
-	target := get_default(match, "target", ["**"])
+	target := object.get(match, "target", ["**"])
 	target_match := {asset.ancestry_path | path_matches(asset.ancestry_path, target[_])}
 	count(target_match) != 0
-	exclude := get_default(match, "exclude", [])
+	exclude := object.get(match, "exclude", [])
 	exclusion_match := {asset.ancestry_path | path_matches(asset.ancestry_path, exclude[_])}
 	count(exclusion_match) == 0
 }

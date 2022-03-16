@@ -18,12 +18,14 @@ package gcv
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	asset2 "github.com/GoogleCloudPlatform/config-validator/pkg/asset"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/gcptarget"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv/configs"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/multierror"
+	"github.com/GoogleCloudPlatform/config-validator/pkg/tftarget"
 	"github.com/golang/glog"
 	cfclient "github.com/open-policy-agent/frameworks/constraint/pkg/client"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers/local"
@@ -67,6 +69,7 @@ type Validator struct {
 	policyLibraryDir string
 	gcpCFClient      *cfclient.Client
 	k8sCFClient      *cfclient.Client
+	tfCFClient       *cfclient.Client
 }
 
 // Stores functional options for CF client
@@ -160,9 +163,15 @@ func NewValidatorFromConfig(config *configs.Configuration, opts ...Option) (*Val
 		return nil, errors.Wrap(err, "unable to set up K8S Constraint Framework client")
 	}
 
+	tfCFClient, err := newCFClient(tftarget.New(), config.TFTemplates, config.TFConstraints, opts...)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to set up TF Constraint Framework client")
+	}
+
 	ret := &Validator{
 		gcpCFClient: gcpCFClient,
 		k8sCFClient: k8sCFClient,
+		tfCFClient:  tfCFClient,
 	}
 	return ret, nil
 }
@@ -225,6 +234,25 @@ func (v *Validator) ReviewAsset(ctx context.Context, asset *validator.Asset) ([]
 	return result.ToViolations()
 }
 
+// ReviewTFResourceChange evaluates a single terraform resource change without any threading in the background.
+func (v *Validator) ReviewTFResourceChange(ctx context.Context, inputResource map[string]interface{}) ([]*validator.Violation, error) {
+	target := tftarget.New()
+	handled, _, err := target.HandleReview(inputResource)
+	if !handled {
+		return nil, fmt.Errorf("Unhandled resource: %w", err)
+	}
+	responses, err := v.tfCFClient.Review(ctx, inputResource)
+	if err != nil {
+		return nil, fmt.Errorf("TF target Constraint Framework review call failed: %w", err)
+	}
+	result, err := NewResult(tftarget.Name, inputResource["address"].(string), inputResource, inputResource, responses)
+	if err != nil {
+		return nil, err
+	}
+
+	return result.ToViolations()
+}
+
 // fixAncestry will try to use the ancestors array to create the ancestorPath
 // value if it is not present.
 func (v *Validator) fixAncestry(input map[string]interface{}) error {
@@ -263,9 +291,9 @@ func (v *Validator) ReviewUnmarshalledJSON(ctx context.Context, asset map[string
 	return v.reviewGCPResource(ctx, asset)
 }
 
-// reviewK8SResource will unwrap k8s resources then pass them to the cf client with the gatekeeper target.
+// reviewK8SResource will convert CAI assets to k8s resources then pass them to the cf client with the gatekeeper target.
 func (v *Validator) reviewK8SResource(ctx context.Context, asset map[string]interface{}) (*Result, error) {
-	k8sResource, err := asset2.UnwrapCAIResource(asset)
+	k8sResource, err := asset2.ConvertCAIToK8s(asset)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to convert asset to admission request")
 	}
@@ -273,14 +301,14 @@ func (v *Validator) reviewK8SResource(ctx context.Context, asset map[string]inte
 	if err != nil {
 		return nil, errors.Wrapf(err, "K8S target Constraint Framework review call failed")
 	}
-	return NewResult(configs.K8STargetName, asset, k8sResource.Object, responses)
+	return NewResult(configs.K8STargetName, asset["name"].(string), asset, k8sResource.Object, responses)
 }
 
-// reviewGCPResource will unwrap k8s resources then pass them to the cf client with the gatekeeper target.
+// reviewGCPResource will pass CAI assets to the cf client with the GCP target.
 func (v *Validator) reviewGCPResource(ctx context.Context, asset map[string]interface{}) (*Result, error) {
 	responses, err := v.gcpCFClient.Review(ctx, asset)
 	if err != nil {
 		return nil, errors.Wrapf(err, "GCP target Constraint Framework review call failed")
 	}
-	return NewResult(gcptarget.Name, asset, asset, responses)
+	return NewResult(gcptarget.Name, asset["name"].(string), asset, asset, responses)
 }

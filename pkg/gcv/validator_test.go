@@ -93,13 +93,6 @@ func TestDefaultTestDataCreatesValidatorFromContents(t *testing.T) {
 	}
 }
 
-var defaultReviewTestAssets = []*validator.Asset{
-	storageAssetNoLogging(),
-	storageAssetWithLogging(),
-	storageAssetWithSecureLogging(),
-	namespaceAssetWithNoLabel(),
-}
-
 type reviewAssetTestcase struct {
 	name           string
 	assetJson      string
@@ -173,7 +166,6 @@ func TestReviewAsset(t *testing.T) {
 		})
 	}
 }
-
 func TestCreateNoDir(t *testing.T) {
 	emptyFolder, err := ioutil.TempDir("", "emptyPolicyDir")
 	defer cleanup(t, emptyFolder)
@@ -237,13 +229,6 @@ func cleanup(t *testing.T, dir string) {
 func testOptions() ([]string, string) {
 	// Add default options to this list
 	return []string{localPolicyDir}, localPolicyDepDir
-}
-
-var defaultReviewTestAssetJSONs = map[string]string{
-	"storageAssetNoLoggingJSON":         storageAssetNoLoggingJSON,
-	"storageAssetWithLoggingJSON":       storageAssetWithLoggingJSON,
-	"storageAssetWithSecureLoggingJSON": storageAssetWithSecureLoggingJSON,
-	"namespaceAssetWithNoLabelJSON":     namespaceAssetWithNoLabelJSON,
 }
 
 var storageAssetNoLoggingJSON = `{
@@ -437,6 +422,20 @@ func mustMakeAsset(assetJSON string) *validator.Asset {
 	return data
 }
 
+var defaultReviewTestAssets = []*validator.Asset{
+	storageAssetNoLogging(),
+	storageAssetWithLogging(),
+	storageAssetWithSecureLogging(),
+	namespaceAssetWithNoLabel(),
+}
+
+var defaultReviewTestAssetJSONs = map[string]string{
+	"storageAssetNoLoggingJSON":         storageAssetNoLoggingJSON,
+	"storageAssetWithLoggingJSON":       storageAssetWithLoggingJSON,
+	"storageAssetWithSecureLoggingJSON": storageAssetWithSecureLoggingJSON,
+	"namespaceAssetWithNoLabelJSON":     namespaceAssetWithNoLabelJSON,
+}
+
 func BenchmarkReviewJSON(b *testing.B) {
 	v, err := NewValidator(testOptions())
 	if err != nil {
@@ -467,6 +466,408 @@ func BenchmarkReviewAsset(b *testing.B) {
 		b.Run(a.Name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				_, err = v.ReviewAsset(context.Background(), defaultReviewTestAssets[idx])
+				if err != nil {
+					b.Fatalf("unexpected error %s", err)
+				}
+			}
+		})
+	}
+}
+
+type reviewTFResourceChangeBadInputTestcase struct {
+	name           string
+	resourceChange map[string]interface{}
+	wantError      bool
+}
+
+func TestReviewTFResourceChangeBadInput(t *testing.T) {
+	missingNameResourceChange := computeInstanceResourceChange()
+	delete(missingNameResourceChange, "name")
+
+	missingAddressResourceChange := computeInstanceResourceChange()
+	delete(missingAddressResourceChange, "address")
+
+	missingTypeResourceChange := computeInstanceResourceChange()
+	delete(missingTypeResourceChange, "type")
+
+	missingChangeResourceChange := computeInstanceResourceChange()
+	delete(missingChangeResourceChange, "change")
+	var testCases = []reviewTFResourceChangeBadInputTestcase{
+		{
+			name:           "base valid scenario",
+			resourceChange: computeInstanceResourceChange(),
+			wantError:      false,
+		},
+		{
+			name:           "missing name",
+			resourceChange: missingNameResourceChange,
+			wantError:      true,
+		},
+		{
+			name:           "missing address",
+			resourceChange: missingAddressResourceChange,
+			wantError:      true,
+		},
+		{
+			name:           "missing change",
+			resourceChange: missingChangeResourceChange,
+			wantError:      true,
+		},
+		{
+			name:           "missing type",
+			resourceChange: missingTypeResourceChange,
+			wantError:      true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v, err := NewValidator(testOptions())
+			if err != nil {
+				t.Fatal("unexpected error", err)
+			}
+
+			violations, err := v.ReviewTFResourceChange(context.Background(), tc.resourceChange)
+			if tc.wantError && err == nil {
+				t.Errorf("wanted error but got %d violations", len(violations))
+			}
+			if !tc.wantError && err != nil {
+				t.Errorf("wanted no error but got %s", err)
+			}
+		})
+	}
+}
+
+type reviewTFResourceChangeTestcase struct {
+	name           string
+	resourceChange map[string]interface{}
+	wantViolations int
+}
+
+func TestReviewTFResourceChange(t *testing.T) {
+	var testCases = []reviewTFResourceChangeTestcase{
+		{
+			name:           "test base valid scenario",
+			resourceChange: computeInstanceResourceChange(),
+			wantViolations: 0,
+		},
+		{
+			name:           "test base invalid machine_type",
+			resourceChange: computeInstanceResourceChangeWithDisallowedMachineType(),
+			wantViolations: 1,
+		},
+		{
+			name:           "test with no machine type",
+			resourceChange: computeInstanceResourceChangeWithoutMachineType(),
+			wantViolations: 1,
+		},
+		{
+			name:           "test unaffected resource_type",
+			resourceChange: kmsKeyRingResourceChange(),
+			wantViolations: 0,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v, err := NewValidator(testOptions())
+			if err != nil {
+				t.Fatal("unexpected error", err)
+			}
+
+			violations, err := v.ReviewTFResourceChange(context.Background(), tc.resourceChange)
+			if err != nil {
+				t.Fatal("unexpected error", err)
+			}
+			got := len(violations)
+			if got != tc.wantViolations {
+				t.Errorf("wanted %d violations, got %d", tc.wantViolations, got)
+			}
+
+		})
+	}
+}
+
+// Artificially removing the after_unknown block to keep this shorter.
+var computeInstanceResourceChangeJSON = `{
+  "address": "google_compute_instance.foobar",
+  "mode": "managed",
+  "type": "google_compute_instance",
+  "name": "foobar",
+  "provider_name": "registry.terraform.io/hashicorp/google",
+  "change": {
+    "actions": [
+      "create"
+    ],
+    "before": null,
+    "after": {
+      "advanced_machine_features": [],
+      "allow_stopping_for_update": null,
+      "attached_disk": [],
+      "boot_disk": [
+        {
+          "auto_delete": true,
+          "disk_encryption_key_raw": null,
+          "initialize_params": [
+            {
+              "image": "https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images/debian-9-stretch-v20220118"
+            }
+          ],
+          "mode": "READ_WRITE"
+        }
+      ],
+      "can_ip_forward": false,
+      "deletion_protection": false,
+      "description": null,
+      "desired_status": null,
+      "enable_display": null,
+      "hostname": null,
+      "labels": {
+        "my_key": "my_value",
+        "my_other_key": "my_other_value"
+      },
+      "machine_type": "e2-medium",
+      "metadata": {
+        "baz": "qux",
+        "foo": "bar",
+        "startup-script": "echo Hello"
+      },
+      "metadata_startup_script": null,
+      "name": "meep-merp",
+      "network_interface": [
+        {
+          "access_config": [],
+          "alias_ip_range": [],
+          "ipv6_access_config": [],
+          "network": "default",
+          "nic_type": null,
+          "queue_count": null
+        }
+      ],
+      "resource_policies": null,
+      "scratch_disk": [],
+      "service_account": [],
+      "shielded_instance_config": [],
+      "tags": [
+        "bar",
+        "foo"
+      ],
+      "timeouts": null,
+      "zone": "us-central1-a"
+    },
+    "after_unknown": {}
+  }
+}`
+
+func computeInstanceResourceChange() map[string]interface{} {
+	return mustMakeResourceChange(computeInstanceResourceChangeJSON)
+}
+
+// Artificially removing the after_unknown block to keep this shorter.
+var computeInstanceResourceChangeWithDisallowedMachineTypeJSON = `{
+  "address": "google_compute_instance.foobar",
+  "mode": "managed",
+  "type": "google_compute_instance",
+  "name": "foobar",
+  "provider_name": "registry.terraform.io/hashicorp/google",
+  "change": {
+    "actions": [
+      "create"
+    ],
+    "before": null,
+    "after": {
+      "advanced_machine_features": [],
+      "allow_stopping_for_update": null,
+      "attached_disk": [],
+      "boot_disk": [
+        {
+          "auto_delete": true,
+          "disk_encryption_key_raw": null,
+          "initialize_params": [
+            {
+              "image": "https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images/debian-9-stretch-v20220118"
+            }
+          ],
+          "mode": "READ_WRITE"
+        }
+      ],
+      "can_ip_forward": false,
+      "deletion_protection": false,
+      "description": null,
+      "desired_status": null,
+      "enable_display": null,
+      "hostname": null,
+      "labels": {
+        "my_key": "my_value",
+        "my_other_key": "my_other_value"
+      },
+      "machine_type": "e2-high",
+      "metadata": {
+        "baz": "qux",
+        "foo": "bar",
+        "startup-script": "echo Hello"
+      },
+      "metadata_startup_script": null,
+      "name": "meep-merp",
+      "network_interface": [
+        {
+          "access_config": [],
+          "alias_ip_range": [],
+          "ipv6_access_config": [],
+          "network": "default",
+          "nic_type": null,
+          "queue_count": null
+        }
+      ],
+      "resource_policies": null,
+      "scratch_disk": [],
+      "service_account": [],
+      "shielded_instance_config": [],
+      "tags": [
+        "bar",
+        "foo"
+      ],
+      "timeouts": null,
+      "zone": "us-central1-a"
+    },
+    "after_unknown": {}
+  }
+}`
+
+func computeInstanceResourceChangeWithDisallowedMachineType() map[string]interface{} {
+	return mustMakeResourceChange(computeInstanceResourceChangeWithDisallowedMachineTypeJSON)
+}
+
+// Artificially removing the after_unknown block to keep this shorter.
+var computeInstanceResourceChangeWithoutMachineTypeJSON = `{
+  "address": "google_compute_instance.foobar",
+  "mode": "managed",
+  "type": "google_compute_instance",
+  "name": "foobar",
+  "provider_name": "registry.terraform.io/hashicorp/google",
+  "change": {
+    "actions": [
+      "create"
+    ],
+    "before": null,
+    "after": {
+      "advanced_machine_features": [],
+      "allow_stopping_for_update": null,
+      "attached_disk": [],
+      "boot_disk": [
+        {
+          "auto_delete": true,
+          "disk_encryption_key_raw": null,
+          "initialize_params": [
+            {
+              "image": "https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images/debian-9-stretch-v20220118"
+            }
+          ],
+          "mode": "READ_WRITE"
+        }
+      ],
+      "can_ip_forward": false,
+      "deletion_protection": false,
+      "description": null,
+      "desired_status": null,
+      "enable_display": null,
+      "hostname": null,
+      "labels": {
+        "my_key": "my_value",
+        "my_other_key": "my_other_value"
+      },
+      "machine_type": "",
+      "metadata": {
+        "baz": "qux",
+        "foo": "bar",
+        "startup-script": "echo Hello"
+      },
+      "metadata_startup_script": null,
+      "name": "meep-merp",
+      "network_interface": [
+        {
+          "access_config": [],
+          "alias_ip_range": [],
+          "ipv6_access_config": [],
+          "network": "default",
+          "nic_type": null,
+          "queue_count": null
+        }
+      ],
+      "resource_policies": null,
+      "scratch_disk": [],
+      "service_account": [],
+      "shielded_instance_config": [],
+      "tags": [
+        "bar",
+        "foo"
+      ],
+      "timeouts": null,
+      "zone": "us-central1-a"
+    },
+    "after_unknown": {}
+  }
+}`
+
+func computeInstanceResourceChangeWithoutMachineType() map[string]interface{} {
+	return mustMakeResourceChange(computeInstanceResourceChangeWithoutMachineTypeJSON)
+}
+
+var kmsKeyRingResourceChangeJSON = `{
+  "address": "google_kms_key_ring.test",
+  "mode": "managed",
+  "type": "google_kms_key_ring",
+  "name": "test",
+  "provider_name": "google",
+  "change": {
+    "actions": [
+      "create"
+    ],
+    "before": null,
+    "after": {
+      "location": "global",
+      "name": "keyring-example",
+      "timeouts": null
+    },
+    "after_unknown": {
+      "id": true,
+      "project": true,
+      "self_link": true
+    }
+  }
+}`
+
+func kmsKeyRingResourceChange() map[string]interface{} {
+	return mustMakeResourceChange(kmsKeyRingResourceChangeJSON)
+}
+
+func mustMakeResourceChange(resourceChangeJSON string) map[string]interface{} {
+	var data map[string]interface{}
+	if err := json.Unmarshal([]byte(resourceChangeJSON), &data); err != nil {
+		panic(err)
+	}
+	return data
+}
+
+var defaultReviewTestResourceChanges = []map[string]interface{}{
+	computeInstanceResourceChange(),
+	computeInstanceResourceChangeWithDisallowedMachineType(),
+	computeInstanceResourceChangeWithoutMachineType(),
+	kmsKeyRingResourceChange(),
+}
+
+func BenchmarkReviewResourceChange(b *testing.B) {
+	v, err := NewValidator(testOptions())
+	if err != nil {
+		b.Fatal("unexpected error", err)
+	}
+
+	b.ResetTimer()
+	for _, rc := range defaultReviewTestResourceChanges {
+		rc := rc
+		b.Run(rc["address"].(string), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_, err = v.ReviewTFResourceChange(context.Background(), rc)
 				if err != nil {
 					b.Fatalf("unexpected error %s", err)
 				}

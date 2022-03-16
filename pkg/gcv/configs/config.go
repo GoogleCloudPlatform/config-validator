@@ -26,7 +26,6 @@ import (
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/multierror"
 	cfapis "github.com/open-policy-agent/frameworks/constraint/pkg/apis"
-	cfv1alpha1 "github.com/open-policy-agent/frameworks/constraint/pkg/apis/templates/v1alpha1"
 	cftemplates "github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/regorewriter"
 	"github.com/pkg/errors"
@@ -45,25 +44,24 @@ func init() {
 	utilruntime.Must(apiextensionsv1beta1.AddToScheme(scheme.Scheme))
 }
 
+// TODO: Using constant from gcptarget/tftarget packages causes circular reference.  Fix circular reference and use <package>.Name
 const (
 	K8STargetName = "admission.k8s.gatekeeper.sh"
+	GCPTargetName = "validation.gcp.forsetisecurity.org"
+	TFTargetName  = "validation.resourcechange.terraform.cloud.google.com"
 )
 
 const (
 	constraintGroup = "constraints.gatekeeper.sh"
-	expectedTarget  = "validation.gcp.forsetisecurity.org"
-	yamlPath        = expectedTarget + "/yamlpath"
-	OriginalName    = expectedTarget + "/originalName"
+	templateGroup   = "templates.gatekeeper.sh"
+	yamlPath        = GCPTargetName + "/yamlpath"
+	OriginalName    = GCPTargetName + "/originalName"
 )
 
 const (
 	gcpConstraint = "gcp"
 	k8sConstraint = "k8s"
-)
-
-var (
-	// templateGK is the GroupKind for ConstraintTemplate types.
-	TemplateGK = schema.GroupKind{Group: cfv1alpha1.SchemeGroupVersion.Group, Kind: "ConstraintTemplate"}
+	tfConstraint  = "terraform"
 )
 
 func arrayFilterSuffix(arr []string, suffix string) []string {
@@ -160,6 +158,9 @@ func injectRegoAdapter(rego string) string {
 
 // convertLegacyConstraintTemplate handles converting a legacy forseti v1alpha1 ConstraintTemplate
 // to a constraint framework v1alpha1 ConstraintTemplate.
+// Legacy constraint templates use `deny` as an entrypoint and the expected inputs are:
+// - `input.asset`: the CAI asset being reviewed (new templates use `input.review`)
+// - `input.constraint.spec.parameters`: the parameters from the constraint template (new templates use `input.parameters`)
 func convertLegacyConstraintTemplate(u *unstructured.Unstructured, regoLib []string) error {
 	targetMap, found, err := unstructured.NestedMap(u.Object, "spec", "targets")
 	if err != nil && !found {
@@ -316,6 +317,8 @@ type Configuration struct {
 	GCPConstraints []*unstructured.Unstructured      // Constraints for GCP
 	K8STemplates   []*cftemplates.ConstraintTemplate // Constraint Templates for GKE
 	K8SConstraints []*unstructured.Unstructured      // Constraints for GKE
+	TFTemplates    []*cftemplates.ConstraintTemplate // Constraint Templates for TF
+	TFConstraints  []*unstructured.Unstructured      // Constraints for TF
 
 	// regoLib contains the set of rego libraries, it is only used during construction of Configuration
 	regoLib []string
@@ -355,8 +358,15 @@ func LoadRegoFiles(dir string) ([]string, error) {
 }
 
 func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
-	switch {
-	case u.GroupVersionKind().GroupKind() == TemplateGK:
+	switch u.GroupVersionKind().Group {
+	case constraintGroup:
+		c.allConstraints = append(c.allConstraints, u)
+
+	case templateGroup:
+		if u.GroupVersionKind().Kind != "ConstraintTemplate" {
+			return errors.Errorf("unexpected data type %s in group %s", u.GroupVersionKind(), templateGroup)
+		}
+
 		switch u.GroupVersionKind().Version {
 		case "v1alpha1":
 			openAPIResult := configValidatorV1Alpha1SchemaValidator.Validate(u.Object)
@@ -403,21 +413,20 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 
 		for _, target := range ct.Spec.Targets {
 			switch target.Target {
-			// TODO: Using consant from gcptarget package causes circular reference.  Fix circular reference and use gcptarget.Name
-			case "validation.gcp.forsetisecurity.org":
+
+			case GCPTargetName:
 				c.GCPTemplates = append(c.GCPTemplates, &ct)
+			case TFTargetName:
+				if u.GroupVersionKind().Version == "v1alpha1" {
+					return errors.Errorf("v1alpha1 templates are not supported for terraform templates. Please upgrade.")
+				}
+				c.TFTemplates = append(c.TFTemplates, &ct)
 			case K8STargetName:
 				c.K8STemplates = append(c.K8STemplates, &ct)
 			default:
 				return errors.Errorf("")
 			}
 		}
-
-	case u.GroupVersionKind().Group == constraintGroup:
-		c.allConstraints = append(c.allConstraints, u)
-
-	case u.GroupVersionKind().Group == cfv1alpha1.SchemeGroupVersion.Group:
-		return errors.Errorf("unexpected data type %s in group %s", u.GroupVersionKind(), cfv1alpha1.SchemeGroupVersion.Group)
 
 	default:
 		glog.V(1).Infof("Ignoring %s %s", u.GroupVersionKind(), u.GetName())
@@ -430,6 +439,9 @@ func (c *Configuration) finishLoad() error {
 	for _, t := range c.GCPTemplates {
 		templates[t.Spec.CRD.Spec.Names.Kind] = gcpConstraint
 	}
+	for _, t := range c.TFTemplates {
+		templates[t.Spec.CRD.Spec.Names.Kind] = tfConstraint
+	}
 	for _, t := range c.K8STemplates {
 		templates[t.Spec.CRD.Spec.Names.Kind] = k8sConstraint
 	}
@@ -441,7 +453,7 @@ func (c *Configuration) finishLoad() error {
 		gvk := constraint.GroupVersionKind()
 		if gvk.Version == "v1alpha1" {
 			if err := convertLegacyConstraint(constraint); err != nil {
-				return errors.Wrapf(err, "failed to convert constraint")
+				return fmt.Errorf("failed to convert constraint: %w", err)
 			}
 		}
 
@@ -459,6 +471,8 @@ func (c *Configuration) finishLoad() error {
 		switch templates[gvk.Kind] {
 		case gcpConstraint:
 			c.GCPConstraints = append(c.GCPConstraints, constraint)
+		case tfConstraint:
+			c.TFConstraints = append(c.TFConstraints, constraint)
 		case k8sConstraint:
 			c.K8SConstraints = append(c.K8SConstraints, constraint)
 		default:
