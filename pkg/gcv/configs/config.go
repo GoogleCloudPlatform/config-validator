@@ -360,6 +360,12 @@ func LoadRegoFiles(dir string) ([]string, error) {
 func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 	switch u.GroupVersionKind().Group {
 	case constraintGroup:
+		if u.GroupVersionKind().Version == "v1alpha1" {
+			glog.Warning(
+				"v1alpha1 constraints are deprecated and will be removed in a future release. " +
+					"Please upgrade: https://github.com/GoogleCloudPlatform/policy-library/blob/main/docs/constraint_template_authoring.md#updating-from-v1alpha1-templates",
+			)
+		}
 		c.allConstraints = append(c.allConstraints, u)
 
 	case templateGroup:
@@ -369,6 +375,10 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 
 		switch u.GroupVersionKind().Version {
 		case "v1alpha1":
+			glog.Warning(
+				"v1alpha1 constraint templates are deprecated and will be removed in a future release. " +
+					"Please upgrade: https://github.com/GoogleCloudPlatform/policy-library/blob/main/docs/constraint_template_authoring.md#updating-from-v1alpha1-templates",
+			)
 			openAPIResult := configValidatorV1Alpha1SchemaValidator.Validate(u.Object)
 			if openAPIResult.HasErrorsOrWarnings() {
 				return errors.Wrapf(openAPIResult.AsError(), "v1alpha1 validation failure")
