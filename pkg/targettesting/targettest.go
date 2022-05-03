@@ -68,14 +68,6 @@ func CreateTargetHandler(t *testing.T, target client.TargetHandler, tcs []*Revie
 	return &targetHandlerTest
 }
 
-func StringToInterface(s []string) []interface{} {
-	iface := make([]interface{}, len(s))
-	for i := range s {
-		iface[i] = s[i]
-	}
-	return iface
-}
-
 // FromJSON returns a function that will unmarshal the JSON string and handle
 // errors appropriately.
 func FromJSON(data string) func(t *testing.T) interface{} {
