@@ -44,16 +44,6 @@ type reviewTestData struct {
 	wantConstraintError bool
 }
 
-func (td *reviewTestData) assetTest(nameMod string) *targetHandlerTest.ReviewTestcase {
-	tc := &targetHandlerTest.ReviewTestcase{
-		Name:                nameMod + " " + td.name,
-		Match:               td.match,
-		WantMatch:           td.wantMatch,
-		WantConstraintError: td.wantConstraintError,
-	}
-	return tc
-}
-
 func (td *reviewTestData) jsonAssetTestcase() *targetHandlerTest.ReviewTestcase {
 	tc := &targetHandlerTest.ReviewTestcase{
 		Name:                "json " + td.name,
