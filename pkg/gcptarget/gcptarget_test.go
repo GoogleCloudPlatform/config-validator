@@ -24,31 +24,8 @@ import (
 	v1 "google.golang.org/genproto/googleapis/cloud/asset/v1"
 )
 
-// match creates a match struct as would exist in a FCV constraint
-func match(opts ...func(map[string]interface{})) map[string]interface{} {
-	matchBlock := map[string]interface{}{}
-	for _, opt := range opts {
-		opt(matchBlock)
-	}
-	return matchBlock
-}
-
-// target populates the targets field inside of the match block
-func target(targets ...string) func(map[string]interface{}) {
-	return func(matchBlock map[string]interface{}) {
-		matchBlock["target"] = targettesting.StringToInterface(targets)
-	}
-}
-
-// exclude populates the exclude field inside of the match block
-func exclude(excludes ...string) func(map[string]interface{}) {
-	return func(matchBlock map[string]interface{}) {
-		matchBlock["exclude"] = targettesting.StringToInterface(excludes)
-	}
-}
-
-// forsetiAsset creates an FCV asset with the given ancestry path.
-func forsetiAsset(ancestryPath string) func(t *testing.T) interface{} {
+// asset creates an CAI asset with the given ancestry path.
+func asset(ancestryPath string) func(t *testing.T) interface{} {
 	return func(t *testing.T) interface{} {
 		return &validator.Asset{
 			AncestryPath: ancestryPath,
@@ -67,19 +44,14 @@ type reviewTestData struct {
 	wantConstraintError bool
 }
 
-func (td *reviewTestData) assetTest(nameMod string) *targetHandlerTest.ReviewTestcase {
+func (td *reviewTestData) jsonAssetTestcase() *targetHandlerTest.ReviewTestcase {
 	tc := &targetHandlerTest.ReviewTestcase{
-		Name:                nameMod + " " + td.name,
+		Name:                "json " + td.name,
 		Match:               td.match,
 		WantMatch:           td.wantMatch,
 		WantConstraintError: td.wantConstraintError,
 	}
-	return tc
-}
-
-func (td *reviewTestData) jsonAssetTestcase() *targetHandlerTest.ReviewTestcase {
-	assetTest := td.assetTest("json")
-	assetTest.Object = targetHandlerTest.FromJSON(fmt.Sprintf(`
+	tc.Object = targetHandlerTest.FromJSON(fmt.Sprintf(`
 {
   "name": "test-name",
   "asset_type": "test-asset-type",
@@ -87,13 +59,18 @@ func (td *reviewTestData) jsonAssetTestcase() *targetHandlerTest.ReviewTestcase 
   "resource": {}
 }
 `, td.ancestryPath))
-	return assetTest
+	return tc
 }
 
-func (td *reviewTestData) forsetiAssetTestcase() *targetHandlerTest.ReviewTestcase {
-	assetTest := td.assetTest("forseti")
-	assetTest.Object = forsetiAsset(td.ancestryPath)
-	return assetTest
+func (td *reviewTestData) assetTestcase() *targetHandlerTest.ReviewTestcase {
+	tc := &targetHandlerTest.ReviewTestcase{
+		Name:                "asset " + td.name,
+		Match:               td.match,
+		WantMatch:           td.wantMatch,
+		WantConstraintError: td.wantConstraintError,
+	}
+	tc.Object = asset(td.ancestryPath)
+	return tc
 }
 
 var testData = []reviewTestData{
@@ -104,165 +81,219 @@ var testData = []reviewTestData{
 	},
 	{
 		name:         "No match specified (matches anything)",
-		match:        match(),
+		match:        map[string]interface{}{},
 		ancestryPath: "organizations/123454321/folders/1221214",
 		wantMatch:    true,
 	},
 	{
-		name:         "Only match once.",
-		match:        match(target("**", "organizations/**")),
+		name: "Only match once.",
+		match: map[string]interface{}{
+			"target": []interface{}{"**", "organizations/**"},
+		},
 		ancestryPath: "organizations/123454321/folders/1221214",
 		wantMatch:    true,
 	},
 	{
-		name:         "Match org on exact ID",
-		match:        match(target("organizations/123454321")),
+		name: "Match org on exact ID",
+		match: map[string]interface{}{
+			"target": []interface{}{"organizations/123454321"},
+		},
 		ancestryPath: "organizations/123454321",
 		wantMatch:    true,
 	},
 	{
-		name:         "Does not match org for descendant match",
-		match:        match(target("organizations/123454321/**")),
+		name: "Does not match org for descendant match",
+		match: map[string]interface{}{
+			"target": []interface{}{"organizations/123454321/**"},
+		},
 		ancestryPath: "organizations/123454321",
 		wantMatch:    false,
 	},
 	{
-		name:         "No match org on close ID",
-		match:        match(target("organizations/123454321/*")),
+		name: "No match org on close ID",
+		match: map[string]interface{}{
+			"target": []interface{}{"organizations/123454321/*"},
+		},
 		ancestryPath: "organizations/1234543211",
 		wantMatch:    false,
 	},
 	{
-		name:         "Match all under org ID - folder",
-		match:        match(target("organizations/123454321/**")),
+		name: "Match all under org ID - folder",
+		match: map[string]interface{}{
+			"target": []interface{}{"organizations/123454321/**"},
+		},
 		ancestryPath: "organizations/123454321/folders/1242511",
 		wantMatch:    true,
 	},
 	{
-		name:         "Match all under org ID - project",
-		match:        match(target("organizations/123454321/**")),
+		name: "Match all under org ID - project",
+		match: map[string]interface{}{
+			"target": []interface{}{"organizations/123454321/**"},
+		},
 		ancestryPath: "organizations/123454321/projects/1242511",
 		wantMatch:    true,
 	},
 	{
-		name:         "Match all under org ID - folder, project",
-		match:        match(target("organizations/123454321/**")),
+		name: "Match all under org ID - folder, project",
+		match: map[string]interface{}{
+			"target": []interface{}{"organizations/123454321/**"},
+		},
 		ancestryPath: "organizations/123454321/folders/125896/projects/1242511",
 		wantMatch:    true,
 	},
 	{
-		name:         "No match folder on descendants",
-		match:        match(target("**/folders/1221214/**")),
+		name: "No match folder on descendants",
+		match: map[string]interface{}{
+			"target": []interface{}{"**/folders/1221214/**"},
+		},
 		ancestryPath: "organizations/123454321/folders/1221214",
 		wantMatch:    false,
 	},
 	{
-		name:         "No match folder",
-		match:        match(target("**/folders/1221214/**")),
+		name: "No match folder",
+		match: map[string]interface{}{
+			"target": []interface{}{"**/folders/1221214/**"},
+		},
 		ancestryPath: "organizations/123454321/folders/1221215",
 		wantMatch:    false,
 	},
 	{
-		name:         "No match under folder",
-		match:        match(target("**/folders/1221214/**")),
+		name: "No match under folder",
+		match: map[string]interface{}{
+			"target": []interface{}{"**/folders/1221214/**"},
+		},
 		ancestryPath: "organizations/123454321/folders/12212144/projects/1221214",
 		wantMatch:    false,
 	},
 	{
-		name:         "Match folder in folder",
-		match:        match(target("**/folders/1221214/**")),
+		name: "Match folder in folder",
+		match: map[string]interface{}{
+			"target": []interface{}{"**/folders/1221214/**"},
+		},
 		ancestryPath: "organizations/123454321/folders/1221214/folders/557385378",
 		wantMatch:    true,
 	},
 	{
-		name:         "Match project in folder",
-		match:        match(target("**/folders/1221214/**")),
+		name: "Match project in folder",
+		match: map[string]interface{}{
+			"target": []interface{}{"**/folders/1221214/**"},
+		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    true,
 	},
 	{
-		name:         "Match project",
-		match:        match(target("**/projects/557385378")),
+		name: "Match project",
+		match: map[string]interface{}{
+			"target": []interface{}{"**/projects/557385378"},
+		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    true,
 	},
 	{
-		name:         "Match project by ID, not number",
-		match:        match(target("**/projects/tfv-test-project")),
+		name: "Match project by ID, not number",
+		match: map[string]interface{}{
+			"target": []interface{}{"**/projects/tfv-test-project"},
+		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/tfv-test-project",
 		wantMatch:    true,
 	},
 	{
-		name:         "Match any project",
-		match:        match(target("**/projects/**")),
+		name: "Match any project",
+		match: map[string]interface{}{
+			"target": []interface{}{"**/projects/**"},
+		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    true,
 	},
 	{
-		name:         "Does not match project",
-		match:        match(target("**/projects/123245")),
+		name: "Does not match project",
+		match: map[string]interface{}{
+			"target": []interface{}{"**/projects/123245"},
+		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    false,
 	},
 	{
-		name:         "Match project multiple",
-		match:        match(target("**/projects/9795872589", "**/projects/557385378")),
+		name: "Match project multiple",
+		match: map[string]interface{}{
+			"target": []interface{}{"**/projects/9795872589", "**/projects/557385378"},
+		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    true,
 	},
 	{
-		name:         "Match any project",
-		match:        match(target("**/projects/*")),
+		name: "Match any project",
+		match: map[string]interface{}{
+			"target": []interface{}{"**/projects/*"},
+		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    true,
 	},
 	{
-		name:         "Exclude project",
-		match:        match(exclude("**/projects/557385378")),
+		name: "Exclude project",
+		match: map[string]interface{}{
+			"exclude": []interface{}{"**/projects/557385378"},
+		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    false,
 	},
 	{
-		name:         "Exclude project by ID, not number",
-		match:        match(exclude("**/projects/tfv-exclude-project")),
+		name: "Exclude project by ID, not number",
+		match: map[string]interface{}{
+			"exclude": []interface{}{"**/projects/tfv-exclude-project"},
+		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/tfv-exclude-project",
 		wantMatch:    false,
 	},
 	{
-		name:         "Exclude project multiple",
-		match:        match(exclude("**/projects/525572987", "**/projects/557385378")),
+		name: "Exclude project multiple",
+		match: map[string]interface{}{
+			"exclude": []interface{}{"**/projects/525572987", "**/projects/557385378"},
+		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    false,
 	},
 	{
-		name:         "Exclude project via wildcard on org",
-		match:        match(exclude("organizations/*/projects/557385378")),
+		name: "Exclude project via wildcard on org",
+		match: map[string]interface{}{
+			"exclude": []interface{}{"organizations/*/projects/557385378"},
+		},
 		ancestryPath: "organizations/123454321/projects/557385378",
 		wantMatch:    false,
 	},
 	{
-		name:                "invalid target CRM type",
-		match:               match(target("flubber/*")),
+		name: "invalid target CRM type",
+		match: map[string]interface{}{
+			"target": []interface{}{"flubber/*"},
+		},
 		wantConstraintError: true,
 	},
 	{
-		name:                "org after folder",
-		match:               match(target("folders/123/organizations/*")),
+		name: "org after folder",
+		match: map[string]interface{}{
+			"target": []interface{}{"folders/123/organizations/*"},
+		},
 		wantConstraintError: true,
 	},
 	{
-		name:                "org after project",
-		match:               match(target("projects/123/organizations/*")),
+		name: "org after project",
+		match: map[string]interface{}{
+			"target": []interface{}{"projects/123/organizations/*"},
+		},
 		wantConstraintError: true,
 	},
 	{
-		name:                "folder after project",
-		match:               match(target("projects/123/folders/123")),
+		name: "folder after project",
+		match: map[string]interface{}{
+			"target": []interface{}{"projects/123/folders/123"},
+		},
 		wantConstraintError: true,
 	},
 	{
-		name:                "invalid exclude CRM name",
-		match:               match(exclude("foosball/*")),
+		name: "invalid exclude CRM name",
+		match: map[string]interface{}{
+			"exclude": []interface{}{"foosball/*"},
+		},
 		wantConstraintError: true,
 	},
 	{
@@ -301,7 +332,7 @@ func TestTargetHandler(t *testing.T) {
 		testcases = append(
 			testcases,
 			tc.jsonAssetTestcase(),
-			tc.forsetiAssetTestcase(),
+			tc.assetTestcase(),
 		)
 	}
 

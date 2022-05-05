@@ -21,32 +21,6 @@ import (
 	"github.com/GoogleCloudPlatform/config-validator/pkg/targettesting"
 )
 
-// match creates a match struct as would exist in a config-validator constraint
-func match(opts ...func(map[string]interface{})) map[string]interface{} {
-	var matchBlock = map[string]interface{}{}
-	matchBlock["resource_address"] = map[string]interface{}{}
-
-	for _, opt := range opts {
-		opt(matchBlock)
-	}
-
-	return matchBlock
-}
-
-// includeAddress populates the includeAddress field inside of the match block
-func includeAddress(val ...string) func(map[string]interface{}) {
-	return func(matchBlock map[string]interface{}) {
-		matchBlock["addresses"] = targettesting.StringToInterface(val)
-	}
-}
-
-// excludeAddress populates the excludeAddress field inside of the match block
-func excludeAddress(val ...string) func(map[string]interface{}) {
-	return func(matchBlock map[string]interface{}) {
-		matchBlock["excludedAddresses"] = targettesting.StringToInterface(val)
-	}
-}
-
 // reviewTestData is the base test data which will be manifested into a
 // raw JSON.
 type reviewTestData struct {
@@ -99,105 +73,137 @@ var testData = []reviewTestData{
 	},
 	{
 		name:      "Basic 2 (wildcard)",
-		match:     match(),
+		match:     map[string]interface{}{},
 		address:   "google_compute_global_forwarding_rule.test",
 		wantMatch: true,
 	},
 	{
-		name:      "Only match once.",
-		match:     match(includeAddress("**", "*.*")),
+		name: "Only match once.",
+		match: map[string]interface{}{
+			"addresses": []interface{}{"**", "*.*"},
+		},
 		address:   "google_compute_global_forwarding_rule.test",
 		wantMatch: true,
 	},
 	{
-		name:      "Match on exact ID",
-		match:     match(includeAddress("google_compute_global_forwarding_rule.test")),
+		name: "Match on exact ID",
+		match: map[string]interface{}{
+			"addresses": []interface{}{"google_compute_global_forwarding_rule.test"},
+		},
 		address:   "google_compute_global_forwarding_rule.test",
 		wantMatch: true,
 	},
 	{
-		name:      "Does not match address for nested module",
-		match:     match(includeAddress("google_compute_global_forwarding_rule.test")),
+		name: "Does not match address for nested module",
+		match: map[string]interface{}{
+			"addresses": []interface{}{"google_compute_global_forwarding_rule.test"},
+		},
 		address:   "module.abc.google_compute_global_forwarding_rule.test",
 		wantMatch: false,
 	},
 	{
-		name:      "name wildcard match",
-		match:     match(includeAddress("google_compute_global_forwarding_rule.*")),
+		name: "name wildcard match",
+		match: map[string]interface{}{
+			"addresses": []interface{}{"google_compute_global_forwarding_rule.*"},
+		},
 		address:   "google_compute_global_forwarding_rule.test",
 		wantMatch: true,
 	},
 	{
-		name:      "module wildcard match",
-		match:     match(includeAddress("**.google_compute_global_forwarding_rule.*")),
+		name: "module wildcard match",
+		match: map[string]interface{}{
+			"addresses": []interface{}{"**.google_compute_global_forwarding_rule.*"},
+		},
 		address:   "module.abc.google_compute_global_forwarding_rule.test",
 		wantMatch: true,
 	},
 	{
-		name:      "root wildcard match",
-		match:     match(includeAddress("**.google_compute_global_forwarding_rule.*")),
+		name: "root wildcard match",
+		match: map[string]interface{}{
+			"addresses": []interface{}{"**.google_compute_global_forwarding_rule.*"},
+		},
 		address:   "root.google_compute_global_forwarding_rule.test",
 		wantMatch: true,
 	},
 	{
-		name:      "root doesn't match module",
-		match:     match(includeAddress("module.one.google_compute_global_forwarding_rule.*")),
+		name: "root doesn't match module",
+		match: map[string]interface{}{
+			"addresses": []interface{}{"module.one.google_compute_global_forwarding_rule.*"},
+		},
 		address:   "root.google_compute_global_forwarding_rule.test",
 		wantMatch: false,
 	},
-	// exlude tests
+	// exclude tests
 	{
-		name:      "exclude all",
-		match:     match(excludeAddress("**", "*.*")),
+		name: "exclude all",
+		match: map[string]interface{}{
+			"excludedAddresses": []interface{}{"**", "*.*"},
+		},
 		address:   "google_compute_global_forwarding_rule.test",
 		wantMatch: false,
 	},
 	{
-		name:      "exclude on exact ID",
-		match:     match(excludeAddress("google_compute_global_forwarding_rule.test")),
+		name: "exclude on exact ID",
+		match: map[string]interface{}{
+			"excludedAddresses": []interface{}{"google_compute_global_forwarding_rule.test"},
+		},
 		address:   "google_compute_global_forwarding_rule.test",
 		wantMatch: false,
 	},
 	{
-		name:      "exclude does not match org for nested module",
-		match:     match(excludeAddress("google_compute_global_forwarding_rule.test")),
+		name: "exclude does not match org for nested module",
+		match: map[string]interface{}{
+			"excludedAddresses": []interface{}{"google_compute_global_forwarding_rule.test"},
+		},
 		address:   "module.abc.google_compute_global_forwarding_rule.test",
 		wantMatch: true,
 	},
 	{
-		name:      "exclude name wildcard match",
-		match:     match(excludeAddress("google_compute_global_forwarding_rule.*")),
+		name: "exclude name wildcard match",
+		match: map[string]interface{}{
+			"excludedAddresses": []interface{}{"google_compute_global_forwarding_rule.*"},
+		},
 		address:   "google_compute_global_forwarding_rule.test",
 		wantMatch: false,
 	},
 	{
-		name:      "exclude module wildcard match",
-		match:     match(excludeAddress("**.google_compute_global_forwarding_rule.*")),
+		name: "exclude module wildcard match",
+		match: map[string]interface{}{
+			"excludedAddresses": []interface{}{"**.google_compute_global_forwarding_rule.*"},
+		},
 		address:   "module.abc.google_compute_global_forwarding_rule.test",
 		wantMatch: false,
 	},
 	// errors
 	{
-		name:                "nested spaces",
-		match:               match(includeAddress("**.* *.*")),
+		name: "nested spaces",
+		match: map[string]interface{}{
+			"addresses": []interface{}{"**.* *.*"},
+		},
 		address:             "module.abc.google_compute_global_forwarding_rule.test",
 		wantConstraintError: true,
 	},
 	{
-		name:                "nested special characters",
-		match:               match(includeAddress("**$$")),
+		name: "nested special characters",
+		match: map[string]interface{}{
+			"addresses": []interface{}{"**$$"},
+		},
 		address:             "module.abc.google_compute_global_forwarding_rule.test",
 		wantConstraintError: true,
 	},
 	{
-		name:                "exclude error - nested spaces",
-		match:               match(excludeAddress("**. * *.*")),
+		name: "exclude error - nested spaces",
+		match: map[string]interface{}{
+			"excludedAddresses": []interface{}{"**. * *.*"},
+		},
 		address:             "module.abc.google_compute_global_forwarding_rule.test",
 		wantConstraintError: true,
 	},
 	{
-		name:                "exclude error - nested special characters",
-		match:               match(excludeAddress("**$$")),
+		name: "exclude error - nested special characters",
+		match: map[string]interface{}{
+			"excludedAddresses": []interface{}{"**$$"},
+		},
 		address:             "module.abc.google_compute_global_forwarding_rule.test",
 		wantConstraintError: true,
 	},
