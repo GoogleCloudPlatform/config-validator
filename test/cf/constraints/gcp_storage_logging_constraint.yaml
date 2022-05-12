@@ -23,4 +23,5 @@ spec:
   severity: medium
   match:
     target: ["organization/*"]
+    exclude: []
   parameters: {}
