@@ -287,6 +287,9 @@ func (g *GCPTarget) ValidateConstraint(constraint *unstructured.Unstructured) er
 			return fmt.Errorf("invalid glob in spec.match.ancestries: %w", ancestriesErr)
 		}
 	} else if targetsFound {
+		glog.Warning(
+			"spec.match.target is deprecated and will be removed in a future release. Use spec.match.ancestries instead",
+		)
 		if targetsErr != nil {
 			return fmt.Errorf("invalid spec.match.target: %s", targetsErr)
 		}
@@ -307,6 +310,9 @@ func (g *GCPTarget) ValidateConstraint(constraint *unstructured.Unstructured) er
 			return fmt.Errorf("invalid glob in spec.match.excludedAncestries: %w", excludedAncestriesErr)
 		}
 	} else if excludesFound {
+		glog.Warning(
+			"spec.match.exclude is deprecated and will be removed in a future release. Use spec.match.excludedAncestries instead",
+		)
 		if excludesErr != nil {
 			return fmt.Errorf("invalid spec.match.exclude: %s", excludesErr)
 		}
