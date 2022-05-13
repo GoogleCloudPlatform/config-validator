@@ -93,7 +93,7 @@ func (td *reviewTestData) legacySpecMatchTestcase() *targetHandlerTest.ReviewTes
 	return tc
 }
 
-var testData = []reviewTestData{
+var matchTests = []reviewTestData{
 	{
 		name:         "Null match object (matches anything)",
 		ancestryPath: "organizations/123454321/folders/1221214",
@@ -346,14 +346,44 @@ var testData = []reviewTestData{
 	},
 }
 
+// Tests for what happens when you try to define
+// both target and ancestries or both exclude and
+// excludedAncestries
+var legacyMatchConflictTests  = []reviewTestData{
+	{
+		name: "target and ancestries",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/123454321"},
+			"target": []interface{}{"organizations/123454321"},
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "exclude and excludedAncestries",
+		match: map[string]interface{}{
+			"excludedAncestries": []interface{}{"organizations/123454321"},
+			"exclude": []interface{}{"organizations/123454321"},
+		},
+		wantConstraintError: true,
+	},
+}
+
 func TestTargetHandler(t *testing.T) {
 	var testcases []*targettesting.ReviewTestcase
-	for _, tc := range testData {
+	for _, tc := range matchTests {
 		testcases = append(
 			testcases,
 			tc.jsonAssetTestcase(),
 			tc.assetTestcase(),
 			tc.legacySpecMatchTestcase(),
+		)
+	}
+
+	for _, tc := range legacyMatchConflictTests {
+		testcases = append(
+			testcases,
+			tc.jsonAssetTestcase(),
+			tc.assetTestcase(),
 		)
 	}
 
