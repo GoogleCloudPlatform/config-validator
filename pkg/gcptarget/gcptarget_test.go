@@ -349,12 +349,12 @@ var matchTests = []reviewTestData{
 // Tests for what happens when you try to define
 // both target and ancestries or both exclude and
 // excludedAncestries
-var legacyMatchConflictTests  = []reviewTestData{
+var legacyMatchConflictTests = []reviewTestData{
 	{
 		name: "target and ancestries",
 		match: map[string]interface{}{
 			"ancestries": []interface{}{"organizations/123454321"},
-			"target": []interface{}{"organizations/123454321"},
+			"target":     []interface{}{"organizations/123454321"},
 		},
 		wantConstraintError: true,
 	},
@@ -362,7 +362,7 @@ var legacyMatchConflictTests  = []reviewTestData{
 		name: "exclude and excludedAncestries",
 		match: map[string]interface{}{
 			"excludedAncestries": []interface{}{"organizations/123454321"},
-			"exclude": []interface{}{"organizations/123454321"},
+			"exclude":            []interface{}{"organizations/123454321"},
 		},
 		wantConstraintError: true,
 	},
