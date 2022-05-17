@@ -16,6 +16,7 @@ package gcptarget
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
@@ -42,6 +43,7 @@ type reviewTestData struct {
 	ancestryPath        string
 	wantMatch           bool
 	wantConstraintError bool
+	wantLogged          *regexp.Regexp
 }
 
 func (td *reviewTestData) jsonAssetTestcase() *targetHandlerTest.ReviewTestcase {
@@ -50,6 +52,7 @@ func (td *reviewTestData) jsonAssetTestcase() *targetHandlerTest.ReviewTestcase 
 		Match:               td.match,
 		WantMatch:           td.wantMatch,
 		WantConstraintError: td.wantConstraintError,
+		WantLogged:          td.wantLogged,
 	}
 	tc.Object = targetHandlerTest.FromJSON(fmt.Sprintf(`
 {
@@ -68,6 +71,7 @@ func (td *reviewTestData) assetTestcase() *targetHandlerTest.ReviewTestcase {
 		Match:               td.match,
 		WantMatch:           td.wantMatch,
 		WantConstraintError: td.wantConstraintError,
+		WantLogged:          td.wantLogged,
 	}
 	tc.Object = asset(td.ancestryPath)
 	return tc
@@ -88,6 +92,7 @@ func (td *reviewTestData) legacySpecMatchTestcase() *targetHandlerTest.ReviewTes
 		Match:               legacyMatch,
 		WantMatch:           td.wantMatch,
 		WantConstraintError: td.wantConstraintError,
+		WantLogged:          td.wantLogged,
 	}
 	tc.Object = asset(td.ancestryPath)
 	return tc
@@ -346,12 +351,10 @@ var matchTests = []reviewTestData{
 	},
 }
 
-// Tests for what happens when you try to define
-// both target and ancestries or both exclude and
-// excludedAncestries
-var legacyMatchConflictTests = []reviewTestData{
+// Tests for legacy match conflicts and warnings
+var legacyMatchTests = []reviewTestData{
 	{
-		name: "target and ancestries",
+		name: "target and ancestries should conflict",
 		match: map[string]interface{}{
 			"ancestries": []interface{}{"organizations/123454321"},
 			"target":     []interface{}{"organizations/123454321"},
@@ -359,12 +362,30 @@ var legacyMatchConflictTests = []reviewTestData{
 		wantConstraintError: true,
 	},
 	{
-		name: "exclude and excludedAncestries",
+		name: "exclude and excludedAncestries should conflict",
 		match: map[string]interface{}{
 			"excludedAncestries": []interface{}{"organizations/123454321"},
 			"exclude":            []interface{}{"organizations/123454321"},
 		},
 		wantConstraintError: true,
+	},
+	{
+		name: "target should warn",
+		match: map[string]interface{}{
+			"target": []interface{}{"**/projects/557385378"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
+		wantMatch:    true,
+		wantLogged:   regexp.MustCompile(`spec.match.target is deprecated.*Use spec.match.ancestries`),
+	},
+	{
+		name: "exclude should warn",
+		match: map[string]interface{}{
+			"exclude": []interface{}{"**/projects/557385378"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
+		wantMatch:    false,
+		wantLogged:   regexp.MustCompile(`spec.match.exclude is deprecated.*Use spec.match.excludedAncestries`),
 	},
 }
 
@@ -379,7 +400,7 @@ func TestTargetHandler(t *testing.T) {
 		)
 	}
 
-	for _, tc := range legacyMatchConflictTests {
+	for _, tc := range legacyMatchTests {
 		testcases = append(
 			testcases,
 			tc.jsonAssetTestcase(),

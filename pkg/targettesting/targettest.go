@@ -15,8 +15,12 @@
 package targettesting
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"log"
+	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -131,6 +135,7 @@ type ReviewTestcase struct {
 	Object              func(t *testing.T) interface{} // function which returns an Object that's getting passed to the Review call
 	WantMatch           bool                           // true if the match should succeed
 	WantConstraintError bool                           // true if adding the constraint should fail
+	WantLogged          *regexp.Regexp                 // regexp to check against logged messages
 }
 
 // Run will set up the client with the TargetHandler and a test constraint template
@@ -139,6 +144,12 @@ func (tc *ReviewTestcase) run(t *testing.T) {
 	// matching_constraints needs differing constraints for the match blocks,
 	// to get test coverage, this gets exercised on calls to client.Review
 	ctx := context.Background()
+
+	var logOutput bytes.Buffer
+	log.SetOutput(&logOutput)
+	defer func() {
+		log.SetOutput(os.Stderr)
+	}()
 
 	// create client
 	cfClient := createClient(t, tc.newTargetHandler)
@@ -207,6 +218,12 @@ func (tc *ReviewTestcase) run(t *testing.T) {
 			unitTestTraceDump(t, review)
 			t.Logf("match block: %v", tc.Match)
 			t.Fatalf("unexpected results in review")
+		}
+	}
+
+	if tc.WantLogged != nil {
+		if !tc.WantLogged.Match(logOutput.Bytes()) {
+			t.Fatalf("expected log output to match %s; got %s", tc.WantLogged.String(), logOutput.String())
 		}
 	}
 }
