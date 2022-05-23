@@ -16,6 +16,7 @@ package gcptarget
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
@@ -42,6 +43,7 @@ type reviewTestData struct {
 	ancestryPath        string
 	wantMatch           bool
 	wantConstraintError bool
+	wantLogged          *regexp.Regexp
 }
 
 func (td *reviewTestData) jsonAssetTestcase() *targetHandlerTest.ReviewTestcase {
@@ -50,6 +52,7 @@ func (td *reviewTestData) jsonAssetTestcase() *targetHandlerTest.ReviewTestcase 
 		Match:               td.match,
 		WantMatch:           td.wantMatch,
 		WantConstraintError: td.wantConstraintError,
+		WantLogged:          td.wantLogged,
 	}
 	tc.Object = targetHandlerTest.FromJSON(fmt.Sprintf(`
 {
@@ -68,12 +71,34 @@ func (td *reviewTestData) assetTestcase() *targetHandlerTest.ReviewTestcase {
 		Match:               td.match,
 		WantMatch:           td.wantMatch,
 		WantConstraintError: td.wantConstraintError,
+		WantLogged:          td.wantLogged,
 	}
 	tc.Object = asset(td.ancestryPath)
 	return tc
 }
 
-var testData = []reviewTestData{
+func (td *reviewTestData) legacySpecMatchTestcase() *targetHandlerTest.ReviewTestcase {
+	legacyMatch := map[string]interface{}{}
+
+	if ancestries, ok := td.match["ancestries"]; ok {
+		legacyMatch["target"] = ancestries
+	}
+	if excludedAncestries, ok := td.match["excludedAncestries"]; ok {
+		legacyMatch["exclude"] = excludedAncestries
+	}
+
+	tc := &targetHandlerTest.ReviewTestcase{
+		Name:                "legacy spec match " + td.name,
+		Match:               legacyMatch,
+		WantMatch:           td.wantMatch,
+		WantConstraintError: td.wantConstraintError,
+		WantLogged:          td.wantLogged,
+	}
+	tc.Object = asset(td.ancestryPath)
+	return tc
+}
+
+var matchTests = []reviewTestData{
 	{
 		name:         "Null match object (matches anything)",
 		ancestryPath: "organizations/123454321/folders/1221214",
@@ -88,7 +113,7 @@ var testData = []reviewTestData{
 	{
 		name: "Only match once.",
 		match: map[string]interface{}{
-			"target": []interface{}{"**", "organizations/**"},
+			"ancestries": []interface{}{"**", "organizations/**"},
 		},
 		ancestryPath: "organizations/123454321/folders/1221214",
 		wantMatch:    true,
@@ -96,7 +121,7 @@ var testData = []reviewTestData{
 	{
 		name: "Match org on exact ID",
 		match: map[string]interface{}{
-			"target": []interface{}{"organizations/123454321"},
+			"ancestries": []interface{}{"organizations/123454321"},
 		},
 		ancestryPath: "organizations/123454321",
 		wantMatch:    true,
@@ -104,7 +129,7 @@ var testData = []reviewTestData{
 	{
 		name: "Does not match org for descendant match",
 		match: map[string]interface{}{
-			"target": []interface{}{"organizations/123454321/**"},
+			"ancestries": []interface{}{"organizations/123454321/**"},
 		},
 		ancestryPath: "organizations/123454321",
 		wantMatch:    false,
@@ -112,7 +137,7 @@ var testData = []reviewTestData{
 	{
 		name: "No match org on close ID",
 		match: map[string]interface{}{
-			"target": []interface{}{"organizations/123454321/*"},
+			"ancestries": []interface{}{"organizations/123454321/*"},
 		},
 		ancestryPath: "organizations/1234543211",
 		wantMatch:    false,
@@ -120,7 +145,7 @@ var testData = []reviewTestData{
 	{
 		name: "Match all under org ID - folder",
 		match: map[string]interface{}{
-			"target": []interface{}{"organizations/123454321/**"},
+			"ancestries": []interface{}{"organizations/123454321/**"},
 		},
 		ancestryPath: "organizations/123454321/folders/1242511",
 		wantMatch:    true,
@@ -128,7 +153,7 @@ var testData = []reviewTestData{
 	{
 		name: "Match all under org ID - project",
 		match: map[string]interface{}{
-			"target": []interface{}{"organizations/123454321/**"},
+			"ancestries": []interface{}{"organizations/123454321/**"},
 		},
 		ancestryPath: "organizations/123454321/projects/1242511",
 		wantMatch:    true,
@@ -136,7 +161,7 @@ var testData = []reviewTestData{
 	{
 		name: "Match all under org ID - folder, project",
 		match: map[string]interface{}{
-			"target": []interface{}{"organizations/123454321/**"},
+			"ancestries": []interface{}{"organizations/123454321/**"},
 		},
 		ancestryPath: "organizations/123454321/folders/125896/projects/1242511",
 		wantMatch:    true,
@@ -144,7 +169,7 @@ var testData = []reviewTestData{
 	{
 		name: "No match folder on descendants",
 		match: map[string]interface{}{
-			"target": []interface{}{"**/folders/1221214/**"},
+			"ancestries": []interface{}{"**/folders/1221214/**"},
 		},
 		ancestryPath: "organizations/123454321/folders/1221214",
 		wantMatch:    false,
@@ -152,7 +177,7 @@ var testData = []reviewTestData{
 	{
 		name: "No match folder",
 		match: map[string]interface{}{
-			"target": []interface{}{"**/folders/1221214/**"},
+			"ancestries": []interface{}{"**/folders/1221214/**"},
 		},
 		ancestryPath: "organizations/123454321/folders/1221215",
 		wantMatch:    false,
@@ -160,7 +185,7 @@ var testData = []reviewTestData{
 	{
 		name: "No match under folder",
 		match: map[string]interface{}{
-			"target": []interface{}{"**/folders/1221214/**"},
+			"ancestries": []interface{}{"**/folders/1221214/**"},
 		},
 		ancestryPath: "organizations/123454321/folders/12212144/projects/1221214",
 		wantMatch:    false,
@@ -168,7 +193,7 @@ var testData = []reviewTestData{
 	{
 		name: "Match folder in folder",
 		match: map[string]interface{}{
-			"target": []interface{}{"**/folders/1221214/**"},
+			"ancestries": []interface{}{"**/folders/1221214/**"},
 		},
 		ancestryPath: "organizations/123454321/folders/1221214/folders/557385378",
 		wantMatch:    true,
@@ -176,7 +201,7 @@ var testData = []reviewTestData{
 	{
 		name: "Match project in folder",
 		match: map[string]interface{}{
-			"target": []interface{}{"**/folders/1221214/**"},
+			"ancestries": []interface{}{"**/folders/1221214/**"},
 		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    true,
@@ -184,7 +209,7 @@ var testData = []reviewTestData{
 	{
 		name: "Match project",
 		match: map[string]interface{}{
-			"target": []interface{}{"**/projects/557385378"},
+			"ancestries": []interface{}{"**/projects/557385378"},
 		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    true,
@@ -192,7 +217,7 @@ var testData = []reviewTestData{
 	{
 		name: "Match project by ID, not number",
 		match: map[string]interface{}{
-			"target": []interface{}{"**/projects/tfv-test-project"},
+			"ancestries": []interface{}{"**/projects/tfv-test-project"},
 		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/tfv-test-project",
 		wantMatch:    true,
@@ -200,7 +225,7 @@ var testData = []reviewTestData{
 	{
 		name: "Match any project",
 		match: map[string]interface{}{
-			"target": []interface{}{"**/projects/**"},
+			"ancestries": []interface{}{"**/projects/**"},
 		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    true,
@@ -208,7 +233,7 @@ var testData = []reviewTestData{
 	{
 		name: "Does not match project",
 		match: map[string]interface{}{
-			"target": []interface{}{"**/projects/123245"},
+			"ancestries": []interface{}{"**/projects/123245"},
 		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    false,
@@ -216,7 +241,7 @@ var testData = []reviewTestData{
 	{
 		name: "Match project multiple",
 		match: map[string]interface{}{
-			"target": []interface{}{"**/projects/9795872589", "**/projects/557385378"},
+			"ancestries": []interface{}{"**/projects/9795872589", "**/projects/557385378"},
 		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    true,
@@ -224,7 +249,7 @@ var testData = []reviewTestData{
 	{
 		name: "Match any project",
 		match: map[string]interface{}{
-			"target": []interface{}{"**/projects/*"},
+			"ancestries": []interface{}{"**/projects/*"},
 		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    true,
@@ -232,7 +257,7 @@ var testData = []reviewTestData{
 	{
 		name: "Exclude project",
 		match: map[string]interface{}{
-			"exclude": []interface{}{"**/projects/557385378"},
+			"excludedAncestries": []interface{}{"**/projects/557385378"},
 		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    false,
@@ -240,7 +265,7 @@ var testData = []reviewTestData{
 	{
 		name: "Exclude project by ID, not number",
 		match: map[string]interface{}{
-			"exclude": []interface{}{"**/projects/tfv-exclude-project"},
+			"excludedAncestries": []interface{}{"**/projects/tfv-exclude-project"},
 		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/tfv-exclude-project",
 		wantMatch:    false,
@@ -248,7 +273,7 @@ var testData = []reviewTestData{
 	{
 		name: "Exclude project multiple",
 		match: map[string]interface{}{
-			"exclude": []interface{}{"**/projects/525572987", "**/projects/557385378"},
+			"excludedAncestries": []interface{}{"**/projects/525572987", "**/projects/557385378"},
 		},
 		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
 		wantMatch:    false,
@@ -256,7 +281,7 @@ var testData = []reviewTestData{
 	{
 		name: "Exclude project via wildcard on org",
 		match: map[string]interface{}{
-			"exclude": []interface{}{"organizations/*/projects/557385378"},
+			"excludedAncestries": []interface{}{"organizations/*/projects/557385378"},
 		},
 		ancestryPath: "organizations/123454321/projects/557385378",
 		wantMatch:    false,
@@ -264,71 +289,118 @@ var testData = []reviewTestData{
 	{
 		name: "invalid target CRM type",
 		match: map[string]interface{}{
-			"target": []interface{}{"flubber/*"},
+			"ancestries": []interface{}{"flubber/*"},
 		},
 		wantConstraintError: true,
 	},
 	{
 		name: "org after folder",
 		match: map[string]interface{}{
-			"target": []interface{}{"folders/123/organizations/*"},
+			"ancestries": []interface{}{"folders/123/organizations/*"},
 		},
 		wantConstraintError: true,
 	},
 	{
 		name: "org after project",
 		match: map[string]interface{}{
-			"target": []interface{}{"projects/123/organizations/*"},
+			"ancestries": []interface{}{"projects/123/organizations/*"},
 		},
 		wantConstraintError: true,
 	},
 	{
 		name: "folder after project",
 		match: map[string]interface{}{
-			"target": []interface{}{"projects/123/folders/123"},
+			"ancestries": []interface{}{"projects/123/folders/123"},
 		},
 		wantConstraintError: true,
 	},
 	{
 		name: "invalid exclude CRM name",
 		match: map[string]interface{}{
-			"exclude": []interface{}{"foosball/*"},
+			"excludedAncestries": []interface{}{"foosball/*"},
 		},
 		wantConstraintError: true,
 	},
 	{
 		name: "Bad target type",
 		match: map[string]interface{}{
-			"target": "organizations/*",
+			"ancestries": "organizations/*",
 		},
 		wantConstraintError: true,
 	},
 	{
 		name: "Bad target item type",
 		match: map[string]interface{}{
-			"target": []interface{}{1},
+			"ancestries": []interface{}{1},
 		},
 		wantConstraintError: true,
 	},
 	{
 		name: "Bad exclude type",
 		match: map[string]interface{}{
-			"exclude": "organizations/*",
+			"excludedAncestries": "organizations/*",
 		},
 		wantConstraintError: true,
 	},
 	{
 		name: "Bad exclude item type",
 		match: map[string]interface{}{
-			"exclude": []interface{}{1},
+			"excludedAncestries": []interface{}{1},
 		},
 		wantConstraintError: true,
 	},
 }
 
+// Tests for legacy match conflicts and warnings
+var legacyMatchTests = []reviewTestData{
+	{
+		name: "target and ancestries should conflict",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/123454321"},
+			"target":     []interface{}{"organizations/123454321"},
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "exclude and excludedAncestries should conflict",
+		match: map[string]interface{}{
+			"excludedAncestries": []interface{}{"organizations/123454321"},
+			"exclude":            []interface{}{"organizations/123454321"},
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "target should warn",
+		match: map[string]interface{}{
+			"target": []interface{}{"**/projects/557385378"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
+		wantMatch:    true,
+		wantLogged:   regexp.MustCompile(`spec.match.target is deprecated.*Use spec.match.ancestries`),
+	},
+	{
+		name: "exclude should warn",
+		match: map[string]interface{}{
+			"exclude": []interface{}{"**/projects/557385378"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
+		wantMatch:    false,
+		wantLogged:   regexp.MustCompile(`spec.match.exclude is deprecated.*Use spec.match.excludedAncestries`),
+	},
+}
+
 func TestTargetHandler(t *testing.T) {
 	var testcases []*targettesting.ReviewTestcase
-	for _, tc := range testData {
+	for _, tc := range matchTests {
+		testcases = append(
+			testcases,
+			tc.jsonAssetTestcase(),
+			tc.assetTestcase(),
+			tc.legacySpecMatchTestcase(),
+		)
+	}
+
+	for _, tc := range legacyMatchTests {
 		testcases = append(
 			testcases,
 			tc.jsonAssetTestcase(),

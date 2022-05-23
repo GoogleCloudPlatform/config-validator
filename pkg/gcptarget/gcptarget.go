@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gcptarget is a constraint framework target for FCV to use for integrating with the opa constraint framework.
+// Package gcptarget is a constraint framework target for config-validator to use for integrating with the opa constraint framework.
 package gcptarget
 
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"text/template"
@@ -27,7 +30,6 @@ import (
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/types"
-	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -35,7 +37,7 @@ import (
 // Name is the target name for GCPTarget
 const Name = "validation.gcp.forsetisecurity.org"
 
-// GCPTarget is the constraint framework target for FCV
+// GCPTarget is the constraint framework target for CAI asset data
 type GCPTarget struct {
 }
 
@@ -66,6 +68,22 @@ func (g *GCPTarget) MatchSchema() apiextensions.JSONSchemaProps {
 					},
 				},
 			},
+			"ancestries": {
+				Type: "array",
+				Items: &apiextensions.JSONSchemaPropsOrArray{
+					Schema: &apiextensions.JSONSchemaProps{
+						Type: "string",
+					},
+				},
+			},
+			"excludedAncestries": {
+				Type: "array",
+				Items: &apiextensions.JSONSchemaPropsOrArray{
+					Schema: &apiextensions.JSONSchemaProps{
+						Type: "string",
+					},
+				},
+			},
 		},
 	}
 }
@@ -82,7 +100,7 @@ func (g *GCPTarget) Library() *template.Template {
 
 // ProcessData implements client.TargetHandler
 func (g *GCPTarget) ProcessData(obj interface{}) (bool, string, interface{}, error) {
-	return false, "", nil, errors.Errorf("Storing data for referential constraint eval is not supported at this time.")
+	return false, "", nil, errors.New("Storing data for referential constraint eval is not supported at this time.")
 }
 
 // HandleReview implements client.TargetHandler
@@ -148,17 +166,17 @@ func (g *GCPTarget) HandleReview(obj interface{}) (bool, interface{}, error) {
 			resourceTypes++
 		}
 		if resourceTypes > 1 {
-			return false, nil, errors.Errorf("malformed asset has more than one of: resource, iam policy, org policy, access context policy: %v", asset)
+			return false, nil, fmt.Errorf("malformed asset has more than one of: resource, iam policy, org policy, access context policy: %v", asset)
 		}
 		return true, asset, nil
 	}
 	return false, nil, nil
 }
 
-// handleAsset handles input from FCV assets as received via the gRPC interface.
+// handleAsset handles input from CAI assets as received via the gRPC interface.
 func (g *GCPTarget) handleAsset(asset *validator.Asset) (bool, interface{}, error) {
 	if asset.Resource == nil {
-		return false, nil, errors.Errorf("forseti asset's resource field is nil %s", asset)
+		return false, nil, fmt.Errorf("CAI asset's resource field is nil %s", asset)
 	}
 	asset2.CleanStructValue(asset.Resource.Data)
 	m := &jsonpb.Marshaler{
@@ -166,12 +184,12 @@ func (g *GCPTarget) handleAsset(asset *validator.Asset) (bool, interface{}, erro
 	}
 	var buf bytes.Buffer
 	if err := m.Marshal(&buf, asset); err != nil {
-		return false, nil, errors.Wrapf(err, "marshalling to json with asset %s: %v", asset.Name, asset)
+		return false, nil, fmt.Errorf("marshalling to json with asset %s: %v. %w", asset.Name, asset, err)
 	}
 	var f interface{}
 	err := json.Unmarshal(buf.Bytes(), &f)
 	if err != nil {
-		return false, nil, errors.Wrapf(err, "marshalling from json with asset %s: %v", asset.Name, asset)
+		return false, nil, fmt.Errorf("marshalling from json with asset %s: %v. %w", asset.Name, asset, err)
 	}
 	return true, f, nil
 }
@@ -226,12 +244,12 @@ func checkPathGlob(expression string) error {
 		switch {
 		case item == organization:
 			if state != stateStart {
-				return errors.Errorf("unexpected %s element %d in %s", item, i, expression)
+				return fmt.Errorf("unexpected %s element %d in %s", item, i, expression)
 			}
 			state = stateFolder
 		case item == folder:
 			if state != stateStart && state != stateFolder {
-				return errors.Errorf("unexpected %s element %d in %s", item, i, expression)
+				return fmt.Errorf("unexpected %s element %d in %s", item, i, expression)
 			}
 			state = stateFolder
 		case item == project:
@@ -241,7 +259,7 @@ func checkPathGlob(expression string) error {
 		case numberRegex.MatchString(item):
 		case state == stateProject && projectIDRegex.MatchString(item):
 		default:
-			return errors.Errorf("unexpected item %s element %d in %s", item, i, expression)
+			return fmt.Errorf("unexpected item %s element %d in %s", item, i, expression)
 		}
 	}
 	return nil
@@ -250,7 +268,7 @@ func checkPathGlob(expression string) error {
 func checkPathGlobs(rs []string) error {
 	for idx, r := range rs {
 		if err := checkPathGlob(r); err != nil {
-			return errors.Wrapf(err, "idx: %d", idx)
+			return fmt.Errorf("idx [%d]: %w", idx, err)
 		}
 	}
 	return nil
@@ -258,22 +276,51 @@ func checkPathGlobs(rs []string) error {
 
 // ValidateConstraint implements client.TargetHandler
 func (g *GCPTarget) ValidateConstraint(constraint *unstructured.Unstructured) error {
-	targets, found, err := unstructured.NestedStringSlice(constraint.Object, "spec", "match", "target")
-	if err != nil {
-		return errors.Errorf("invalid spec.match.target: %s", err)
-	}
-	if found {
-		if err := checkPathGlobs(targets); err != nil {
-			return errors.Wrapf(err, "invalid glob in target")
+	ancestries, ancestriesFound, ancestriesErr := unstructured.NestedStringSlice(constraint.Object, "spec", "match", "ancestries")
+	targets, targetsFound, targetsErr := unstructured.NestedStringSlice(constraint.Object, "spec", "match", "target")
+	if ancestriesFound && targetsFound {
+		return errors.New("only one of spec.match.ancestries and spec.match.target can be specified")
+	} else if ancestriesFound {
+		if ancestriesErr != nil {
+			return fmt.Errorf("invalid spec.match.ancestries: %s", ancestriesErr)
+		}
+		if ancestriesErr := checkPathGlobs(ancestries); ancestriesErr != nil {
+			return fmt.Errorf("invalid glob in spec.match.ancestries: %w", ancestriesErr)
+		}
+	} else if targetsFound {
+		// TODO b/232980918: replace with zapLogger.Warn
+		log.Print(
+			"spec.match.target is deprecated and will be removed in a future release. Use spec.match.ancestries instead",
+		)
+		if targetsErr != nil {
+			return fmt.Errorf("invalid spec.match.target: %s", targetsErr)
+		}
+		if targetsErr := checkPathGlobs(targets); targetsErr != nil {
+			return fmt.Errorf("invalid glob in spec.match.target: %w", targetsErr)
 		}
 	}
-	excludes, found, err := unstructured.NestedStringSlice(constraint.Object, "spec", "match", "exclude")
-	if err != nil {
-		return errors.Errorf("invalid spec.match.exclude: %s", err)
-	}
-	if found {
-		if err := checkPathGlobs(excludes); err != nil {
-			return errors.Wrapf(err, "invalid glob in exclude")
+
+	excludedAncestries, excludedAncestriesFound, excludedAncestriesErr := unstructured.NestedStringSlice(constraint.Object, "spec", "match", "excludedAncestries")
+	excludes, excludesFound, excludesErr := unstructured.NestedStringSlice(constraint.Object, "spec", "match", "exclude")
+	if excludedAncestriesFound && excludesFound {
+		return errors.New("only one of spec.match.excludedAncestries and spec.match.exclude can be specified")
+	} else if excludedAncestriesFound {
+		if excludedAncestriesErr != nil {
+			return fmt.Errorf("invalid spec.match.excludedAncestries: %s", excludedAncestriesErr)
+		}
+		if excludedAncestriesErr := checkPathGlobs(excludedAncestries); excludedAncestriesErr != nil {
+			return fmt.Errorf("invalid glob in spec.match.excludedAncestries: %w", excludedAncestriesErr)
+		}
+	} else if excludesFound {
+		// TODO b/232980918: replace with zapLogger.Warn
+		log.Print(
+			"spec.match.exclude is deprecated and will be removed in a future release. Use spec.match.excludedAncestries instead",
+		)
+		if excludesErr != nil {
+			return fmt.Errorf("invalid spec.match.exclude: %s", excludesErr)
+		}
+		if excludesErr := checkPathGlobs(excludes); excludesErr != nil {
+			return fmt.Errorf("invalid glob in spec.match.exclude: %w", excludesErr)
 		}
 	}
 	return nil

@@ -29,13 +29,16 @@ matching_constraints[constraint] {
 	spec := object.get(constraint, "spec", {})
 	match := object.get(spec, "match", {})
 
+	# Try ancestries / excludedAncestries first, then
+	# fall back to target / exclude.
 	# Default matcher behavior is to match everything.
-	target := object.get(match, "target", ["**"])
-	target_match := {asset.ancestry_path | path_matches(asset.ancestry_path, target[_])}
-	count(target_match) != 0
-	exclude := object.get(match, "exclude", [])
-	exclusion_match := {asset.ancestry_path | path_matches(asset.ancestry_path, exclude[_])}
-	count(exclusion_match) == 0
+	ancestries := object.get(match, "ancestries", object.get(match, "target", ["**"]))
+	ancestries_match := {asset.ancestry_path | path_matches(asset.ancestry_path, ancestries[_])}
+	count(ancestries_match) != 0
+
+	excluded_ancestries := object.get(match, "excludedAncestries", object.get(match, "exclude", []))
+	excluded_ancestries_match := {asset.ancestry_path | path_matches(asset.ancestry_path, excluded_ancestries[_])}
+	count(excluded_ancestries_match) == 0
 }
 
 # CAI Resource Types

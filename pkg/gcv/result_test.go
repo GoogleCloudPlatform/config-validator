@@ -173,9 +173,10 @@ var conversionTestCases = []ConversionTestCase{
 					}),
 					Spec: mustAsStruct(map[string]interface{}{
 						"match": map[string]interface{}{
-							"target": []interface{}{
+							"ancestries": []interface{}{
 								"organizations/**",
 							},
+							"excludedAncestries": []interface{}{},
 						},
 						"parameters": map[string]interface{}{},
 						"severity":   "high",
@@ -218,6 +219,7 @@ var conversionTestCases = []ConversionTestCase{
 							"target": []interface{}{
 								"organizations/**",
 							},
+							"exclude": []interface{}{},
 						},
 						"parameters": map[string]interface{}{},
 						"severity":   "medium",
