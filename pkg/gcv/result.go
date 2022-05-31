@@ -17,9 +17,9 @@ package gcv
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
-	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv/cf"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv/configs"
 	"github.com/golang/protobuf/jsonpb"
 	structpb "github.com/golang/protobuf/ptypes/struct"
@@ -210,14 +210,14 @@ func (cv *ConstraintViolation) toViolation(name string, auxMetadata map[string]i
 
 	var pbMetadata *structpb.Value
 	if constraintMetadata, ok := cv.Constraint.Object["metadata"]; ok {
-		if pbMetadata, err = cf.ConvertToProtoVal(constraintMetadata); err != nil {
+		if pbMetadata, err = convertToProtoVal(constraintMetadata); err != nil {
 			return nil, errors.Wrapf(err, "failed to convert constraint metadata into structpb.Value")
 		}
 	}
 
 	var pbSpec *structpb.Value
 	if constraintSpec, ok := cv.Constraint.Object["spec"]; ok {
-		if pbSpec, err = cf.ConvertToProtoVal(constraintSpec); err != nil {
+		if pbSpec, err = convertToProtoVal(constraintSpec); err != nil {
 			return nil, errors.Wrapf(err, "failed to convert constraint spec into structpb.Value")
 		}
 	}
@@ -238,4 +238,70 @@ func (cv *ConstraintViolation) toViolation(name string, auxMetadata map[string]i
 		Metadata:         metadata,
 		Severity:         cv.Severity,
 	}, nil
+}
+
+type convertFailed struct {
+	err error
+}
+
+// convertToProtoVal converts an interface into a proto struct value.
+func convertToProtoVal(from interface{}) (val *structpb.Value, err error) {
+	defer func() {
+		if x := recover(); x != nil {
+			convFail, ok := x.(*convertFailed)
+			if !ok {
+				panic(x)
+			}
+			val = nil
+			err = errors.Errorf("failed to convert proto val: %s", convFail.err)
+		}
+	}()
+	val = convertToProtoValInternal(from)
+	return
+}
+
+func convertToProtoValInternal(from interface{}) *structpb.Value {
+	if from == nil {
+		return nil
+	}
+	switch val := from.(type) {
+	case map[string]interface{}:
+		fields := map[string]*structpb.Value{}
+		for k, v := range val {
+			fields[k] = convertToProtoValInternal(v)
+		}
+		return &structpb.Value{
+			Kind: &structpb.Value_StructValue{
+				StructValue: &structpb.Struct{
+					Fields: fields,
+				},
+			}}
+
+	case []interface{}:
+		vals := make([]*structpb.Value, len(val))
+		for idx, v := range val {
+			vals[idx] = convertToProtoValInternal(v)
+		}
+		return &structpb.Value{
+			Kind: &structpb.Value_ListValue{
+				ListValue: &structpb.ListValue{Values: vals},
+			},
+		}
+
+	case string:
+		return &structpb.Value{Kind: &structpb.Value_StringValue{StringValue: val}}
+	case int:
+		return &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: float64(val)}}
+	case int64:
+		return &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: float64(val)}}
+	case float64:
+		return &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: val}}
+	case float32:
+		return &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: float64(val)}}
+	case bool:
+		return &structpb.Value{Kind: &structpb.Value_BoolValue{BoolValue: val}}
+
+	default:
+		panic(&convertFailed{errors.Errorf("Unhandled type %v (%s)", from, reflect.TypeOf(from).String())})
+	}
 }
