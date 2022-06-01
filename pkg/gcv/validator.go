@@ -212,11 +212,13 @@ func NewValidatorFromContents(policyFiles []*configs.PolicyFile, policyLibrary [
 
 // ReviewAsset reviews a single asset.
 func (v *Validator) ReviewAsset(ctx context.Context, asset *validator.Asset) ([]*validator.Violation, error) {
-	if err := asset2.ValidateAsset(asset); err != nil {
+	// Sanitize the ancestry path first, so that an asset that only provides ancestors
+	// can still pass ValidateAsset.
+	if err := asset2.SanitizeAncestryPath(asset); err != nil {
 		return nil, err
 	}
 
-	if err := asset2.SanitizeAncestryPath(asset); err != nil {
+	if err := asset2.ValidateAsset(asset); err != nil {
 		return nil, err
 	}
 

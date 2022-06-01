@@ -233,7 +233,11 @@ func testOptions() ([]string, string) {
 
 var storageAssetNoLoggingJSON = `{
   "name": "//storage.googleapis.com/my-storage-bucket",
-  "ancestry_path": "organization/1/folder/2/project/3",
+  "ancestors": [
+    "projects/3",
+    "folders/2",
+    "organizations/1"
+  ],
   "asset_type": "storage.googleapis.com/Bucket",
   "resource": {
     "version": "v1",
