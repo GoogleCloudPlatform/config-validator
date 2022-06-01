@@ -58,6 +58,7 @@ var conversionTestCases = []ConversionTestCase{
 						},
 					},
 					"resource": map[string]interface{}{
+						"ancestors":     []interface{}{string("projects/3"), string("folders/2"), string("organizations/1")},
 						"ancestry_path": string("organizations/1/folders/2/projects/3"),
 						"asset_type":    string("storage.googleapis.com/Bucket"),
 						"name":          string("//storage.googleapis.com/my-storage-bucket"),
@@ -118,6 +119,7 @@ var conversionTestCases = []ConversionTestCase{
 						},
 					},
 					"resource": map[string]interface{}{
+						"ancestors":     []interface{}{string("projects/3"), string("folders/2"), string("organizations/1")},
 						"ancestry_path": string("organizations/1/folders/2/projects/3"),
 						"asset_type":    string("storage.googleapis.com/Bucket"),
 						"name":          string("//storage.googleapis.com/my-storage-bucket"),
