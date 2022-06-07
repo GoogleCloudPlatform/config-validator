@@ -21,7 +21,6 @@ import (
 
 	"github.com/GoogleCloudPlatform/config-validator/cmd/policy-tool/debug"
 	"github.com/GoogleCloudPlatform/config-validator/cmd/policy-tool/lint"
-	"github.com/GoogleCloudPlatform/config-validator/cmd/policy-tool/status"
 	_ "github.com/golang/glog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -47,7 +46,6 @@ var glogFlags = map[string]struct{}{
 func init() {
 	rootCmd.AddCommand(debug.Cmd)
 	rootCmd.AddCommand(lint.Cmd)
-	rootCmd.AddCommand(status.Cmd)
 	flag.CommandLine.VisitAll(func(f *flag.Flag) {
 		if _, ok := glogFlags[f.Name]; ok {
 			pflag.CommandLine.AddGoFlag(f)
