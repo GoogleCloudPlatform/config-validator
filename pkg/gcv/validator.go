@@ -31,7 +31,6 @@ import (
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers/local"
 	cftemplates "github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
 	k8starget "github.com/open-policy-agent/gatekeeper/pkg/target"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -92,10 +91,10 @@ func DisableBuiltins(builtins ...string) Option {
 // We may want to make this initialization behavior configurable in the future.
 func NewValidatorConfig(policyPaths []string, policyLibraryPath string) (*configs.Configuration, error) {
 	if len(policyPaths) == 0 {
-		return nil, errors.Errorf("No policy path set, provide an option to set the policy path gcv.PolicyPath")
+		return nil, fmt.Errorf("No policy path set, provide an option to set the policy path gcv.PolicyPath")
 	}
 	if policyLibraryPath == "" {
-		return nil, errors.Errorf("No policy library set")
+		return nil, fmt.Errorf("No policy library set")
 	}
 	glog.V(logRequestsVerboseLevel).Infof("loading policy dir: %v lib dir: %s", policyPaths, policyLibraryPath)
 	return configs.NewConfiguration(policyPaths, policyLibraryPath)
@@ -122,18 +121,18 @@ func newCFClient(
 	options.backendArgs = append(options.backendArgs, cfclient.Driver(driver))
 	backend, err := cfclient.NewBackend(options.backendArgs...)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to set up Constraint Framework backend")
+		return nil, fmt.Errorf("unable to set up Constraint Framework backend: %w", err)
 	}
 	cfClient, err := backend.NewClient(options.clientArgs...)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to set up Constraint Framework client")
+		return nil, fmt.Errorf("unable to set up Constraint Framework client: %w", err)
 	}
 
 	ctx := context.Background()
 	var errs multierror.Errors
 	for _, template := range templates {
 		if _, err := cfClient.AddTemplate(ctx, template); err != nil {
-			errs.Add(errors.Wrapf(err, "failed to add template %v", template))
+			errs.Add(fmt.Errorf("failed to add template %v: %w", template, err))
 		}
 	}
 	if !errs.Empty() {
@@ -142,7 +141,7 @@ func newCFClient(
 
 	for _, constraint := range constraints {
 		if _, err := cfClient.AddConstraint(ctx, constraint); err != nil {
-			errs.Add(errors.Wrapf(err, "failed to add constraint %s", constraint))
+			errs.Add(fmt.Errorf("failed to add constraint %s: %w", constraint, err))
 		}
 	}
 	if !errs.Empty() {
@@ -155,17 +154,17 @@ func newCFClient(
 func NewValidatorFromConfig(config *configs.Configuration, opts ...Option) (*Validator, error) {
 	gcpCFClient, err := newCFClient(gcptarget.New(), config.GCPTemplates, config.GCPConstraints, opts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to set up GCP Constraint Framework client")
+		return nil, fmt.Errorf("unable to set up GCP Constraint Framework client: %w", err)
 	}
 
 	k8sCFClient, err := newCFClient(&k8starget.K8sValidationTarget{}, config.K8STemplates, config.K8SConstraints, opts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to set up K8S Constraint Framework client")
+		return nil, fmt.Errorf("unable to set up K8S Constraint Framework client: %w", err)
 	}
 
 	tfCFClient, err := newCFClient(tftarget.New(), config.TFTemplates, config.TFConstraints, opts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to set up TF Constraint Framework client")
+		return nil, fmt.Errorf("unable to set up TF Constraint Framework client: %w", err)
 	}
 
 	ret := &Validator{
@@ -192,10 +191,10 @@ func NewValidator(policyPaths []string, policyLibraryPath string, opts ...Option
 // policyLibrary is a slice of file contents of all policy library files.
 func NewValidatorFromContents(policyFiles []*configs.PolicyFile, policyLibrary []string, opts ...Option) (*Validator, error) {
 	if len(policyFiles) == 0 {
-		return nil, errors.Errorf("No policy constraints provided")
+		return nil, fmt.Errorf("No policy constraints provided")
 	}
 	if len(policyLibrary) == 0 {
-		return nil, errors.Errorf("No policy library provided")
+		return nil, fmt.Errorf("No policy library provided")
 	}
 
 	unstructuredObjects, err := configs.LoadUnstructuredFromContents(policyFiles)
@@ -269,14 +268,14 @@ func (v *Validator) fixAncestry(input map[string]interface{}) error {
 		input[ancestryPathKey] = configs.NormalizeAncestry(ancestry)
 		return nil
 	}
-	return errors.Errorf("asset missing ancestry information: %v", input)
+	return fmt.Errorf("asset missing ancestry information: %v", input)
 }
 
 // ReviewJSON reviews the content of a JSON string
 func (v *Validator) ReviewJSON(ctx context.Context, data string) (*Result, error) {
 	asset := map[string]interface{}{}
 	if err := json.Unmarshal([]byte(data), &asset); err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal json")
+		return nil, fmt.Errorf("failed to unmarshal json: %w", err)
 	}
 	return v.ReviewUnmarshalledJSON(ctx, asset)
 }
@@ -297,11 +296,11 @@ func (v *Validator) ReviewUnmarshalledJSON(ctx context.Context, asset map[string
 func (v *Validator) reviewK8SResource(ctx context.Context, asset map[string]interface{}) (*Result, error) {
 	k8sResource, err := asset2.ConvertCAIToK8s(asset)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to convert asset to admission request")
+		return nil, fmt.Errorf("failed to convert asset to admission request: %w", err)
 	}
 	responses, err := v.k8sCFClient.Review(ctx, k8sResource)
 	if err != nil {
-		return nil, errors.Wrapf(err, "K8S target Constraint Framework review call failed")
+		return nil, fmt.Errorf("K8S target Constraint Framework review call failed: %w", err)
 	}
 	return NewResult(configs.K8STargetName, asset["name"].(string), asset, k8sResource.Object, responses)
 }
@@ -310,7 +309,7 @@ func (v *Validator) reviewK8SResource(ctx context.Context, asset map[string]inte
 func (v *Validator) reviewGCPResource(ctx context.Context, asset map[string]interface{}) (*Result, error) {
 	responses, err := v.gcpCFClient.Review(ctx, asset)
 	if err != nil {
-		return nil, errors.Wrapf(err, "GCP target Constraint Framework review call failed")
+		return nil, fmt.Errorf("GCP target Constraint Framework review call failed: %w", err)
 	}
 	return NewResult(gcptarget.Name, asset["name"].(string), asset, asset, responses)
 }
