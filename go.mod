@@ -17,7 +17,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/open-policy-agent/frameworks/constraint v0.0.0-20210422220901-804ff2ee8b4f
 	github.com/open-policy-agent/gatekeeper v0.0.0-20200130050101-a7990e5bc83a
-	github.com/open-policy-agent/opa v0.29.3
+	github.com/open-policy-agent/opa v0.29.3 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/smallfish/simpleyaml v0.0.0-20170911015856-a32031077861
 	github.com/spf13/cobra v1.1.3
@@ -28,6 +28,5 @@ require (
 	k8s.io/api v0.17.2
 	k8s.io/apiextensions-apiserver v0.17.2
 	k8s.io/apimachinery v0.17.2
-	k8s.io/cli-runtime v0.17.2
 	k8s.io/kubectl v0.17.2
 )
