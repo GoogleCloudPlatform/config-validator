@@ -119,6 +119,38 @@ var matchTests = []reviewTestData{
 		wantMatch:    true,
 	},
 	{
+		name: "organizations/** can match organizations/unknown",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/**"},
+		},
+		ancestryPath: "organizations/unknown/folders/1221214",
+		wantMatch:    true,
+	},
+	{
+		name: "organizations/* can NOT match organizations/unknown",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/*"},
+		},
+		ancestryPath: "organizations/unknown/folders/1221214",
+		wantMatch:    false,
+	},
+	{
+		name: "** can match organizations/unknown.",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"**"},
+		},
+		ancestryPath: "organizations/unknown/folders/1221214",
+		wantMatch:    true,
+	},
+	{
+		name: "* can NOT match organizations/unknown.",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"*"},
+		},
+		ancestryPath: "organizations/unknown/folders/1221214",
+		wantMatch:    false,
+	},
+	{
 		name: "Match org on exact ID",
 		match: map[string]interface{}{
 			"ancestries": []interface{}{"organizations/123454321"},
@@ -311,6 +343,13 @@ var matchTests = []reviewTestData{
 		name: "folder after project",
 		match: map[string]interface{}{
 			"ancestries": []interface{}{"projects/123/folders/123"},
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "org ID is not number",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/unknown"},
 		},
 		wantConstraintError: true,
 	},
