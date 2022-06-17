@@ -127,7 +127,15 @@ var matchTests = []reviewTestData{
 		wantMatch:    true,
 	},
 	{
-		name: "organizations/* can NOT match organizations/unknown",
+		name: "organizations/* can match organizations/unknown",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/*"},
+		},
+		ancestryPath: "organizations/unknown",
+		wantMatch:    true,
+	},
+	{
+		name: "organizations/* can NOT match organizations/unknown with descendents",
 		match: map[string]interface{}{
 			"ancestries": []interface{}{"organizations/*"},
 		},
