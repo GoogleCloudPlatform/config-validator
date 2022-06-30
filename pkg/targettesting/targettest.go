@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"regexp"
@@ -30,6 +31,8 @@ import (
 	"github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv/configs"
 )
 
 // defaultConstraintTemplate will fail or pass a resource depending on the
@@ -45,20 +48,51 @@ violation[{"msg": msg}] {
 }
 `
 
+const testVersion = "v1beta1"
 const testConstraintKind = "TestConstraint"
 
-func newConstraintTemplate(targetName string, crdNames templates.Names, rego string) *templates.ConstraintTemplate {
-	ct := &templates.ConstraintTemplate{}
-	ct.Name = strings.ToLower(crdNames.Kind)
-	ct.Spec.CRD.Spec.Names = crdNames
-	ct.Spec.Targets = []templates.Target{
-		{
-			Target: targetName,
-			Rego:   rego,
+func newConstraintTemplate(targetName, rego string) *templates.ConstraintTemplate {
+	// Building a correct constraint template is difficult based on the struct. It's easier
+	// to reason about yaml files and rely on existing conversion code.
+	ctSpec := map[string]interface{}{
+		"crd": map[string]interface{}{
+			"spec": map[string]interface{}{
+				"names": map[string]interface{}{
+					"kind": testConstraintKind,
+				},
+				"validation": map[string]interface{}{
+					"openAPIV3Schema": map[string]interface{}{},
+				},
+			},
+		},
+		"targets": []map[string]interface{}{
+			{
+				"target": targetName,
+				"rego": rego,
+			},
 		},
 	}
+	ct := map[string]interface{}{
+		"apiVersion": fmt.Sprintf("templates.gatekeeper.sh/%s", testVersion),
+		"kind":       "ConstraintTemplate",
+		"metadata": map[string]interface{}{
+			"name": strings.ToLower(testConstraintKind),
+		},
+		"spec": ctSpec,
+	}
 
-	return ct
+	config, err := configs.NewConfigurationFromContents([]*unstructured.Unstructured{&unstructured.Unstructured{Object: ct}}, []string{})
+	if err != nil {
+		// This represents an error in a test case
+		panic(err)
+	}
+
+	var templates []*templates.ConstraintTemplate
+	templates = append(templates, config.GCPTemplates...)
+	templates = append(templates, config.K8STemplates...)
+	templates = append(templates, config.TFTemplates...)
+
+	return templates[0]
 }
 
 func CreateTargetHandler(t *testing.T, target client.TargetHandler, tcs []*ReviewTestcase) *TargetHandlerTest {
@@ -105,7 +139,6 @@ func (tt *TargetHandlerTest) Test(t *testing.T) {
 		targetName:       targetName,
 		constraintTemplate: newConstraintTemplate(
 			targetName,
-			templates.Names{Kind: testConstraintKind},
 			defaultConstraintTemplateRego,
 		),
 	}
@@ -157,7 +190,7 @@ func (tc *ReviewTestcase) run(t *testing.T) {
 	// add template
 	resp, err := cfClient.AddTemplate(ctx, tc.constraintTemplate)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("loading template %v: %v", tc.constraintTemplate, err)
 	}
 	if !resp.Handled[tc.targetName] {
 		t.Fatal("expected target name")
@@ -177,12 +210,13 @@ func (tc *ReviewTestcase) run(t *testing.T) {
 		"apiVersion": "constraints.gatekeeper.sh/v1beta1",
 		"kind":       testConstraintKind,
 		"metadata": map[string]interface{}{
-			"name": "testconstraint",
+			"name": strings.ToLower(testConstraintKind),
 		},
 		"spec": constraintSpec,
 	}
 
 	resp, err = cfClient.AddConstraint(ctx, &unstructured.Unstructured{Object: constraint})
+
 	if tc.WantConstraintError {
 		if err == nil {
 			t.Fatal("expected constraint add error, got none")
