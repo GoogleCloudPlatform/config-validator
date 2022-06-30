@@ -44,6 +44,7 @@ func New() *TFTarget {
 // MatchSchema implements client.MatchSchemaProvider
 func (g *TFTarget) MatchSchema() apiextensions.JSONSchemaProps {
 	return apiextensions.JSONSchemaProps{
+		Type: "object",
 		Properties: map[string]apiextensions.JSONSchemaProps{
 			"addresses": {
 				Type: "array",
