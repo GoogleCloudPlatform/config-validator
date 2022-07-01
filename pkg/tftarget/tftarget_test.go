@@ -215,9 +215,9 @@ var testData = []reviewTestData{
 	},
 	{
 		name:         "provider doesn't contain google",
-		address:      "google_compute_global_forwarding_rule.test",
-		wantMatch:    false,
-		providerName: "moogle",
+		address:      "whatever_compute_global_forwarding_rule.test",
+		wantMatch:    true,
+		providerName: "whatever",
 	},
 
 	{
