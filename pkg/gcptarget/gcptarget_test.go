@@ -355,11 +355,12 @@ var matchTests = []reviewTestData{
 		wantConstraintError: true,
 	},
 	{
-		name: "org ID is not number",
+		name: "allow unknown in match parameters",
 		match: map[string]interface{}{
 			"ancestries": []interface{}{"organizations/unknown"},
 		},
-		wantConstraintError: true,
+		ancestryPath: "organizations/unknown",
+		wantMatch:    true,
 	},
 	{
 		name: "invalid exclude CRM name",

@@ -257,6 +257,7 @@ func checkPathGlob(expression string) error {
 			state = stateProject
 		case item == "*":
 		case item == "**":
+		case item == "unknown":
 		case numberRegex.MatchString(item):
 		case state == stateProject && projectIDRegex.MatchString(item):
 		default:
