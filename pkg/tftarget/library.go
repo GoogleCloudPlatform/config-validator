@@ -29,18 +29,7 @@ matching_constraints[constraint] {
 	spec := object.get(constraint, "spec", {})
 	match := object.get(spec, "match", {})
 
-	check_provider(resource)
 	check_address(resource, match)
-}
-
-check_provider(resource) {
-	provider_name := object.get(resource, "provider_name", "")
-	contains(resource.provider_name, "google")
-}
-
-check_provider(resource) {
-	provider_name := object.get(resource, "provider_name", "")
-	provider_name == ""
 }
 
 check_address(resource, match) {
