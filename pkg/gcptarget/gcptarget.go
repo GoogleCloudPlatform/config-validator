@@ -51,6 +51,7 @@ func New() *GCPTarget {
 // MatchSchema implements client.MatchSchemaProvider
 func (g *GCPTarget) MatchSchema() apiextensions.JSONSchemaProps {
 	return apiextensions.JSONSchemaProps{
+		Type: "object",
 		Properties: map[string]apiextensions.JSONSchemaProps{
 			"target": {
 				Type: "array",
