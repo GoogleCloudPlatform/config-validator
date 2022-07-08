@@ -355,9 +355,25 @@ var matchTests = []reviewTestData{
 		wantConstraintError: true,
 	},
 	{
-		name: "org ID is not number",
+		name: "allow unknown in match parameters",
 		match: map[string]interface{}{
 			"ancestries": []interface{}{"organizations/unknown"},
+		},
+		ancestryPath: "organizations/unknown",
+		wantMatch:    true,
+	},
+	{
+		name: "organizations/unknown cannot match other random org string",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/unknown"},
+		},
+		ancestryPath: "organizations/whatever",
+		wantMatch:    false,
+	},
+	{
+		name: "only allows unknown as string in match parameter",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/random"},
 		},
 		wantConstraintError: true,
 	},
