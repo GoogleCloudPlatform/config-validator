@@ -8,7 +8,7 @@ config policy support to new projects without having to integrate
 Rego parsing directly.
 
 For information on setting up Config Validator to secure your environment,
-see the [User Guide](https://github.com/GoogleCloudPlatform/policy-library/blob/master/docs/user_guide.md).
+see the [User Guide](https://github.com/GoogleCloudPlatform/policy-library/blob/main/docs/user_guide.md).
 
 ## Development
 ### Available Commands
