@@ -28,8 +28,10 @@ import (
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	asset2 "github.com/GoogleCloudPlatform/config-validator/pkg/asset"
 	"github.com/gogo/protobuf/jsonpb"
-	"github.com/open-policy-agent/frameworks/constraint/pkg/client"
+	"github.com/open-policy-agent/frameworks/constraint/pkg/core/constraints"
+	"github.com/open-policy-agent/frameworks/constraint/pkg/handler"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/types"
+	"github.com/open-policy-agent/opa/storage"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -41,11 +43,23 @@ const Name = "validation.gcp.forsetisecurity.org"
 type GCPTarget struct {
 }
 
-var _ client.TargetHandler = &GCPTarget{}
+type matcher struct {
+}
+
+func (*matcher) Match(review interface{}) (bool, error) {
+	return true, nil
+}
+
+var _ handler.TargetHandler = &GCPTarget{}
 
 // New returns a new GCPTarget
 func New() *GCPTarget {
 	return &GCPTarget{}
+}
+
+// ToMatcher converts .spec.match in mutators to Matcher.
+func (h *GCPTarget) ToMatcher(u *unstructured.Unstructured) (constraints.Matcher, error) {
+	return &matcher{}, nil
 }
 
 // MatchSchema implements client.MatchSchemaProvider
@@ -100,8 +114,8 @@ func (g *GCPTarget) Library() *template.Template {
 }
 
 // ProcessData implements client.TargetHandler
-func (g *GCPTarget) ProcessData(obj interface{}) (bool, string, interface{}, error) {
-	return false, "", nil, errors.New("Storing data for referential constraint eval is not supported at this time.")
+func (g *GCPTarget) ProcessData(obj interface{}) (bool, storage.Path, interface{}, error) {
+	return false, nil, nil, errors.New("Storing data for referential constraint eval is not supported at this time.")
 }
 
 // HandleReview implements client.TargetHandler
@@ -197,7 +211,7 @@ func (g *GCPTarget) handleAsset(asset *validator.Asset) (bool, interface{}, erro
 
 // HandleViolation implements client.TargetHandler
 func (g *GCPTarget) HandleViolation(result *types.Result) error {
-	result.Resource = result.Review
+	// result.Resource = result.Review
 	return nil
 }
 

@@ -27,8 +27,10 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client"
+	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers/local"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
+	"github.com/open-policy-agent/frameworks/constraint/pkg/handler"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -97,9 +99,9 @@ func newConstraintTemplate(targetName, rego string) *templates.ConstraintTemplat
 	return templates[0]
 }
 
-func CreateTargetHandler(t *testing.T, target client.TargetHandler, tcs []*ReviewTestcase) *TargetHandlerTest {
+func CreateTargetHandler(t *testing.T, target handler.TargetHandler, tcs []*ReviewTestcase) *TargetHandlerTest {
 	var targetHandlerTest = TargetHandlerTest{
-		NewTargetHandler: func(t *testing.T) client.TargetHandler {
+		NewTargetHandler: func(t *testing.T) handler.TargetHandler {
 			return target
 		},
 	}
@@ -125,7 +127,7 @@ func FromJSON(data string) func(t *testing.T) interface{} {
 type TargetHandlerTest struct {
 	// NewTargetHandler returns a new target handler.  This should call t.Helper()
 	// and t.Fatal() on any errors encountered during creation.
-	NewTargetHandler func(t *testing.T) client.TargetHandler
+	NewTargetHandler func(t *testing.T) handler.TargetHandler
 
 	// ReviewTestcases are the testcases that will be run against client.Review.
 	ReviewTestcases []*ReviewTestcase
@@ -155,7 +157,7 @@ func (tt *TargetHandlerTest) Test(t *testing.T) {
 
 // testcaseBase contains params that are populated by the top level test
 type testcaseBase struct {
-	newTargetHandler   func(t *testing.T) client.TargetHandler
+	newTargetHandler   func(t *testing.T) handler.TargetHandler
 	targetName         string
 	constraintTemplate *templates.ConstraintTemplate
 }
@@ -234,7 +236,7 @@ func (tc *ReviewTestcase) run(t *testing.T) {
 
 	// create review from tc, input needs to be GCP hierarchy path
 	reviewObj := tc.Object(t)
-	resp, err = cfClient.Review(ctx, reviewObj, client.Tracing(true))
+	resp, err = cfClient.Review(ctx, reviewObj, drivers.Tracing(true))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,25 +270,24 @@ func unitTestTraceDump(t *testing.T, review *types.Response) {
 	t.Helper()
 	// t.Logf("Trace:\n%s", *review.Trace)
 	t.Logf("Target: %s", review.Target)
-	t.Logf("Input:\n%s", *review.Input)
+	// t.Logf("Input:\n%s", *review.Input)
 	t.Logf("Results(%d)", len(review.Results))
 	for idx, result := range review.Results {
 		t.Logf("  %d:\n%#v", idx, spew.Sdump(result))
 	}
 }
 
-func createClient(t *testing.T, newTargetHandler func(t *testing.T) client.TargetHandler) *client.Client {
+func createClient(t *testing.T, newTargetHandler func(t *testing.T) handler.TargetHandler) *client.Client {
 	t.Helper()
 	target := newTargetHandler(t)
 	if target == nil {
 		t.Fatalf("newTargetHandler returned nil")
 	}
-	driver := local.New(local.Tracing(true))
-	backend, err := client.NewBackend(client.Driver(driver))
+	driver, err := local.New(local.Tracing(true))
 	if err != nil {
-		t.Fatalf("Could not initialize backend: %s", err)
+		t.Fatalf("Could not initialize driver: %s", err)
 	}
-	cfClient, err := backend.NewClient(client.Targets(target))
+	cfClient, err := client.NewClient(client.Driver(driver), client.Targets(target))
 	if err != nil {
 		t.Fatalf("unable to set up OPA client: %s", err)
 	}

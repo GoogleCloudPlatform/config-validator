@@ -19,7 +19,6 @@ import "text/template"
 /*
 This comment puts the start of rego on line 10 so it's easier to do math when
 it calls out the line number.
-
 */
 const libraryTemplateSrc = `package target
 

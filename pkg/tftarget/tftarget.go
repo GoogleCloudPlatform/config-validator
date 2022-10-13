@@ -20,8 +20,10 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/open-policy-agent/frameworks/constraint/pkg/client"
+	"github.com/open-policy-agent/frameworks/constraint/pkg/core/constraints"
+	"github.com/open-policy-agent/frameworks/constraint/pkg/handler"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/types"
+	"github.com/open-policy-agent/opa/storage"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -34,11 +36,23 @@ const Name = "validation.resourcechange.terraform.cloud.google.com"
 type TFTarget struct {
 }
 
-var _ client.TargetHandler = &TFTarget{}
+var _ handler.TargetHandler = &TFTarget{}
 
 // New returns a new TFTarget
 func New() *TFTarget {
 	return &TFTarget{}
+}
+
+type matcher struct {
+}
+
+func (*matcher) Match(review interface{}) (bool, error) {
+	return false, nil
+}
+
+// ToMatcher implements client.ToMatcher
+func (g *TFTarget) ToMatcher(constraint *unstructured.Unstructured) (constraints.Matcher, error) {
+	return &matcher{}, nil
 }
 
 // MatchSchema implements client.MatchSchemaProvider
@@ -77,8 +91,8 @@ func (g *TFTarget) Library() *template.Template {
 }
 
 // ProcessData implements client.TargetHandler
-func (g *TFTarget) ProcessData(obj interface{}) (bool, string, interface{}, error) {
-	return false, "", nil, errors.Errorf("Storing data for referential constraint eval is not supported at this time.")
+func (g *TFTarget) ProcessData(obj interface{}) (bool, storage.Path, interface{}, error) {
+	return false, nil, nil, errors.Errorf("Storing data for referential constraint eval is not supported at this time.")
 }
 
 // HandleReview implements client.TargetHandler
@@ -104,7 +118,7 @@ func (g *TFTarget) HandleReview(obj interface{}) (bool, interface{}, error) {
 
 // HandleViolation implements client.TargetHandler
 func (g *TFTarget) HandleViolation(result *types.Result) error {
-	result.Resource = result.Review
+	// result.Resource = result.Review
 	return nil
 }
 

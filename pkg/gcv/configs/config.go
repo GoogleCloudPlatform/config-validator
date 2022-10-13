@@ -28,6 +28,7 @@ import (
 	cfapis "github.com/open-policy-agent/frameworks/constraint/pkg/apis"
 	cftemplates "github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/regorewriter"
+	"github.com/open-policy-agent/opa/ast"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -207,11 +208,21 @@ func convertLegacyConstraintTemplate(u *unstructured.Unstructured, regoLib []str
 			return errors.Wrapf(err, "failed to create rego rewriter")
 		}
 		for idx, lib := range regoLib {
-			if err := rr.AddLib(fmt.Sprintf("idx-%d.rego", idx), lib); err != nil {
+			path := fmt.Sprintf("idx-%d.rego", idx)
+			m, err := ast.ParseModule(path, lib)
+			if err != nil {
+				return fmt.Errorf("failed to ParseModule with path %s: %w", path, err)
+			}
+			if err := rr.AddLib(path, m); err != nil {
 				return errors.Wrapf(err, "failed to add lib %d", idx)
 			}
 		}
-		if err := rr.AddEntryPoint("template-rego", injectRegoAdapter(rego)); err != nil {
+		path := "template-rego"
+		m, err := ast.ParseModule(path, injectRegoAdapter(rego))
+		if err != nil {
+			return fmt.Errorf("failed to ParseModule with path %s: %w", path, err)
+		}
+		if err := rr.AddEntryPoint(path, m); err != nil {
 			return errors.Wrapf(err, "failed to add source")
 		}
 		srcs, err := rr.Rewrite()
