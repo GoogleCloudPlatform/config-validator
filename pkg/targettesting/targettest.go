@@ -134,7 +134,7 @@ type TargetHandlerTest struct {
 }
 
 // Test runs all testcases in the TargetHandlerTest
-func (tt *TargetHandlerTest) Test(t *testing.T, regoLibs ...*templates.ConstraintTemplate) {
+func (tt *TargetHandlerTest) Test(t *testing.T) {
 	t.Helper()
 
 	targetName := tt.NewTargetHandler(t).GetName()
@@ -270,7 +270,6 @@ func unitTestTraceDump(t *testing.T, review *types.Response) {
 	t.Helper()
 	// t.Logf("Trace:\n%s", *review.Trace)
 	t.Logf("Target: %s", review.Target)
-	// t.Logf("Input:\n%s", *review.Input)
 	t.Logf("Results(%d)", len(review.Results))
 	for idx, result := range review.Results {
 		t.Logf("  %d:\n%#v", idx, spew.Sdump(result))

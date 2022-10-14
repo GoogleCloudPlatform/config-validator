@@ -288,7 +288,6 @@ func (g *GCPTarget) handleAsset(asset *validator.Asset) (bool, interface{}, erro
 
 // HandleViolation implements client.TargetHandler
 func (g *GCPTarget) HandleViolation(result *types.Result) error {
-	// result.Resource = result.Review
 	return nil
 }
 

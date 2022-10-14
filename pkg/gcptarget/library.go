@@ -19,6 +19,7 @@ import "text/template"
 /*
 This comment puts the start of rego on line 10 so it's easier to do math when
 it calls out the line number.
+
 */
 const libraryTemplateSrc = `package target
 
@@ -53,7 +54,7 @@ matching_reviews_and_constraints[[review, constraint]] {
 autoreject_review[rejection] {
 	false
 	rejection := {
-		"msg": "should not reach this",
+		"msg": "should not reach this", 
 	}
 }
 

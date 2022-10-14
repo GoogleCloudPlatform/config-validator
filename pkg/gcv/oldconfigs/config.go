@@ -78,9 +78,8 @@ func (c *UnclassifiedConfig) AsInterface() (interface{}, error) {
 
 // asConstraint attempts to convert to constraint
 // Returns:
-//
-//	*Constraint: only set if valid constraint
-//	bool: (always set) if this is a constraint
+//   *Constraint: only set if valid constraint
+//   bool: (always set) if this is a constraint
 func asConstraint(data *UnclassifiedConfig) (*Constraint, error) {
 	// There is no validation matching this constraint to the template here that happens after
 	// basic parsing has happened when we have more context.
@@ -126,9 +125,8 @@ func (c *Constraint) AsProto() (*validator.Constraint, error) {
 
 // asConstraintTemplate attempts to convert to template
 // Returns:
-//
-//	*ConstraintTemplate: only set if valid template
-//	bool: (always set) if this is a template
+//   *ConstraintTemplate: only set if valid template
+//   bool: (always set) if this is a template
 func asConstraintTemplate(data *UnclassifiedConfig) (*ConstraintTemplate, error) {
 	if data.Group != validTemplateGroup {
 		return nil, fmt.Errorf("group expected to be %s not %s", validTemplateGroup, data.Group)

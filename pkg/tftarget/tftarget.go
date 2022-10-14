@@ -184,7 +184,6 @@ func (g *TFTarget) HandleReview(obj interface{}) (bool, interface{}, error) {
 
 // HandleViolation implements client.TargetHandler
 func (g *TFTarget) HandleViolation(result *types.Result) error {
-	// result.Resource = result.Review
 	return nil
 }
 
