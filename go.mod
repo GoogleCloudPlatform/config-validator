@@ -21,6 +21,7 @@ require (
 	github.com/go-openapi/spec v0.19.3
 	github.com/go-openapi/strfmt v0.19.3
 	github.com/go-openapi/validate v0.19.2
+	github.com/gobwas/glob v0.2.3
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/glog v1.0.0
 	github.com/golang/protobuf v1.5.2
@@ -63,10 +64,8 @@ require (
 	github.com/go-openapi/runtime v0.19.4 // indirect
 	github.com/go-openapi/swag v0.19.15 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
-	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/cel-go v0.10.2 // indirect
-	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.1.1 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
@@ -118,7 +117,7 @@ require (
 	k8s.io/client-go v0.23.5 // indirect
 	k8s.io/component-base v0.23.5 // indirect
 	k8s.io/klog/v2 v2.70.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
+	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65 // indirect
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.30 // indirect
 	sigs.k8s.io/controller-runtime v0.11.2 // indirect

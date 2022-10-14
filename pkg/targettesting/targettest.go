@@ -134,7 +134,7 @@ type TargetHandlerTest struct {
 }
 
 // Test runs all testcases in the TargetHandlerTest
-func (tt *TargetHandlerTest) Test(t *testing.T) {
+func (tt *TargetHandlerTest) Test(t *testing.T, regoLibs ...*templates.ConstraintTemplate) {
 	t.Helper()
 
 	targetName := tt.NewTargetHandler(t).GetName()

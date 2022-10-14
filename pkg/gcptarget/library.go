@@ -53,7 +53,7 @@ matching_reviews_and_constraints[[review, constraint]] {
 autoreject_review[rejection] {
 	false
 	rejection := {
-		"msg": "should not reach this", 
+		"msg": "should not reach this",
 	}
 }
 

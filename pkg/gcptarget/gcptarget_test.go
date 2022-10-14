@@ -99,41 +99,41 @@ func (td *reviewTestData) legacySpecMatchTestcase() *targetHandlerTest.ReviewTes
 }
 
 var matchTests = []reviewTestData{
-	// {
-	// 	name:         "Null match object (matches anything)",
-	// 	ancestryPath: "organizations/123454321/folders/1221214",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name:         "No match specified (matches anything)",
-	// 	match:        map[string]interface{}{},
-	// 	ancestryPath: "organizations/123454321/folders/1221214",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "Only match once.",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"**", "organizations/**"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/1221214",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "organizations/** can match organizations/unknown",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"organizations/**"},
-	// 	},
-	// 	ancestryPath: "organizations/unknown/folders/1221214",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "organizations/* can match organizations/unknown",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"organizations/*"},
-	// 	},
-	// 	ancestryPath: "organizations/unknown",
-	// 	wantMatch:    true,
-	// },
+	{
+		name:         "Null match object (matches anything)",
+		ancestryPath: "organizations/123454321/folders/1221214",
+		wantMatch:    true,
+	},
+	{
+		name:         "No match specified (matches anything)",
+		match:        map[string]interface{}{},
+		ancestryPath: "organizations/123454321/folders/1221214",
+		wantMatch:    true,
+	},
+	{
+		name: "Only match once.",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"**", "organizations/**"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214",
+		wantMatch:    true,
+	},
+	{
+		name: "organizations/** can match organizations/unknown",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/**"},
+		},
+		ancestryPath: "organizations/unknown/folders/1221214",
+		wantMatch:    true,
+	},
+	{
+		name: "organizations/* can match organizations/unknown",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/*"},
+		},
+		ancestryPath: "organizations/unknown",
+		wantMatch:    true,
+	},
 	{
 		name: "organizations/* can NOT match organizations/unknown with descendents",
 		match: map[string]interface{}{
@@ -142,276 +142,276 @@ var matchTests = []reviewTestData{
 		ancestryPath: "organizations/unknown/folders/1221214",
 		wantMatch:    false,
 	},
-	// {
-	// 	name: "** can match organizations/unknown.",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"**"},
-	// 	},
-	// 	ancestryPath: "organizations/unknown/folders/1221214",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "* can NOT match organizations/unknown.",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"*"},
-	// 	},
-	// 	ancestryPath: "organizations/unknown/folders/1221214",
-	// 	wantMatch:    false,
-	// },
-	// {
-	// 	name: "Match org on exact ID",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"organizations/123454321"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "Does not match org for descendant match",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"organizations/123454321/**"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321",
-	// 	wantMatch:    false,
-	// },
-	// {
-	// 	name: "No match org on close ID",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"organizations/123454321/*"},
-	// 	},
-	// 	ancestryPath: "organizations/1234543211",
-	// 	wantMatch:    false,
-	// },
-	// {
-	// 	name: "Match all under org ID - folder",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"organizations/123454321/**"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/1242511",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "Match all under org ID - project",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"organizations/123454321/**"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/projects/1242511",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "Match all under org ID - folder, project",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"organizations/123454321/**"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/125896/projects/1242511",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "No match folder on descendants",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"**/folders/1221214/**"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/1221214",
-	// 	wantMatch:    false,
-	// },
-	// {
-	// 	name: "No match folder",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"**/folders/1221214/**"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/1221215",
-	// 	wantMatch:    false,
-	// },
-	// {
-	// 	name: "No match under folder",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"**/folders/1221214/**"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/12212144/projects/1221214",
-	// 	wantMatch:    false,
-	// },
-	// {
-	// 	name: "Match folder in folder",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"**/folders/1221214/**"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/1221214/folders/557385378",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "Match project in folder",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"**/folders/1221214/**"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "Match project",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"**/projects/557385378"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "Match project by ID, not number",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"**/projects/tfv-test-project"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/1221214/projects/tfv-test-project",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "Match any project",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"**/projects/**"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "Does not match project",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"**/projects/123245"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
-	// 	wantMatch:    false,
-	// },
-	// {
-	// 	name: "Match project multiple",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"**/projects/9795872589", "**/projects/557385378"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "Match any project",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"**/projects/*"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "Exclude project",
-	// 	match: map[string]interface{}{
-	// 		"excludedAncestries": []interface{}{"**/projects/557385378"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
-	// 	wantMatch:    false,
-	// },
-	// {
-	// 	name: "Exclude project by ID, not number",
-	// 	match: map[string]interface{}{
-	// 		"excludedAncestries": []interface{}{"**/projects/tfv-exclude-project"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/1221214/projects/tfv-exclude-project",
-	// 	wantMatch:    false,
-	// },
-	// {
-	// 	name: "Exclude project multiple",
-	// 	match: map[string]interface{}{
-	// 		"excludedAncestries": []interface{}{"**/projects/525572987", "**/projects/557385378"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
-	// 	wantMatch:    false,
-	// },
-	// {
-	// 	name: "Exclude project via wildcard on org",
-	// 	match: map[string]interface{}{
-	// 		"excludedAncestries": []interface{}{"organizations/*/projects/557385378"},
-	// 	},
-	// 	ancestryPath: "organizations/123454321/projects/557385378",
-	// 	wantMatch:    false,
-	// },
-	// {
-	// 	name: "invalid target CRM type",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"flubber/*"},
-	// 	},
-	// 	wantConstraintError: true,
-	// },
-	// {
-	// 	name: "org after folder",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"folders/123/organizations/*"},
-	// 	},
-	// 	wantConstraintError: true,
-	// },
-	// {
-	// 	name: "org after project",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"projects/123/organizations/*"},
-	// 	},
-	// 	wantConstraintError: true,
-	// },
-	// {
-	// 	name: "folder after project",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"projects/123/folders/123"},
-	// 	},
-	// 	wantConstraintError: true,
-	// },
-	// {
-	// 	name: "allow unknown in match parameters",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"organizations/unknown"},
-	// 	},
-	// 	ancestryPath: "organizations/unknown",
-	// 	wantMatch:    true,
-	// },
-	// {
-	// 	name: "organizations/unknown cannot match other random org string",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"organizations/unknown"},
-	// 	},
-	// 	ancestryPath: "organizations/whatever",
-	// 	wantMatch:    false,
-	// },
-	// {
-	// 	name: "only allows unknown as string in match parameter",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{"organizations/random"},
-	// 	},
-	// 	wantConstraintError: true,
-	// },
-	// {
-	// 	name: "invalid exclude CRM name",
-	// 	match: map[string]interface{}{
-	// 		"excludedAncestries": []interface{}{"foosball/*"},
-	// 	},
-	// 	wantConstraintError: true,
-	// },
-	// {
-	// 	name: "Bad target type",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": "organizations/*",
-	// 	},
-	// 	wantConstraintError: true,
-	// },
-	// {
-	// 	name: "Bad target item type",
-	// 	match: map[string]interface{}{
-	// 		"ancestries": []interface{}{1},
-	// 	},
-	// 	wantConstraintError: true,
-	// },
-	// {
-	// 	name: "Bad exclude type",
-	// 	match: map[string]interface{}{
-	// 		"excludedAncestries": "organizations/*",
-	// 	},
-	// 	wantConstraintError: true,
-	// },
-	// {
-	// 	name: "Bad exclude item type",
-	// 	match: map[string]interface{}{
-	// 		"excludedAncestries": []interface{}{1},
-	// 	},
-	// 	wantConstraintError: true,
-	// },
+	{
+		name: "** can match organizations/unknown.",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"**"},
+		},
+		ancestryPath: "organizations/unknown/folders/1221214",
+		wantMatch:    true,
+	},
+	{
+		name: "* can NOT match organizations/unknown.",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"*"},
+		},
+		ancestryPath: "organizations/unknown/folders/1221214",
+		wantMatch:    false,
+	},
+	{
+		name: "Match org on exact ID",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/123454321"},
+		},
+		ancestryPath: "organizations/123454321",
+		wantMatch:    true,
+	},
+	{
+		name: "Does not match org for descendant match",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/123454321/**"},
+		},
+		ancestryPath: "organizations/123454321",
+		wantMatch:    false,
+	},
+	{
+		name: "No match org on close ID",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/123454321/*"},
+		},
+		ancestryPath: "organizations/1234543211",
+		wantMatch:    false,
+	},
+	{
+		name: "Match all under org ID - folder",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/123454321/**"},
+		},
+		ancestryPath: "organizations/123454321/folders/1242511",
+		wantMatch:    true,
+	},
+	{
+		name: "Match all under org ID - project",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/123454321/**"},
+		},
+		ancestryPath: "organizations/123454321/projects/1242511",
+		wantMatch:    true,
+	},
+	{
+		name: "Match all under org ID - folder, project",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/123454321/**"},
+		},
+		ancestryPath: "organizations/123454321/folders/125896/projects/1242511",
+		wantMatch:    true,
+	},
+	{
+		name: "No match folder on descendants",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"**/folders/1221214/**"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214",
+		wantMatch:    false,
+	},
+	{
+		name: "No match folder",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"**/folders/1221214/**"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221215",
+		wantMatch:    false,
+	},
+	{
+		name: "No match under folder",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"**/folders/1221214/**"},
+		},
+		ancestryPath: "organizations/123454321/folders/12212144/projects/1221214",
+		wantMatch:    false,
+	},
+	{
+		name: "Match folder in folder",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"**/folders/1221214/**"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214/folders/557385378",
+		wantMatch:    true,
+	},
+	{
+		name: "Match project in folder",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"**/folders/1221214/**"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
+		wantMatch:    true,
+	},
+	{
+		name: "Match project",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"**/projects/557385378"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
+		wantMatch:    true,
+	},
+	{
+		name: "Match project by ID, not number",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"**/projects/tfv-test-project"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214/projects/tfv-test-project",
+		wantMatch:    true,
+	},
+	{
+		name: "Match any project",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"**/projects/**"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
+		wantMatch:    true,
+	},
+	{
+		name: "Does not match project",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"**/projects/123245"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
+		wantMatch:    false,
+	},
+	{
+		name: "Match project multiple",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"**/projects/9795872589", "**/projects/557385378"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
+		wantMatch:    true,
+	},
+	{
+		name: "Match any project",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"**/projects/*"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
+		wantMatch:    true,
+	},
+	{
+		name: "Exclude project",
+		match: map[string]interface{}{
+			"excludedAncestries": []interface{}{"**/projects/557385378"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
+		wantMatch:    false,
+	},
+	{
+		name: "Exclude project by ID, not number",
+		match: map[string]interface{}{
+			"excludedAncestries": []interface{}{"**/projects/tfv-exclude-project"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214/projects/tfv-exclude-project",
+		wantMatch:    false,
+	},
+	{
+		name: "Exclude project multiple",
+		match: map[string]interface{}{
+			"excludedAncestries": []interface{}{"**/projects/525572987", "**/projects/557385378"},
+		},
+		ancestryPath: "organizations/123454321/folders/1221214/projects/557385378",
+		wantMatch:    false,
+	},
+	{
+		name: "Exclude project via wildcard on org",
+		match: map[string]interface{}{
+			"excludedAncestries": []interface{}{"organizations/*/projects/557385378"},
+		},
+		ancestryPath: "organizations/123454321/projects/557385378",
+		wantMatch:    false,
+	},
+	{
+		name: "invalid target CRM type",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"flubber/*"},
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "org after folder",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"folders/123/organizations/*"},
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "org after project",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"projects/123/organizations/*"},
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "folder after project",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"projects/123/folders/123"},
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "allow unknown in match parameters",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/unknown"},
+		},
+		ancestryPath: "organizations/unknown",
+		wantMatch:    true,
+	},
+	{
+		name: "organizations/unknown cannot match other random org string",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/unknown"},
+		},
+		ancestryPath: "organizations/whatever",
+		wantMatch:    false,
+	},
+	{
+		name: "only allows unknown as string in match parameter",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{"organizations/random"},
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "invalid exclude CRM name",
+		match: map[string]interface{}{
+			"excludedAncestries": []interface{}{"foosball/*"},
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "Bad target type",
+		match: map[string]interface{}{
+			"ancestries": "organizations/*",
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "Bad target item type",
+		match: map[string]interface{}{
+			"ancestries": []interface{}{1},
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "Bad exclude type",
+		match: map[string]interface{}{
+			"excludedAncestries": "organizations/*",
+		},
+		wantConstraintError: true,
+	},
+	{
+		name: "Bad exclude item type",
+		match: map[string]interface{}{
+			"excludedAncestries": []interface{}{1},
+		},
+		wantConstraintError: true,
+	},
 }
 
 // Tests for legacy match conflicts and warnings
@@ -458,18 +458,18 @@ func TestTargetHandler(t *testing.T) {
 		testcases = append(
 			testcases,
 			tc.jsonAssetTestcase(),
-			// tc.assetTestcase(),
-			// tc.legacySpecMatchTestcase(),
+			tc.assetTestcase(),
+			tc.legacySpecMatchTestcase(),
 		)
 	}
 
-	// for _, tc := range legacyMatchTests {
-	// 	testcases = append(
-	// 		testcases,
-	// 		tc.jsonAssetTestcase(),
-	// 		tc.assetTestcase(),
-	// 	)
-	// }
+	for _, tc := range legacyMatchTests {
+		testcases = append(
+			testcases,
+			tc.jsonAssetTestcase(),
+			tc.assetTestcase(),
+		)
+	}
 
 	targettesting.CreateTargetHandler(t, New(), testcases).Test(t)
 }

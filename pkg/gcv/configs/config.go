@@ -402,7 +402,7 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 		case "v1beta1":
 			openAPIResult := configValidatorV1Beta1SchemaValidator.Validate(u.Object)
 			if openAPIResult.HasErrorsOrWarnings() {
-				return errors.Wrapf(openAPIResult.AsError(), "v1alpha1 validation failure")
+				return errors.Wrapf(openAPIResult.AsError(), "v1beta1 validation failure")
 			}
 		default:
 			return errors.Errorf("unrecognized ConstraintTemplate version %s", u.GroupVersionKind().Version)
