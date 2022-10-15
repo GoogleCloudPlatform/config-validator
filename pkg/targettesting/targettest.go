@@ -61,14 +61,16 @@ func newConstraintTemplate(targetName, rego string) *templates.ConstraintTemplat
 					"kind": testConstraintKind,
 				},
 				"validation": map[string]interface{}{
-					"openAPIV3Schema": map[string]interface{}{},
+					"openAPIV3Schema": map[string]interface{}{
+						"type": "object",
+					},
 				},
 			},
 		},
 		"targets": []map[string]interface{}{
 			{
 				"target": targetName,
-				"rego": rego,
+				"rego":   rego,
 			},
 		},
 	}
