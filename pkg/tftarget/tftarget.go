@@ -21,7 +21,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/gobwas/glob"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/core/constraints"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/handler"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/types"
@@ -45,79 +44,35 @@ func New() *TFTarget {
 	return &TFTarget{}
 }
 
-type matcher struct {
-	includeMatch []string
-	excludeMatch []string
-}
-
-func (m *matcher) Match(review interface{}) (bool, error) {
-	reviewObj, ok := review.(map[string]interface{})
-	if !ok {
-		return false, fmt.Errorf("unexpected type of review, expect map[string]interface{}")
-	}
-	address, ok := reviewObj["address"].(string)
-	if !ok {
-		return false, fmt.Errorf("unexpected type of address in review object")
-	}
-
-	matched := false
-	for _, pattern := range m.includeMatch {
-		g := glob.MustCompile(pattern, '.')
-		if g.Match(address) {
-			matched = true
-			break
-		}
-	}
-	if !matched {
-		return false, nil
-	}
-
-	for _, pattern := range m.excludeMatch {
-		g := glob.MustCompile(pattern, '.')
-		if g.Match(address) {
-			return false, nil
-		}
-	}
-	return true, nil
-}
-
 // ToMatcher implements client.ToMatcher
 func (g *TFTarget) ToMatcher(constraint *unstructured.Unstructured) (constraints.Matcher, error) {
-	spec, ok, err := unstructured.NestedMap(constraint.Object, "spec")
-	if err != nil {
-		return nil, fmt.Errorf("unable to get spec: %w", err)
-	}
-	if !ok {
-		return &matcher{includeMatch: []string{"**"}}, nil
-	}
-
-	match, ok, err := unstructured.NestedMap(spec, "match")
+	match, ok, err := unstructured.NestedMap(constraint.Object, "spec", "match")
 	if err != nil {
 		return nil, fmt.Errorf("unable to get spec.match: %w", err)
 	}
 	if !ok {
-		return &matcher{includeMatch: []string{"**"}}, nil
+		return &matcher{include: []string{"**"}, exclude: []string{}}, nil
 	}
 
-	includeMatch, ok, err := unstructured.NestedStringSlice(match, "addresses")
+	include, ok, err := unstructured.NestedStringSlice(match, "addresses")
 	if err != nil {
 		return nil, fmt.Errorf("unable to get string slice from spec.match.addresses: %w", err)
 	}
 	if !ok {
-		includeMatch = []string{"**"}
+		include = []string{"**"}
 	}
 
-	excludeMatch, ok, err := unstructured.NestedStringSlice(match, "excludedAddresses")
+	exclude, ok, err := unstructured.NestedStringSlice(match, "excludedAddresses")
 	if err != nil {
 		return nil, fmt.Errorf("unable to get string slice from spec.match.excludedAddresses: %w", err)
 	}
 	if !ok {
-		excludeMatch = []string{}
+		exclude = []string{}
 	}
 
 	return &matcher{
-		includeMatch: includeMatch,
-		excludeMatch: excludeMatch,
+		include: include,
+		exclude: exclude,
 	}, nil
 }
 

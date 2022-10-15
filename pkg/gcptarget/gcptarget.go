@@ -27,7 +27,6 @@ import (
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	asset2 "github.com/GoogleCloudPlatform/config-validator/pkg/asset"
-	"github.com/gobwas/glob"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/core/constraints"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/handler"
@@ -44,42 +43,6 @@ const Name = "validation.gcp.forsetisecurity.org"
 type GCPTarget struct {
 }
 
-type matcher struct {
-	ancestries         []string
-	excludedAncestries []string
-}
-
-func (m *matcher) Match(review interface{}) (bool, error) {
-	reviewObj, ok := review.(map[string]interface{})
-	if !ok {
-		return false, fmt.Errorf("unexpected type of review, expect map[string]interface{}")
-	}
-	ancestryPath, ok := reviewObj["ancestry_path"].(string)
-	if !ok {
-		return false, fmt.Errorf("unexpected type of ancestry_path in review object")
-	}
-
-	matchAncestries := false
-	for _, pattern := range m.ancestries {
-		g := glob.MustCompile(pattern, '/')
-		if g.Match(ancestryPath) {
-			matchAncestries = true
-			break
-		}
-	}
-	if !matchAncestries {
-		return false, nil
-	}
-
-	for _, pattern := range m.excludedAncestries {
-		g := glob.MustCompile(pattern, '/')
-		if g.Match(ancestryPath) {
-			return false, nil
-		}
-	}
-	return true, nil
-}
-
 var _ handler.TargetHandler = &GCPTarget{}
 
 // New returns a new GCPTarget
@@ -89,53 +52,45 @@ func New() *GCPTarget {
 
 // ToMatcher converts .spec.match in mutators to Matcher.
 func (h *GCPTarget) ToMatcher(constraint *unstructured.Unstructured) (constraints.Matcher, error) {
-	spec, ok, err := unstructured.NestedMap(constraint.Object, "spec")
-	if err != nil {
-		return nil, fmt.Errorf("unable to get spec: %w", err)
-	}
-	if !ok {
-		return &matcher{ancestries: []string{"**"}}, nil
-	}
-
-	match, ok, err := unstructured.NestedMap(spec, "match")
+	match, ok, err := unstructured.NestedMap(constraint.Object, "spec", "match")
 	if err != nil {
 		return nil, fmt.Errorf("unable to get spec.match: %w", err)
 	}
 	if !ok {
-		return &matcher{ancestries: []string{"**"}}, nil
+		return &matcher{include: []string{"**"}, exclude: []string{}}, nil
 	}
 
-	ancestries, ok, err := unstructured.NestedStringSlice(match, "ancestries")
+	include, ok, err := unstructured.NestedStringSlice(match, "ancestries")
 	if err != nil {
 		return nil, fmt.Errorf("unable to get string slice from spec.match.ancestries: %w", err)
 	}
 	if !ok {
-		ancestries, ok, err = unstructured.NestedStringSlice(match, "target")
+		include, ok, err = unstructured.NestedStringSlice(match, "target")
 		if err != nil {
 			return nil, fmt.Errorf("unable to get string slice from spec.match.target: %w", err)
 		}
 		if !ok {
-			ancestries = []string{"**"}
+			include = []string{"**"}
 		}
 	}
 
-	excludedAncestries, ok, err := unstructured.NestedStringSlice(match, "excludedAncestries")
+	exclude, ok, err := unstructured.NestedStringSlice(match, "excludedAncestries")
 	if err != nil {
 		return nil, fmt.Errorf("unable to get string slice from spec.match.excludedAncestries: %w", err)
 	}
 	if !ok {
-		excludedAncestries, ok, err = unstructured.NestedStringSlice(match, "exclude")
+		exclude, ok, err = unstructured.NestedStringSlice(match, "exclude")
 		if err != nil {
 			return nil, fmt.Errorf("unable to get string slice from spec.match.exclude: %w", err)
 		}
 		if !ok {
-			excludedAncestries = []string{}
+			exclude = []string{}
 		}
 	}
 
 	return &matcher{
-		ancestries:         ancestries,
-		excludedAncestries: excludedAncestries,
+		include: include,
+		exclude: exclude,
 	}, nil
 }
 
