@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # First build the config-validator binary
-FROM golang:1.13 as build
+FROM golang:1.17 as build
 
 WORKDIR /go/src/app
 
