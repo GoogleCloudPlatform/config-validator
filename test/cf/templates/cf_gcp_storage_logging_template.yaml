@@ -23,6 +23,7 @@ spec:
         kind: CFGCPStorageLoggingConstraint
       validation:
         openAPIV3Schema:
+          type: "object"
           properties: {}
   targets:
     - target: "validation.gcp.forsetisecurity.org"
