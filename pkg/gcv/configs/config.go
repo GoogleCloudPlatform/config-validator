@@ -408,6 +408,14 @@ func (c *Configuration) loadUnstructured(u *unstructured.Unstructured) error {
 			return errors.Wrapf(err, "failed to convert to versioned constraint template internal struct")
 		}
 
+		if ct.Spec.CRD.Spec.Validation.OpenAPIV3Schema.Type == "" {
+			glog.Warning(
+				"spec.crd.spec.validation.openAPIV3Schema is missing the type: declaration. " +
+					"Please upgrade: https://open-policy-agent.github.io/gatekeeper/website/docs/constrainttemplates#v1-constraint-template",
+			)
+			ct.Spec.CRD.Spec.Validation.OpenAPIV3Schema.Type = "object"
+		}
+
 		if dup, found := c.templateNames[ct.Name]; found {
 			return errors.Errorf(
 				"ConstraintTemplate %q declared at path %q has duplicate name conflict with template declared at path %q",
