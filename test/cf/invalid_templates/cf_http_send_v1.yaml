@@ -23,6 +23,7 @@ spec:
         kind: CFHttpSendV1
       validation:
         openAPIV3Schema:
+          type: "object"
           properties: {}
   targets:
     validation.gcp.forsetisecurity.org:
@@ -57,4 +58,3 @@ spec:
         	message := sprintf("I'm doing something forbidden! %s", [input.asset.name])
         	metadata := {}
         }
-

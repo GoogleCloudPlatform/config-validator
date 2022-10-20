@@ -25,6 +25,7 @@ spec:
         kind: TFComputeInstanceMachineTypeAllowlistConstraintV1
       validation:
         openAPIV3Schema:
+          type: "object"
           properties:
             allowlist:
               description: "A list of machine_types allowed, for example: ['e2-medium']"
