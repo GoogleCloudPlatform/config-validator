@@ -74,9 +74,8 @@ type Validator struct {
 
 // Stores functional options for CF client
 type initOptions struct {
-	driverArgs  []local.Arg
-	backendArgs []cfclient.Opt
-	clientArgs  []cfclient.Opt
+	driverArgs []local.Arg
+	clientArgs []cfclient.Opt
 }
 
 type Option = func(*initOptions)
@@ -122,9 +121,8 @@ func newCFClient(
 		return nil, fmt.Errorf("unable to create new driver: %w", err)
 	}
 	// Append driver option after creation
-	options.backendArgs = append(options.backendArgs, cfclient.Driver(driver))
-	options.backendArgs = append(options.backendArgs, options.clientArgs...)
-	cfClient, err := cfclient.NewClient(options.backendArgs...)
+	args := append(options.clientArgs, cfclient.Driver(driver))
+	cfClient, err := cfclient.NewClient(args...)
 	if err != nil {
 		return nil, fmt.Errorf("unable to set up Constraint Framework client: %w", err)
 	}

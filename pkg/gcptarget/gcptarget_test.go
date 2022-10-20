@@ -586,11 +586,11 @@ func TestToMatcher(t *testing.T) {
 					t.Fatalf("ToMatcher() = %s, want = nil", err)
 				}
 				matcher := got.(*matcher)
-				if diff := cmp.Diff(test.wantInclude, matcher.include); diff != "" {
-					t.Errorf("ToMatcher().include = %v, want = %v, diff = %s", matcher.include, test.wantInclude, diff)
+				if diff := cmp.Diff(test.wantInclude, matcher.ancestries); diff != "" {
+					t.Errorf("ToMatcher().include = %v, want = %v, diff = %s", matcher.ancestries, test.wantInclude, diff)
 				}
-				if diff := cmp.Diff(test.wantExclude, matcher.exclude); diff != "" {
-					t.Errorf("ToMatcher().exclude = %v, want = %v, diff = %s", matcher.exclude, test.wantExclude, diff)
+				if diff := cmp.Diff(test.wantExclude, matcher.excludedAncestries); diff != "" {
+					t.Errorf("ToMatcher().exclude = %v, want = %v, diff = %s", matcher.excludedAncestries, test.wantExclude, diff)
 				}
 			}
 		})

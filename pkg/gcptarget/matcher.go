@@ -24,8 +24,8 @@ var ErrInvalidReview = fmt.Errorf("unexpected type of review, expect map[string]
 var ErrInvalidAncestryPath = fmt.Errorf("unexpected type of ancestry path in review object")
 
 type matcher struct {
-	include []string
-	exclude []string
+	ancestries         []string
+	excludedAncestries []string
 }
 
 func (m *matcher) Match(review interface{}) (bool, error) {
@@ -39,7 +39,7 @@ func (m *matcher) Match(review interface{}) (bool, error) {
 	}
 
 	matchAncestries := false
-	for _, pattern := range m.include {
+	for _, pattern := range m.ancestries {
 		g := glob.MustCompile(pattern, '/')
 		if g.Match(ancestryPath) {
 			matchAncestries = true
@@ -50,7 +50,7 @@ func (m *matcher) Match(review interface{}) (bool, error) {
 		return false, nil
 	}
 
-	for _, pattern := range m.exclude {
+	for _, pattern := range m.excludedAncestries {
 		g := glob.MustCompile(pattern, '/')
 		if g.Match(ancestryPath) {
 			return false, nil

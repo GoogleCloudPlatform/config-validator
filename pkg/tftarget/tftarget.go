@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"text/template"
 
 	"github.com/open-policy-agent/frameworks/constraint/pkg/core/constraints"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/handler"
@@ -51,7 +50,7 @@ func (g *TFTarget) ToMatcher(constraint *unstructured.Unstructured) (constraints
 		return nil, fmt.Errorf("unable to get spec.match: %w", err)
 	}
 	if !ok {
-		return &matcher{include: []string{"**"}, exclude: []string{}}, nil
+		return &matcher{addresses: []string{"**"}, excludedAddresses: []string{}}, nil
 	}
 
 	include, ok, err := unstructured.NestedStringSlice(match, "addresses")
@@ -71,8 +70,8 @@ func (g *TFTarget) ToMatcher(constraint *unstructured.Unstructured) (constraints
 	}
 
 	return &matcher{
-		include: include,
-		exclude: exclude,
+		addresses:         include,
+		excludedAddresses: exclude,
 	}, nil
 }
 
@@ -101,22 +100,17 @@ func (g *TFTarget) MatchSchema() apiextensions.JSONSchemaProps {
 	}
 }
 
-// GetName implements client.TargetHandler
+// GetName implements handler.TargetHandler
 func (g *TFTarget) GetName() string {
 	return Name
 }
 
-// Library implements client.TargetHandler
-func (g *TFTarget) Library() *template.Template {
-	return libraryTemplate
-}
-
-// ProcessData implements client.TargetHandler
+// ProcessData implements handler.TargetHandler
 func (g *TFTarget) ProcessData(obj interface{}) (bool, storage.Path, interface{}, error) {
-	return false, nil, nil, errors.Errorf("Storing data for referential constraint eval is not supported at this time.")
+	return false, nil, nil, errors.Errorf("storing data for referential constraint eval is not supported at this time.")
 }
 
-// HandleReview implements client.TargetHandler
+// HandleReview implements handler.TargetHandler
 func (g *TFTarget) HandleReview(obj interface{}) (bool, interface{}, error) {
 	switch resource := obj.(type) {
 	case map[string]interface{}:
@@ -137,7 +131,7 @@ func (g *TFTarget) HandleReview(obj interface{}) (bool, interface{}, error) {
 	return false, nil, nil
 }
 
-// HandleViolation implements client.TargetHandler
+// HandleViolation implements handler.TargetHandler
 func (g *TFTarget) HandleViolation(result *types.Result) error {
 	return nil
 }
@@ -170,7 +164,7 @@ func checkPathGlobs(rs []string) error {
 	return nil
 }
 
-// ValidateConstraint implements client.TargetHandler
+// ValidateConstraint implements handler.TargetHandler
 func (g *TFTarget) ValidateConstraint(constraint *unstructured.Unstructured) error {
 	includes, found, err := unstructured.NestedStringSlice(constraint.Object, "spec", "match", "addresses")
 	if err != nil {

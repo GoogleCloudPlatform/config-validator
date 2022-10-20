@@ -48,6 +48,15 @@ func TestMatch(t *testing.T) {
 			want: false,
 		},
 		{
+			name:    "exclude with **",
+			include: []string{"**"},
+			exclude: []string{"abc/**"},
+			review: map[string]interface{}{
+				"ancestry_path": "abc/def",
+			},
+			want: false,
+		},
+		{
 			name:    "exclude not match",
 			include: []string{"**"},
 			exclude: []string{"abc/*"},
@@ -72,8 +81,8 @@ func TestMatch(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			matcher := &matcher{
-				include: test.include,
-				exclude: test.exclude,
+				ancestries:         test.include,
+				excludedAncestries: test.exclude,
 			}
 			got, err := matcher.Match(test.review)
 			if got != test.want {

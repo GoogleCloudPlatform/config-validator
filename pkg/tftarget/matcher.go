@@ -21,8 +21,8 @@ import (
 )
 
 type matcher struct {
-	include []string
-	exclude []string
+	addresses         []string
+	excludedAddresses []string
 }
 
 var ErrInvalidReview = fmt.Errorf("unexpected type of review, expect map[string]interface{}")
@@ -41,7 +41,7 @@ func (m *matcher) Match(review interface{}) (bool, error) {
 	}
 
 	matched := false
-	for _, pattern := range m.include {
+	for _, pattern := range m.addresses {
 		g := glob.MustCompile(pattern, '.')
 		if g.Match(address) {
 			matched = true
@@ -52,7 +52,7 @@ func (m *matcher) Match(review interface{}) (bool, error) {
 		return false, nil
 	}
 
-	for _, pattern := range m.exclude {
+	for _, pattern := range m.excludedAddresses {
 		g := glob.MustCompile(pattern, '.')
 		if g.Match(address) {
 			return false, nil
