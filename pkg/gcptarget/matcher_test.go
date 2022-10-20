@@ -48,11 +48,11 @@ func TestMatch(t *testing.T) {
 			want: false,
 		},
 		{
-			name:    "exclude with **",
+			name:    "exclude match with **",
 			include: []string{"**"},
 			exclude: []string{"abc/**"},
 			review: map[string]interface{}{
-				"ancestry_path": "abc/def",
+				"ancestry_path": "abc/def/ghi",
 			},
 			want: false,
 		},
