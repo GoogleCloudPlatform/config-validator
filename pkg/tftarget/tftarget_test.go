@@ -19,6 +19,9 @@ import (
 	"testing"
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/targettesting"
+	"github.com/google/go-cmp/cmp"
+	"github.com/open-policy-agent/frameworks/constraint/pkg/client/clienttest/cts"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // reviewTestData is the base test data which will be manifested into a
@@ -267,4 +270,82 @@ func TestTargetHandler(t *testing.T) {
 	}
 
 	targettesting.CreateTargetHandler(t, New(), testcases).Test(t)
+}
+
+func TestToMatcher(t *testing.T) {
+	tests := []struct {
+		name        string
+		constraint  *unstructured.Unstructured
+		wantInclude []string
+		wantExclude []string
+		wantErr     bool
+	}{
+		{
+			name: "default fields",
+			constraint: cts.MakeConstraint(t,
+				"kind",
+				"name",
+				cts.Set([]interface{}{"abc"}, "spec", "match", "addresses"),
+				cts.Set([]interface{}{"def"}, "spec", "match", "excludedAddresses"),
+			),
+			wantInclude: []string{"abc"},
+			wantExclude: []string{"def"},
+		},
+		{
+			name:        "spec.match not exist",
+			constraint:  cts.MakeConstraint(t, "kind", "name"),
+			wantInclude: []string{"**"},
+			wantExclude: []string{},
+		},
+		{
+			name: "target fields not exist",
+			constraint: cts.MakeConstraint(t,
+				"kind",
+				"name",
+				cts.Set([]interface{}{"abc"}, "spec", "match", "random"),
+			),
+			wantInclude: []string{"**"},
+			wantExclude: []string{},
+		},
+		{
+			name: "non string slice type in addresses",
+			constraint: cts.MakeConstraint(t,
+				"kind",
+				"name",
+				cts.Set("abc", "spec", "match", "addresses"),
+			),
+			wantErr: true,
+		},
+		{
+			name: "non string slice type in excludedAddresses",
+			constraint: cts.MakeConstraint(t,
+				"kind",
+				"name",
+				cts.Set("abc", "spec", "match", "excludedAddresses"),
+			),
+			wantErr: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			target := &TFTarget{}
+			got, err := target.ToMatcher(test.constraint)
+			if test.wantErr {
+				if err == nil {
+					t.Fatalf("ToMatcher() = nil, want = err")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("ToMatcher() = %s, want = nil", err)
+				}
+				matcher := got.(*matcher)
+				if diff := cmp.Diff(test.wantInclude, matcher.addresses); diff != "" {
+					t.Errorf("ToMatcher().include = %v, want = %v, diff = %s", matcher.addresses, test.wantInclude, diff)
+				}
+				if diff := cmp.Diff(test.wantExclude, matcher.excludedAddresses); diff != "" {
+					t.Errorf("ToMatcher().exclude = %v, want = %v, diff = %s", matcher.excludedAddresses, test.wantExclude, diff)
+				}
+			}
+		})
+	}
 }

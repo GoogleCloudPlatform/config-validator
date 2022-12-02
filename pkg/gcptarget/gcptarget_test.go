@@ -22,7 +22,10 @@ import (
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/targettesting"
 	targetHandlerTest "github.com/GoogleCloudPlatform/config-validator/pkg/targettesting"
+	"github.com/google/go-cmp/cmp"
+	"github.com/open-policy-agent/frameworks/constraint/pkg/client/clienttest/cts"
 	v1 "google.golang.org/genproto/googleapis/cloud/asset/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // asset creates an CAI asset with the given ancestry path.
@@ -472,4 +475,124 @@ func TestTargetHandler(t *testing.T) {
 	}
 
 	targettesting.CreateTargetHandler(t, New(), testcases).Test(t)
+}
+
+func TestToMatcher(t *testing.T) {
+	tests := []struct {
+		name        string
+		constraint  *unstructured.Unstructured
+		wantInclude []string
+		wantExclude []string
+		wantErr     bool
+	}{
+		{
+			name: "default fields",
+			constraint: cts.MakeConstraint(t,
+				"kind",
+				"name",
+				cts.Set([]interface{}{"abc"}, "spec", "match", "ancestries"),
+				cts.Set([]interface{}{"def"}, "spec", "match", "excludedAncestries"),
+			),
+			wantInclude: []string{"abc"},
+			wantExclude: []string{"def"},
+		},
+		{
+			name: "legacy fields",
+			constraint: cts.MakeConstraint(t,
+				"kind",
+				"name",
+				cts.Set([]interface{}{"abc"}, "spec", "match", "target"),
+				cts.Set([]interface{}{"def"}, "spec", "match", "exclude"),
+			),
+			wantInclude: []string{"abc"},
+			wantExclude: []string{"def"},
+		},
+		{
+			name: "default fields takes priority than legacy fields",
+			constraint: cts.MakeConstraint(t,
+				"kind",
+				"name",
+				cts.Set([]interface{}{"abc"}, "spec", "match", "ancestries"),
+				cts.Set([]interface{}{"def"}, "spec", "match", "excludedAncestries"),
+				cts.Set([]interface{}{"ghi"}, "spec", "match", "target"),
+				cts.Set([]interface{}{"jkl"}, "spec", "match", "exclude"),
+			),
+			wantInclude: []string{"abc"},
+			wantExclude: []string{"def"},
+		},
+		{
+			name:        "spec.match not exist",
+			constraint:  cts.MakeConstraint(t, "kind", "name"),
+			wantInclude: []string{"**"},
+			wantExclude: []string{},
+		},
+		{
+			name: "target fields not exist",
+			constraint: cts.MakeConstraint(t,
+				"kind",
+				"name",
+				cts.Set([]interface{}{"abc"}, "spec", "match", "random"),
+			),
+			wantInclude: []string{"**"},
+			wantExclude: []string{},
+		},
+		{
+			name: "non string slice type in ancestries",
+			constraint: cts.MakeConstraint(t,
+				"kind",
+				"name",
+				cts.Set("abc", "spec", "match", "ancestries"),
+			),
+			wantErr: true,
+		},
+		{
+			name: "non string slice type in target",
+			constraint: cts.MakeConstraint(t,
+				"kind",
+				"name",
+				cts.Set("abc", "spec", "match", "target"),
+			),
+			wantErr: true,
+		},
+		{
+			name: "non string slice type in excludedAncestries",
+			constraint: cts.MakeConstraint(t,
+				"kind",
+				"name",
+				cts.Set("abc", "spec", "match", "excludedAncestries"),
+			),
+			wantErr: true,
+		},
+		{
+			name: "non string slice type in exclude",
+			constraint: cts.MakeConstraint(t,
+				"kind",
+				"name",
+				cts.Set("abc", "spec", "match", "exclude"),
+			),
+			wantErr: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			target := &GCPTarget{}
+			got, err := target.ToMatcher(test.constraint)
+			if test.wantErr {
+				if err == nil {
+					t.Fatalf("ToMatcher() = nil, want = err")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("ToMatcher() = %s, want = nil", err)
+				}
+				matcher := got.(*matcher)
+				if diff := cmp.Diff(test.wantInclude, matcher.ancestries); diff != "" {
+					t.Errorf("ToMatcher().include = %v, want = %v, diff = %s", matcher.ancestries, test.wantInclude, diff)
+				}
+				if diff := cmp.Diff(test.wantExclude, matcher.excludedAncestries); diff != "" {
+					t.Errorf("ToMatcher().exclude = %v, want = %v, diff = %s", matcher.excludedAncestries, test.wantExclude, diff)
+				}
+			}
+		})
+	}
 }

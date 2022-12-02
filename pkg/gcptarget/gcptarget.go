@@ -23,13 +23,14 @@ import (
 	"log"
 	"regexp"
 	"strings"
-	"text/template"
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	asset2 "github.com/GoogleCloudPlatform/config-validator/pkg/asset"
 	"github.com/gogo/protobuf/jsonpb"
-	"github.com/open-policy-agent/frameworks/constraint/pkg/client"
+	"github.com/open-policy-agent/frameworks/constraint/pkg/core/constraints"
+	"github.com/open-policy-agent/frameworks/constraint/pkg/handler"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/types"
+	"github.com/open-policy-agent/opa/storage"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -41,11 +42,55 @@ const Name = "validation.gcp.forsetisecurity.org"
 type GCPTarget struct {
 }
 
-var _ client.TargetHandler = &GCPTarget{}
+var _ handler.TargetHandler = &GCPTarget{}
 
 // New returns a new GCPTarget
 func New() *GCPTarget {
 	return &GCPTarget{}
+}
+
+// ToMatcher converts .spec.match in mutators to Matcher.
+func (h *GCPTarget) ToMatcher(constraint *unstructured.Unstructured) (constraints.Matcher, error) {
+	match, ok, err := unstructured.NestedMap(constraint.Object, "spec", "match")
+	if err != nil {
+		return nil, fmt.Errorf("unable to get spec.match: %w", err)
+	}
+	if !ok {
+		return &matcher{ancestries: []string{"**"}, excludedAncestries: []string{}}, nil
+	}
+
+	include, ok, err := unstructured.NestedStringSlice(match, "ancestries")
+	if err != nil {
+		return nil, fmt.Errorf("unable to get string slice from spec.match.ancestries: %w", err)
+	}
+	if !ok {
+		include, ok, err = unstructured.NestedStringSlice(match, "target")
+		if err != nil {
+			return nil, fmt.Errorf("unable to get string slice from spec.match.target: %w", err)
+		}
+		if !ok {
+			include = []string{"**"}
+		}
+	}
+
+	exclude, ok, err := unstructured.NestedStringSlice(match, "excludedAncestries")
+	if err != nil {
+		return nil, fmt.Errorf("unable to get string slice from spec.match.excludedAncestries: %w", err)
+	}
+	if !ok {
+		exclude, ok, err = unstructured.NestedStringSlice(match, "exclude")
+		if err != nil {
+			return nil, fmt.Errorf("unable to get string slice from spec.match.exclude: %w", err)
+		}
+		if !ok {
+			exclude = []string{}
+		}
+	}
+
+	return &matcher{
+		ancestries:         include,
+		excludedAncestries: exclude,
+	}, nil
 }
 
 // MatchSchema implements client.MatchSchemaProvider
@@ -89,22 +134,17 @@ func (g *GCPTarget) MatchSchema() apiextensions.JSONSchemaProps {
 	}
 }
 
-// GetName implements client.TargetHandler
+// GetName implements handler.TargetHandler
 func (g *GCPTarget) GetName() string {
 	return Name
 }
 
-// Library implements client.TargetHandler
-func (g *GCPTarget) Library() *template.Template {
-	return libraryTemplate
+// ProcessData implements handler.TargetHandler
+func (g *GCPTarget) ProcessData(obj interface{}) (bool, storage.Path, interface{}, error) {
+	return false, nil, nil, errors.New("storing data for referential constraint eval is not supported at this time.")
 }
 
-// ProcessData implements client.TargetHandler
-func (g *GCPTarget) ProcessData(obj interface{}) (bool, string, interface{}, error) {
-	return false, "", nil, errors.New("Storing data for referential constraint eval is not supported at this time.")
-}
-
-// HandleReview implements client.TargetHandler
+// HandleReview implements handler.TargetHandler
 func (g *GCPTarget) HandleReview(obj interface{}) (bool, interface{}, error) {
 	switch asset := obj.(type) {
 	case *validator.Asset:
@@ -195,9 +235,8 @@ func (g *GCPTarget) handleAsset(asset *validator.Asset) (bool, interface{}, erro
 	return true, f, nil
 }
 
-// HandleViolation implements client.TargetHandler
+// HandleViolation implements handler.TargetHandler
 func (g *GCPTarget) HandleViolation(result *types.Result) error {
-	result.Resource = result.Review
 	return nil
 }
 
@@ -276,7 +315,7 @@ func checkPathGlobs(rs []string) error {
 	return nil
 }
 
-// ValidateConstraint implements client.TargetHandler
+// ValidateConstraint implements handler.TargetHandler
 func (g *GCPTarget) ValidateConstraint(constraint *unstructured.Unstructured) error {
 	ancestries, ancestriesFound, ancestriesErr := unstructured.NestedStringSlice(constraint.Object, "spec", "match", "ancestries")
 	targets, targetsFound, targetsErr := unstructured.NestedStringSlice(constraint.Object, "spec", "match", "target")

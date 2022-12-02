@@ -30,6 +30,7 @@ import (
 	cfclient "github.com/open-policy-agent/frameworks/constraint/pkg/client"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers/local"
 	cftemplates "github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
+	"github.com/open-policy-agent/frameworks/constraint/pkg/handler"
 	k8starget "github.com/open-policy-agent/gatekeeper/pkg/target"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -73,9 +74,8 @@ type Validator struct {
 
 // Stores functional options for CF client
 type initOptions struct {
-	driverArgs  []local.Arg
-	backendArgs []cfclient.BackendOpt
-	clientArgs  []cfclient.Opt
+	driverArgs []local.Arg
+	clientArgs []cfclient.Opt
 }
 
 type Option = func(*initOptions)
@@ -101,7 +101,7 @@ func NewValidatorConfig(policyPaths []string, policyLibraryPath string) (*config
 }
 
 func newCFClient(
-	targetHandler cfclient.TargetHandler,
+	targetHandler handler.TargetHandler,
 	templates []*cftemplates.ConstraintTemplate,
 	constraints []*unstructured.Unstructured,
 	opts ...Option) (
@@ -116,14 +116,13 @@ func newCFClient(
 		opt(options)
 	}
 
-	driver := local.New(options.driverArgs...)
-	// Append driver option after creation
-	options.backendArgs = append(options.backendArgs, cfclient.Driver(driver))
-	backend, err := cfclient.NewBackend(options.backendArgs...)
+	driver, err := local.New(options.driverArgs...)
 	if err != nil {
-		return nil, fmt.Errorf("unable to set up Constraint Framework backend: %w", err)
+		return nil, fmt.Errorf("unable to create new driver: %w", err)
 	}
-	cfClient, err := backend.NewClient(options.clientArgs...)
+	// Append driver option after creation
+	args := append(options.clientArgs, cfclient.Driver(driver))
+	cfClient, err := cfclient.NewClient(args...)
 	if err != nil {
 		return nil, fmt.Errorf("unable to set up Constraint Framework client: %w", err)
 	}
