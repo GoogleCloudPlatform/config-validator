@@ -30,7 +30,6 @@ import (
 	"github.com/open-policy-agent/frameworks/constraint/pkg/core/constraints"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/handler"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/types"
-	"github.com/open-policy-agent/opa/storage"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -140,7 +139,7 @@ func (g *GCPTarget) GetName() string {
 }
 
 // ProcessData implements handler.TargetHandler
-func (g *GCPTarget) ProcessData(obj interface{}) (bool, storage.Path, interface{}, error) {
+func (g *GCPTarget) ProcessData(obj interface{}) (bool, []string, interface{}, error) {
 	return false, nil, nil, errors.New("storing data for referential constraint eval is not supported at this time.")
 }
 
