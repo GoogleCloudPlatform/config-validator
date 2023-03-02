@@ -28,8 +28,8 @@ var (
 )
 
 func init() {
-	Cmd.Flags().StringSliceVar(&flags.policies, "policies", nil, "Path to one or more policies directories.")
-	Cmd.Flags().StringVar(&flags.libs, "libs", "", "Path to the libs directory.")
+	Cmd.Flags().StringSliceVar(&flags.policies, "policies", nil, "Path to one or more policy directories or files.")
+	Cmd.Flags().StringVar(&flags.libs, "libs", "", "Path to the Rego libs directory.")
 	Cmd.Flags().StringSliceVar(&flags.files, "file", nil, "Files to process.")
 	Cmd.Flags().StringSliceVar(&flags.disabledBuiltins, "disabledBuiltins", nil, "Built in functions that should be disabled.")
 	if err := Cmd.MarkFlagRequired("policies"); err != nil {
@@ -50,15 +50,26 @@ func debugCmd(cmd *cobra.Command, args []string) error {
 	for _, fileName := range flags.files {
 		fileBytes, err := ioutil.ReadFile(fileName)
 		if err != nil {
-			fmt.Printf("Failed to read %s: %s\n", fileName, err)
+			fmt.Fprintf(os.Stderr, "Failed to read %s: %v\n", fileName, err)
 			continue
 		}
-
 		lines := strings.Split(string(fileBytes), "\n")
 		for idx, line := range lines {
-			_, err := validator.ReviewJSON(ctx, line)
+			if len(line) == 0 {
+				continue
+			}
+			result, err := validator.ReviewJSON(ctx, line)
 			if err != nil {
-				fmt.Printf("Error processing line %d: %s\nValue: %s\n", idx, err, line)
+				fmt.Fprintf(os.Stderr, "Error processing input at %s[%d]: %v\n", fileName, idx, err)
+				continue
+			}
+			vs, err := result.ToViolations()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error processing violations for input at %s[%d]: %v\n", fileName, idx, err)
+				continue
+			}
+			for _, v := range vs {
+				fmt.Printf("%s: %s [%s]\n", v.Resource, v.Message, v.Constraint)
 			}
 		}
 	}
