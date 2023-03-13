@@ -24,6 +24,7 @@ import "google/cloud/orgpolicy/v1/orgpolicy.proto";
 import "google/identity/accesscontextmanager/v1/access_level.proto";
 import "google/identity/accesscontextmanager/v1/access_policy.proto";
 import "google/identity/accesscontextmanager/v1/service_perimeter.proto";
+import "google/cloud/orgpolicy/v2/orgpolicy.proto";
 
 // Asset contains GCP resource metadata and additional metadata set on a resource, such as Cloud IAM policy.
 // WARNING: these field names are directly used to structure data passed to templates.
@@ -59,6 +60,10 @@ message Asset {
 
     google.identity.accesscontextmanager.v1.ServicePerimeter service_perimeter = 10;
   }
+
+  //Representation of the Cloud Organization Policy V2 set on an asset.
+  // There can be multiple V2 Organization Policies for an asset.
+  repeated google.cloud.orgpolicy.v2.Policy v2_org_policies = 11;
 }
 
 // Constraint contains the configuration for a constraint.
