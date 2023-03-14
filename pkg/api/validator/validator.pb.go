@@ -20,7 +20,7 @@
 // 	protoc        v3.6.1
 // source: validator.proto
 
-package __
+package validator
 
 import (
 	assetpb "cloud.google.com/go/asset/apiv1/assetpb"
