@@ -15,7 +15,7 @@
 // The definition of validator RPC service.
 syntax = "proto3";
 
-option go_package ="./validator.proto";
+option go_package ="validator/";
 
 package validator;
 
