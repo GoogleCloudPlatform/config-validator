@@ -14,7 +14,7 @@ proto: proto-builder
 	docker run \
 		-v `pwd`:/go/src/github.com/GoogleCloudPlatform/config-validator \
 		$(PROTO_DOCKER_IMAGE) \
-		protoc -I/proto -I./api --go_out=plugins=grpc:./pkg/api/validator ./api/validator.proto
+		protoc -I/proto -I./api --go_out=plugins=grpc:./pkg/api ./api/validator.proto 
 
 # Generate validator.proto for Python
 .PHONY: pyproto
