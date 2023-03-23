@@ -317,6 +317,8 @@ func TestConversion(t *testing.T) {
 				cmpopts.IgnoreFields(structpb.Value{}, "state", "sizeCache", "unknownFields"),
 				cmpopts.IgnoreFields(structpb.Struct{}, "state", "sizeCache", "unknownFields"),
 				cmpopts.IgnoreFields(structpb.ListValue{}, "state", "sizeCache", "unknownFields"),
+				cmpopts.IgnoreFields(validator.Violation{}, "state", "sizeCache", "unknownFields"),
+				cmpopts.IgnoreFields(validator.Constraint{}, "state", "sizeCache", "unknownFields"),
 			}
 			if diff := cmp.Diff(violations, tc.wantViolations, cmpOptions...); diff != "" {
 				t.Errorf("violations mismatch, +got -want\n%s", diff)
