@@ -46,8 +46,8 @@ func ValidateAsset(asset *validator.Asset) error {
 	if asset.GetAssetType() == "" {
 		result = multierror.Append(result, errors.Errorf("asset %q missing type", asset.GetName()))
 	}
-	if asset.GetResource() == nil && asset.GetIamPolicy() == nil && asset.GetOrgPolicy() == nil && asset.GetAccessContextPolicy() == nil {
-		result = multierror.Append(result, errors.Errorf("asset %q missing all of these: resource, IAM policy, Org Policy, Access Context Policy", asset.GetName()))
+	if asset.GetResource() == nil && asset.GetIamPolicy() == nil && asset.GetOrgPolicy() == nil && asset.GetAccessContextPolicy() == nil  asset.GetV2OrgPolicies() == nil {
+		result = multierror.Append(result, errors.Errorf("asset %q missing all of these: resource, IAM policy, Org Policy, Access Context Policy, v2 Org Policy", asset.GetName()))
 	}
 	return result.ErrorOrNil()
 }
