@@ -122,6 +122,26 @@ func TestReviewAsset(t *testing.T) {
 			assetJson:      namespaceAssetWithNoLabelJSON,
 			wantViolations: 1,
 		},
+		{
+			name:           "test iam policy",
+			assetJson:      iamPolicyJSON,
+			wantViolations: 0,
+		},
+		{
+			name:           "test resource",
+			assetJson:      resourceAssetJSON,
+			wantViolations: 0,
+		},
+		{
+			name:           "test org_policy",
+			assetJson:      orgPolicyJSON,
+			wantViolations: 0,
+		},
+		{
+			name:           "test v2_org_policies",
+			assetJson:      orgPolicyPolicyJSON,
+			wantViolations: 0,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -418,6 +438,121 @@ func namespaceAssetWithNoLabel() *validator.Asset {
 	return mustMakeAsset(namespaceAssetWithNoLabelJSON)
 }
 
+var iamPolicyJSON = `{
+  "name": "//cloudresourcemanager.googleapis.com/456",
+  "asset_type": "cloudresourcemanager.googleapis.com/Folder",
+  "ancestry_path": "organizations/123/folders/456",
+  "iam_policy": {
+    "bindings": [
+      {
+        "role": "roles/editor",
+        "members": [
+          "user:jane@example.com"
+        ]
+      }
+    ]
+  }
+}`
+
+func iamPolicy() *validator.Asset {
+	return mustMakeAsset(iamPolicyJSON)
+}
+
+var resourceAssetJSON = `{
+  "name": "//bigquery.googleapis.com/projects/123/datasets/test-dataset",
+  "asset_type": "bigquery.googleapis.com/Dataset",
+  "ancestry_path": "organizations/12331/folders/2323/project/123",
+  "resource": {
+    "version": "v2",
+    "discovery_document_uri": "https://www.googleapis.com/discovery/v1/apis/bigquery/v2/rest",
+    "discovery_name": "Dataset",
+    "parent": "//cloudresourcemanager.googleapis.com/projects/123",
+    "data": {
+      "friendlyName": "",
+      "datasetReference": {
+        "datasetId": "test-dataset"
+      },
+      "labels": {
+        "env": "dev"
+      },
+      "location": "EU",
+      "defaultTableExpirationMs": 3600000
+    }
+  }
+}`
+
+func resourceAsset() *validator.Asset {
+	return mustMakeAsset(resourceAssetJSON)
+}
+
+var orgPolicyJSON = `{
+  "name": "//cloudresourcemanager.googleapis.com/projects/345",
+  "asset_type": "cloudresourcemanager.googleapis.com/Project",
+  "org_policy": [
+    {
+      "constraint": "constraints/compute.disableSerialPortAccess",
+      "boolean_policy": {
+        "enforced": true
+      },
+      "update_time": "2021-04-14T15:16:17Z"
+    },
+    {
+      "constraint": "constraints/serviceuser.services",
+      "list_policy": {
+        "all_values": 1
+      },
+      "update_time": "2041-04-14T15:17:17Z"
+    }
+  ],
+  "ancestry_path": "organization/1/folder/2/project/345"
+}`
+
+func orgPolicy() *validator.Asset {
+	return mustMakeAsset(orgPolicyJSON)
+}
+
+var orgPolicyPolicyJSON = `
+	{
+    "name": "//cloudresourcemanager.googleapis.com/projects/123",
+    "ancestry_path": "organization/2323/folder/243/project/123",
+    "asset_type": "cloudresourcemanager.googleapis.com/Project",
+    "v2_org_policies": [
+      {
+        "name": "projects/123/policies/gcp.resourceLocations",
+        "spec": {
+          "update_time": "2021-04-14T15:16:17Z",
+          "rules": [
+            {
+              "values": {
+                "allowed_values": [
+                  "projects/123",
+                  "projects/456"
+                ],
+                "denied_values": [
+                  "projects/789"
+                ]
+              },
+              "condition": {
+                "expression": "resource.matchLabels('label1', 'label2')",
+                "title": "Title of the condition",
+                "description": "Description the policy",
+                "location": "EU"
+              }
+            },
+            {
+              "allow_all": true
+            }
+          ]
+        }
+      }
+    ]
+  }
+`
+
+func orgPolicyPolicy() *validator.Asset {
+	return mustMakeAsset(orgPolicyPolicyJSON)
+}
+
 func mustMakeAsset(assetJSON string) *validator.Asset {
 	data := &validator.Asset{}
 	if err := jsonpb.UnmarshalString(assetJSON, data); err != nil {
@@ -431,6 +566,10 @@ var defaultReviewTestAssets = []*validator.Asset{
 	storageAssetWithLogging(),
 	storageAssetWithSecureLogging(),
 	namespaceAssetWithNoLabel(),
+	iamPolicy(),
+	resourceAsset(),
+	orgPolicy(),
+	orgPolicyPolicy(),
 }
 
 var defaultReviewTestAssetJSONs = map[string]string{
@@ -438,6 +577,10 @@ var defaultReviewTestAssetJSONs = map[string]string{
 	"storageAssetWithLoggingJSON":       storageAssetWithLoggingJSON,
 	"storageAssetWithSecureLoggingJSON": storageAssetWithSecureLoggingJSON,
 	"namespaceAssetWithNoLabelJSON":     namespaceAssetWithNoLabelJSON,
+	"iamPolicyJSON":                     iamPolicyJSON,
+	"resourceAssetJSON":                 resourceAssetJSON,
+	"orgPolicyJSON":                     orgPolicyJSON,
+	"orgPolicyPolicyJSON":               orgPolicyPolicyJSON,
 }
 
 func BenchmarkReviewJSON(b *testing.B) {
