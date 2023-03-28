@@ -162,6 +162,10 @@ func TestReview(t *testing.T) {
 							Message:    "//storage.googleapis.com/my-storage-bucket does not have the required logging destination.",
 						},
 					},
+					"//cloudresourcemanager.googleapis.com/456":                    nil,
+					"//bigquery.googleapis.com/projects/123/datasets/test-dataset": nil,
+					"//cloudresourcemanager.googleapis.com/projects/345":           nil,
+					"//cloudresourcemanager.googleapis.com/projects/123":           nil,
 				},
 			)
 			v := NewParallelValidator(stopChannel, cv)
