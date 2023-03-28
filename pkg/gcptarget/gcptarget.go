@@ -170,6 +170,10 @@ func (g *GCPTarget) HandleReview(obj interface{}) (bool, interface{}, error) {
 		if asset["org_policy"] != nil {
 			foundOrgPolicy = true
 		}
+		foundV2OrgPolicy := false
+		if asset["v2_org_policies"] != nil {
+			foundV2OrgPolicy = true
+		}
 		_, foundAccessPolicy, err := unstructured.NestedMap(asset, "access_policy")
 		if err != nil {
 			return false, nil, err
@@ -183,7 +187,7 @@ func (g *GCPTarget) HandleReview(obj interface{}) (bool, interface{}, error) {
 			return false, nil, err
 		}
 
-		if !foundIam && !foundResource && !foundOrgPolicy && !foundAccessPolicy && !foundAcessLevel && !foundServicePerimeter {
+		if !foundIam && !foundResource && !foundOrgPolicy && !foundV2OrgPolicy && !foundAccessPolicy && !foundAcessLevel && !foundServicePerimeter {
 			return false, nil, nil
 		}
 		resourceTypes := 0
@@ -194,6 +198,9 @@ func (g *GCPTarget) HandleReview(obj interface{}) (bool, interface{}, error) {
 			resourceTypes++
 		}
 		if foundOrgPolicy {
+			resourceTypes++
+		}
+		if foundV2OrgPolicy {
 			resourceTypes++
 		}
 		if foundAccessPolicy {
