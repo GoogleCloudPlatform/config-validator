@@ -28,7 +28,7 @@ import (
 	"github.com/GoogleCloudPlatform/config-validator/pkg/tftarget"
 	"github.com/golang/glog"
 	cfclient "github.com/open-policy-agent/frameworks/constraint/pkg/client"
-	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers/local"
+	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers/rego"
 	cftemplates "github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/handler"
 	k8starget "github.com/open-policy-agent/gatekeeper/pkg/target"
@@ -74,7 +74,7 @@ type Validator struct {
 
 // Stores functional options for CF client
 type initOptions struct {
-	driverArgs []local.Arg
+	driverArgs []rego.Arg
 	clientArgs []cfclient.Opt
 }
 
@@ -82,7 +82,7 @@ type Option = func(*initOptions)
 
 func DisableBuiltins(builtins ...string) Option {
 	return func(o *initOptions) {
-		o.driverArgs = append(o.driverArgs, local.DisableBuiltins(builtins...))
+		o.driverArgs = append(o.driverArgs, rego.DisableBuiltins(builtins...))
 	}
 }
 
@@ -108,7 +108,7 @@ func newCFClient(
 	*cfclient.Client, error) {
 
 	options := &initOptions{
-		driverArgs: []local.Arg{local.Tracing(false)},
+		driverArgs: []rego.Arg{rego.Tracing(false)},
 		clientArgs: []cfclient.Opt{cfclient.Targets(targetHandler)},
 	}
 
@@ -116,7 +116,7 @@ func newCFClient(
 		opt(options)
 	}
 
-	driver, err := local.New(options.driverArgs...)
+	driver, err := rego.New(options.driverArgs...)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create new driver: %w", err)
 	}

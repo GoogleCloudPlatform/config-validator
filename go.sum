@@ -631,6 +631,8 @@ github.com/open-policy-agent/frameworks/constraint v0.0.0-20220504225309-3462b1a
 github.com/open-policy-agent/frameworks/constraint v0.0.0-20220504225309-3462b1a344f3/go.mod h1:AUJQpyuvY/rE/capVYxUjwER84NOq/DMo2Wn74cKs6A=
 github.com/open-policy-agent/frameworks/constraint v0.0.0-20221006234738-a3d297b3152f h1:Sp58oU+EdDJ3JqsIhASHUatz3S5Vx7OJyu2HfiEOWBk=
 github.com/open-policy-agent/frameworks/constraint v0.0.0-20221006234738-a3d297b3152f/go.mod h1:SZoM5OFrXcEf4w4Tkei/1z2LYwyQbj39NbOoEqxRPYc=
+github.com/open-policy-agent/frameworks/constraint v0.0.0-20230411224310-3f237e2710fa h1:1r6gnPhbsswSIem/Fa11fKo/MhjijzvqSxWIu+3HQeY=
+github.com/open-policy-agent/frameworks/constraint v0.0.0-20230411224310-3f237e2710fa/go.mod h1:nrGEsNJ9LyQa68eqwV6snwCc7pbkvwUJLPZlq6zz6Fs=
 github.com/open-policy-agent/gatekeeper v0.0.0-20220504234711-ecf609290e2e h1:Ihg7u+FKBdUcVGPu70t2yX286DFkgyUv3RSUkIMFJCo=
 github.com/open-policy-agent/gatekeeper v0.0.0-20220504234711-ecf609290e2e/go.mod h1:213PqIQnJN94R0chYC3T9ds9Oc4/a1ojaZF4cqLqbyY=
 github.com/open-policy-agent/gatekeeper v0.0.0-20221019225957-0484f99d8857 h1:b/b2V4luiou2xemEmLx+TOPxa3MUMXCnUylqGNUxgIk=

@@ -28,7 +28,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers"
-	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers/local"
+	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers/rego"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/handler"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/types"
@@ -282,7 +282,7 @@ func createClient(t *testing.T, newTargetHandler func(t *testing.T) handler.Targ
 	if target == nil {
 		t.Fatalf("newTargetHandler returned nil")
 	}
-	driver, err := local.New(local.Tracing(true))
+	driver, err := rego.New(rego.Tracing(true))
 	if err != nil {
 		t.Fatalf("Could not initialize driver: %s", err)
 	}
