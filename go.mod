@@ -27,7 +27,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/open-policy-agent/frameworks/constraint v0.0.0-20221006234738-a3d297b3152f
+	github.com/open-policy-agent/frameworks/constraint v0.0.0-20230411224310-3f237e2710fa
 	github.com/open-policy-agent/gatekeeper v0.0.0-20221019225957-0484f99d8857
 	github.com/open-policy-agent/opa v0.47.1
 	github.com/pkg/errors v0.9.1

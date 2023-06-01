@@ -518,8 +518,8 @@ github.com/onsi/gomega v0.0.0-20170829124025-dcabb60a477c/go.mod h1:C1qb7wdrVGGV
 github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7JYyY=
 github.com/onsi/gomega v1.10.1/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1ybHNo=
 github.com/onsi/gomega v1.19.0 h1:4ieX6qQjPP/BfC3mpsAtIGGlxTWPeA3Inl/7DtXw1tw=
-github.com/open-policy-agent/frameworks/constraint v0.0.0-20221006234738-a3d297b3152f h1:Sp58oU+EdDJ3JqsIhASHUatz3S5Vx7OJyu2HfiEOWBk=
-github.com/open-policy-agent/frameworks/constraint v0.0.0-20221006234738-a3d297b3152f/go.mod h1:SZoM5OFrXcEf4w4Tkei/1z2LYwyQbj39NbOoEqxRPYc=
+github.com/open-policy-agent/frameworks/constraint v0.0.0-20230411224310-3f237e2710fa h1:1r6gnPhbsswSIem/Fa11fKo/MhjijzvqSxWIu+3HQeY=
+github.com/open-policy-agent/frameworks/constraint v0.0.0-20230411224310-3f237e2710fa/go.mod h1:nrGEsNJ9LyQa68eqwV6snwCc7pbkvwUJLPZlq6zz6Fs=
 github.com/open-policy-agent/gatekeeper v0.0.0-20221019225957-0484f99d8857 h1:b/b2V4luiou2xemEmLx+TOPxa3MUMXCnUylqGNUxgIk=
 github.com/open-policy-agent/gatekeeper v0.0.0-20221019225957-0484f99d8857/go.mod h1:FBhEDoWSthx5j28b/QK/eiJehuh3/UwiObsPVYOTjdw=
 github.com/open-policy-agent/opa v0.47.1 h1:4Nf8FwguZeE5P83akiwaaoWx1XkmSkRcKmCEskiD/1c=
