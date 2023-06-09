@@ -19,12 +19,12 @@ import (
 	"regexp"
 	"testing"
 
+	v1 "cloud.google.com/go/asset/apiv1/assetpb"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/targettesting"
 	targetHandlerTest "github.com/GoogleCloudPlatform/config-validator/pkg/targettesting"
 	"github.com/google/go-cmp/cmp"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client/clienttest/cts"
-	v1 "google.golang.org/genproto/googleapis/cloud/asset/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
