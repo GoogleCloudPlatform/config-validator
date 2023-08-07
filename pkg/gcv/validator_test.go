@@ -17,7 +17,6 @@ package gcv
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -187,7 +186,7 @@ func TestReviewAsset(t *testing.T) {
 	}
 }
 func TestCreateNoDir(t *testing.T) {
-	emptyFolder, err := ioutil.TempDir("", "emptyPolicyDir")
+	emptyFolder, err := os.MkdirTemp("", "emptyPolicyDir")
 	defer cleanup(t, emptyFolder)
 	if err != nil {
 		t.Fatal(err)
@@ -206,7 +205,7 @@ func TestCreateNoReadAccess(t *testing.T) {
 		t.Logf("Skipping %s in Cloud Build environment", t.Name())
 		return
 	}
-	tmpDir, err := ioutil.TempDir("", "InvalidAccessTest")
+	tmpDir, err := os.MkdirTemp("", "InvalidAccessTest")
 	if err != nil {
 		t.Fatal("creating temp dir:", err)
 	}
@@ -222,12 +221,12 @@ func TestCreateNoReadAccess(t *testing.T) {
 }
 
 func TestCreateEmptyDir(t *testing.T) {
-	policyDir, err := ioutil.TempDir("", "emptyPolicyDir")
+	policyDir, err := os.MkdirTemp("", "emptyPolicyDir")
 	defer cleanup(t, policyDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	policyLibDir, err := ioutil.TempDir("", "emptyPolicyDir")
+	policyLibDir, err := os.MkdirTemp("", "emptyPolicyDir")
 	defer cleanup(t, policyLibDir)
 	if err != nil {
 		t.Fatal(err)

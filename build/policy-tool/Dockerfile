@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Build policy-tool
-FROM golang:1.13.6 as build
+FROM golang:1.20 as build
 
 WORKDIR /go/src/app
 

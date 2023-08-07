@@ -31,7 +31,7 @@ import (
 	"github.com/open-policy-agent/frameworks/constraint/pkg/client/drivers/rego"
 	cftemplates "github.com/open-policy-agent/frameworks/constraint/pkg/core/templates"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/handler"
-	k8starget "github.com/open-policy-agent/gatekeeper/pkg/target"
+	k8starget "github.com/open-policy-agent/gatekeeper/v3/pkg/target"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 

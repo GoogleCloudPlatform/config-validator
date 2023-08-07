@@ -15,7 +15,7 @@
 
 # NOTE: This Dockerfile is optimized for ease of changes (dev/release work)
 # rather than number of layers.
-FROM golang:1.13
+FROM golang:1.20
 
 RUN apt-get update && apt-get -y install wget unzip
 RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip && \
