@@ -15,7 +15,7 @@ proto: proto-builder
 		-v `pwd`:/go/src/github.com/GoogleCloudPlatform/config-validator \
 		$(PROTO_DOCKER_IMAGE) \
 		protoc -I/proto -I./api --go_out=plugins=grpc:./pkg/api ./api/validator.proto
-	go run cloud.google.com/go/internal/aliasfix/cmd/aliasfix@latest .
+	go run cloud.google.com/go/internal/aliasfix/cmd/aliasfix@v0.0.0-20230804212214-b30a7f4a520c .
 	go mod tidy
 	sed -i 's/\"google.golang.org\/genproto\/googleapis\/cloud\/orgpolicy\/v1\"/\"cloud.google.com\/go\/orgpolicy\/apiv1\/orgpolicypb\"/g' pkg/api/validator/validator.pb.go
 
