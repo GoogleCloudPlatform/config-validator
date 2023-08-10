@@ -60,13 +60,6 @@ type ConfigValidator interface {
 // Any data added in AddData stays in the underlying rule evaluation engine's memory.
 // To avoid out of memory errors, callers can invoke Reset to delete existing data.
 type Validator struct {
-	// policyPaths is a list of paths where the constraints and constraint templates are stored as yaml files.
-	// Each path can refer to a directory or file.
-	policyPaths []string
-	// policy dependencies directory points to rego files that provide supporting code for templates.
-	// These rego dependencies should be packaged with the GCV deployment.
-	// Right now expected to be set to point to "//policies/validator/lib" folder
-	policyLibraryDir string
 	gcpCFClient      *cfclient.Client
 	k8sCFClient      *cfclient.Client
 	tfCFClient       *cfclient.Client

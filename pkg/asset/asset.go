@@ -15,7 +15,6 @@
 package asset
 
 import (
-	"bytes"
 	"encoding/json"
 	"regexp"
 	"strings"
@@ -23,9 +22,9 @@ import (
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv/configs"
 	"github.com/golang/glog"
-	"github.com/golang/protobuf/jsonpb"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/encoding/protojson"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -56,20 +55,19 @@ func ConvertResourceViaJSONToInterface(asset *validator.Asset) (interface{}, err
 	if asset == nil {
 		return nil, nil
 	}
-	m := &jsonpb.Marshaler{
-		OrigName: true,
+	m := &protojson.MarshalOptions{
+		UseProtoNames:   true,
 	}
 	if asset.Resource != nil {
 		CleanStructValue(asset.Resource.Data)
 	}
 	glog.V(logRequestsVerboseLevel).Infof("converting asset to golang interface: %v", asset)
-	var buf bytes.Buffer
-	if err := m.Marshal(&buf, asset); err != nil {
+	buf, err := m.Marshal(asset)
+	if err != nil {
 		return nil, errors.Wrapf(err, "marshalling to json with asset %s: %v", asset.Name, asset)
 	}
 	var f interface{}
-	err := json.Unmarshal(buf.Bytes(), &f)
-	if err != nil {
+	if err := json.Unmarshal(buf, &f); err != nil {
 		return nil, errors.Wrapf(err, "marshalling from json with asset %s: %v", asset.Name, asset)
 	}
 	return f, nil

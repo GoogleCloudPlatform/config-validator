@@ -21,10 +21,10 @@ import (
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv/configs"
-	"github.com/golang/protobuf/jsonpb"
-	structpb "github.com/golang/protobuf/ptypes/struct"
 	cftypes "github.com/open-policy-agent/frameworks/constraint/pkg/types"
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -64,7 +64,7 @@ func NewResult(
 		ConstraintViolations: make([]ConstraintViolation, len(cfResponse.Results)),
 	}
 	for idx, cfResult := range cfResponse.Results {
-		for k, _ := range cfResult.Metadata {
+		for k := range cfResult.Metadata {
 			if k == ConstraintKey {
 				return nil, errors.Errorf("constraint template metadata contains reserved key %s", ConstraintKey)
 			}
@@ -193,7 +193,7 @@ func (cv *ConstraintViolation) toViolation(name string, auxMetadata map[string]i
 		return nil, errors.Wrapf(err, "failed to marshal result metadata %v to json", cv.Metadata)
 	}
 	metadata := &structpb.Value{}
-	if err := jsonpb.UnmarshalString(string(metadataJson), metadata); err != nil {
+	if err := protojson.Unmarshal(metadataJson, metadata); err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal json %s into structpb", string(metadataJson))
 	}
 
