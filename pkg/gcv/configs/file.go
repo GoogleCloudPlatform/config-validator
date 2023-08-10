@@ -18,7 +18,7 @@ package configs
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/url"
 	"os"
@@ -122,7 +122,7 @@ func (p *localPath) ReadAll(ctx context.Context, predicates ...readPredicate) ([
 			return nil
 		}
 
-		content, err := ioutil.ReadFile(path)
+		content, err := os.ReadFile(path)
 		if err != nil {
 			return errors.Wrapf(err, "failed to read %s", path)
 		}
@@ -157,7 +157,7 @@ func (p *gcsPath) read(ctx context.Context, bucket *storage.BucketHandle, name s
 		}
 	}()
 
-	data, err := ioutil.ReadAll(reader)
+	data, err := io.ReadAll(reader)
 	if err != nil {
 		return File{}, errors.Wrapf(err, "failed to read %s", fileName)
 	}

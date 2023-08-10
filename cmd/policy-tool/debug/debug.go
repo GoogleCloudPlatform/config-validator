@@ -3,7 +3,6 @@ package debug
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -48,7 +47,7 @@ func debugCmd(cmd *cobra.Command, args []string) error {
 
 	// TODO: streaming read
 	for _, fileName := range flags.files {
-		fileBytes, err := ioutil.ReadFile(fileName)
+		fileBytes, err := os.ReadFile(fileName)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to read %s: %v\n", fileName, err)
 			continue
