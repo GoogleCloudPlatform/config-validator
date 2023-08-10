@@ -78,11 +78,12 @@ type Asset struct {
 	// Representation of the Cloud Organization access policy.
 	//
 	// Types that are assignable to AccessContextPolicy:
+	//
 	//	*Asset_AccessPolicy
 	//	*Asset_AccessLevel
 	//	*Asset_ServicePerimeter
 	AccessContextPolicy isAsset_AccessContextPolicy `protobuf_oneof:"access_context_policy"`
-	//Representation of the Cloud Organization Policy V2 set on an asset.
+	// Representation of the Cloud Organization Policy V2 set on an asset.
 	// There can be multiple V2 Organization Policies for an asset.
 	V2OrgPolicies []*orgpolicypb1.Policy `protobuf:"bytes,11,rep,name=v2_org_policies,json=v2OrgPolicies,proto3" json:"v2_org_policies,omitempty"`
 }

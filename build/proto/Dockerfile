@@ -17,13 +17,14 @@
 # rather than number of layers.
 FROM golang:1.20
 
-RUN apt-get update && apt-get -y install wget unzip
-RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip && \
-    unzip -d /usr/local protoc-3.6.1-linux-x86_64.zip
+RUN DEBIAN_FRONTEND=noninteractive apt update && \
+    DEBIAN_FRONTEND=noninteractive apt install wget unzip python3-pip --assume-yes
 
-RUN apt install python-pip --assume-yes
-RUN pip install --upgrade pip
-RUN pip install grpcio-tools
+ARG PROTOC_VERSION=3.6.1
+RUN wget -q https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
+    unzip -d /usr/local protoc-${PROTOC_VERSION}-linux-x86_64.zip
+
+RUN pip install grpcio-tools --break-system-packages
 
 # Add a common directory for .proto includes
 RUN mkdir /proto
