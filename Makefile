@@ -21,12 +21,12 @@ proto: proto-builder
 
 # Generate validator.proto for Python
 .PHONY: pyproto
-pyproto:
+pyproto: proto-builder
 	mkdir -p build-grpc
 	docker run \
 		-v `pwd`:/go/src/github.com/GoogleCloudPlatform/config-validator \
 		$(PROTO_DOCKER_IMAGE) \
-		python -m grpc_tools.protoc -I/proto -I./api --python_out=./build-grpc --grpc_python_out=./build-grpc ./api/validator.proto
+		python3 -m grpc_tools.protoc -I/proto -I./api --python_out=./build-grpc --grpc_python_out=./build-grpc ./api/validator.proto
 	@echo "Generated files available in ./build-grpc"
 
 .PHONY: test
