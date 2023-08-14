@@ -20,12 +20,12 @@ import (
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	"github.com/ghodss/yaml"
-	"github.com/golang/protobuf/jsonpb"
-	structpb "github.com/golang/protobuf/ptypes/struct"
 	"github.com/pkg/errors"
 	"github.com/smallfish/simpleyaml"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type yamlFile struct {
@@ -238,7 +238,7 @@ func convertToProtoVal(from interface{}) (*structpb.Value, error) {
 		return nil, errors.Wrap(err, "marshalling to json")
 	}
 
-	if err := jsonpb.UnmarshalString(string(jsn), to); err != nil {
+	if err := protojson.Unmarshal(jsn, to); err != nil {
 		return nil, errors.Wrap(err, "unmarshalling to proto")
 	}
 

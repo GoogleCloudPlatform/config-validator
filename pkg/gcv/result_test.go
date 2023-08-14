@@ -21,9 +21,9 @@ import (
 	"testing"
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
-	structpb "github.com/golang/protobuf/ptypes/struct"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type ConversionTestCase struct {
@@ -273,7 +273,7 @@ func mustAsStruct(v interface{}) *structpb.Value {
 		}
 		return &structpb.Value{
 			Kind: &structpb.Value_ListValue{
-				&structpb.ListValue{
+				ListValue: &structpb.ListValue{
 					Values: fields,
 				},
 			},

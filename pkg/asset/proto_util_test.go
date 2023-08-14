@@ -15,10 +15,11 @@
 package asset
 
 import (
+	"bytes"
 	"testing"
 
-	"github.com/golang/protobuf/jsonpb"
-	structpb "github.com/golang/protobuf/ptypes/struct"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func TestCleanProtoValues(t *testing.T) {
@@ -152,18 +153,18 @@ func TestCleanProtoValues(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			pre, err := (&jsonpb.Marshaler{}).MarshalToString(c.value)
+			pre, err := protojson.Marshal(c.value)
 			if err == nil && !c.noop {
 				t.Fatal("this test should have failed before calling CleanProtoValue()")
 			}
 
 			CleanProtoValue(c.value)
-			post, err := (&jsonpb.Marshaler{}).MarshalToString(c.value)
+			post, err := protojson.Marshal(c.value)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if c.noop && pre != post {
+			if c.noop && !bytes.Equal(pre, post) {
 				t.Fatalf("expected no-op, found difference in json output: pre: %s\npost: %s\n", pre, post)
 			}
 		})

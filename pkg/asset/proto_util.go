@@ -15,7 +15,7 @@
 package asset
 
 import (
-	structpb "github.com/golang/protobuf/ptypes/struct"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // CleanProtoValue recursively updates proto Values that have a nil .Kind field

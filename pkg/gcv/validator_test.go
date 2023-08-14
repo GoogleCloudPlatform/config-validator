@@ -23,7 +23,7 @@ import (
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv/configs"
-	"github.com/golang/protobuf/jsonpb"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const (
@@ -95,7 +95,6 @@ func TestDefaultTestDataCreatesValidatorFromContents(t *testing.T) {
 type reviewAssetTestcase struct {
 	name           string
 	assetJson      string
-	asset          *validator.Asset
 	wantViolations int
 }
 
@@ -554,7 +553,7 @@ func orgPolicyPolicy() *validator.Asset {
 
 func mustMakeAsset(assetJSON string) *validator.Asset {
 	data := &validator.Asset{}
-	if err := jsonpb.UnmarshalString(assetJSON, data); err != nil {
+	if err := protojson.Unmarshal([]byte(assetJSON), data); err != nil {
 		panic(err)
 	}
 	return data

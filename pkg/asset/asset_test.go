@@ -17,12 +17,11 @@ package asset
 import (
 	"testing"
 
-	"github.com/golang/protobuf/proto"
-	structpb "github.com/golang/protobuf/ptypes/struct"
-	"github.com/google/go-cmp/cmp"
-	"google.golang.org/genproto/googleapis/cloud/asset/v1"
-
+	"cloud.google.com/go/asset/apiv1/assetpb"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
+	"github.com/google/go-cmp/cmp"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func TestConvertResourceToInterface(t *testing.T) {
@@ -51,7 +50,7 @@ func TestConvertResourceToInterface(t *testing.T) {
 			description: "resource proto preserves underscores",
 			input: &validator.Asset{
 				Name: "some asset name",
-				Resource: &asset.Resource{
+				Resource: &assetpb.Resource{
 					DiscoveryName: "some really cool name",
 				},
 			},
@@ -66,7 +65,7 @@ func TestConvertResourceToInterface(t *testing.T) {
 			description: "resource proto's data preserves underscores",
 			input: &validator.Asset{
 				Name: "some asset name",
-				Resource: &asset.Resource{
+				Resource: &assetpb.Resource{
 					Data: &structpb.Struct{
 						Fields: map[string]*structpb.Value{
 							"a_field_with_underscores": {Kind: &structpb.Value_BoolValue{BoolValue: true}},

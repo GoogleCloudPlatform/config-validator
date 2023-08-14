@@ -25,7 +25,7 @@ import (
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	"github.com/GoogleCloudPlatform/config-validator/pkg/gcv"
-	"github.com/golang/protobuf/jsonpb"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var vdt *gcv.Validator
@@ -60,15 +60,16 @@ func init() {
 func Fuzz(data []byte) (score int) {
 	// Try interpreting data as an Asset.
 	// Exit early if invalid.
-	assetJSON := string(data)
 	asset := &validator.Asset{}
-	if err := jsonpb.UnmarshalString(assetJSON, asset); err != nil {
+	if err := protojson.Unmarshal(data, asset); err != nil {
 		return 0
 	}
 
 	// Try reviewing the asset.
 	// The actual findings don't matter, but it shouldn't crash.
-	vdt.ReviewAsset(context.Background(), asset)
+	if _, err := vdt.ReviewAsset(context.Background(), asset); err != nil {
+		return 0
+	}
 
 	return 1
 }

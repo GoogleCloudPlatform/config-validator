@@ -65,16 +65,6 @@ const (
 	tfConstraint  = "terraform"
 )
 
-func arrayFilterSuffix(arr []string, suffix string) []string {
-	var filteredList []string
-	for _, s := range arr {
-		if strings.HasSuffix(strings.ToLower(s), strings.ToLower(suffix)) {
-			filteredList = append(filteredList, s)
-		}
-	}
-	return filteredList
-}
-
 func setAnnotation(u *unstructured.Unstructured, key, value string) {
 	annotations := u.GetAnnotations()
 	if annotations == nil {
