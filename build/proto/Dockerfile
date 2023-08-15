@@ -20,7 +20,7 @@ FROM golang:1.20
 RUN DEBIAN_FRONTEND=noninteractive apt update && \
     DEBIAN_FRONTEND=noninteractive apt install wget unzip python3-pip --assume-yes
 
-ARG PROTOC_VERSION=3.6.1
+ARG PROTOC_VERSION=24.0
 RUN wget -q https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
     unzip -d /usr/local protoc-${PROTOC_VERSION}-linux-x86_64.zip
 
