@@ -60,9 +60,9 @@ type ConfigValidator interface {
 // Any data added in AddData stays in the underlying rule evaluation engine's memory.
 // To avoid out of memory errors, callers can invoke Reset to delete existing data.
 type Validator struct {
-	gcpCFClient      *cfclient.Client
-	k8sCFClient      *cfclient.Client
-	tfCFClient       *cfclient.Client
+	gcpCFClient *cfclient.Client
+	k8sCFClient *cfclient.Client
+	tfCFClient  *cfclient.Client
 }
 
 // Stores functional options for CF client
