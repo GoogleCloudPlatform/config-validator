@@ -193,7 +193,7 @@ func ConvertToAdmissionRequest(asset map[string]interface{}) (*admissionv1beta1.
 
 // k8s assset names will follow pattern:
 // //container.googleapis.com/projects/*/(locations|zones)/*/clusters/*/k8s
-var assetPath = regexp.MustCompile(`^//container/.googleapis/.com/projects/[^/]*/(locations|zones)/[^/]*/clusters/[^/]*/k8s`)
+var assetPath = regexp.MustCompile(`^//container\.googleapis\.com/projects/[^/]*/(locations|zones)/[^/]*/clusters/[^/]*/k8s`)
 
 // IsK8S returns true if the CAI asset is an asset from a kubernetes cluster.
 func IsK8S(asset map[string]interface{}) bool {
