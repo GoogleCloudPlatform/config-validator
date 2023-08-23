@@ -16,7 +16,6 @@
 package gcptarget
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,10 +25,10 @@ import (
 
 	"github.com/GoogleCloudPlatform/config-validator/pkg/api/validator"
 	asset2 "github.com/GoogleCloudPlatform/config-validator/pkg/asset"
-	"github.com/gogo/protobuf/jsonpb"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/core/constraints"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/handler"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/types"
+	"google.golang.org/protobuf/encoding/protojson"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -226,16 +225,15 @@ func (g *GCPTarget) handleAsset(asset *validator.Asset) (bool, interface{}, erro
 		return false, nil, fmt.Errorf("CAI asset's resource field is nil %s", asset)
 	}
 	asset2.CleanStructValue(asset.Resource.Data)
-	m := &jsonpb.Marshaler{
-		OrigName: true,
+	m := &protojson.MarshalOptions{
+		UseProtoNames: true,
 	}
-	var buf bytes.Buffer
-	if err := m.Marshal(&buf, asset); err != nil {
+	buf, err := m.Marshal(asset)
+	if err != nil {
 		return false, nil, fmt.Errorf("marshalling to json with asset %s: %v. %w", asset.Name, asset, err)
 	}
 	var f interface{}
-	err := json.Unmarshal(buf.Bytes(), &f)
-	if err != nil {
+	if err := json.Unmarshal(buf, &f); err != nil {
 		return false, nil, fmt.Errorf("marshalling from json with asset %s: %v. %w", asset.Name, asset, err)
 	}
 	return true, f, nil

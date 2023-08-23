@@ -56,7 +56,7 @@ func ConvertResourceViaJSONToInterface(asset *validator.Asset) (interface{}, err
 		return nil, nil
 	}
 	m := &protojson.MarshalOptions{
-		UseProtoNames:   true,
+		UseProtoNames: true,
 	}
 	if asset.Resource != nil {
 		CleanStructValue(asset.Resource.Data)
