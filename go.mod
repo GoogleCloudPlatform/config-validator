@@ -14,8 +14,8 @@ require (
 	github.com/go-openapi/strfmt v0.21.2
 	github.com/go-openapi/validate v0.21.0
 	github.com/gobwas/glob v0.2.3
-	github.com/golang/glog v1.1.1
-	github.com/google/go-cmp v0.5.9
+	github.com/golang/glog v1.2.4
+	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/open-policy-agent/frameworks/constraint v0.0.0-20230712214810-96753a21c26f
 	github.com/open-policy-agent/gatekeeper/v3 v3.13.0
